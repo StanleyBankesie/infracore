@@ -1,0 +1,2878 @@
+/**
+ * @fileoverview Main AppShell layout component.
+ * Responsible for the overall layout, navigation sidebar, header, global state,
+ * notification polling, and service worker push integrations.
+ */
+
+import React, { useEffect, useMemo, useRef, useState } from "react";
+import {
+  Link,
+  NavLink,
+  Route,
+  Routes,
+  useNavigate,
+  useLocation,
+  Navigate,
+} from "react-router-dom";
+import Swal from "sweetalert2";
+
+import { useAuth } from "../auth/AuthContext.jsx";
+import {
+  getLastActivity,
+  getInactivityTimeoutMs,
+  readStoredAuth,
+  writeStoredAuth,
+  touchLastActivity,
+} from "../auth/authStorage.js";
+import { usePermission } from "../auth/PermissionContext.jsx";
+import { useTheme } from "../theme/ThemeContext.jsx";
+import { resolveBackgroundForTheme } from "../utils/appBackground.js";
+import ThemeToggle from "../components/ThemeToggle.jsx";
+import ListPageOverview from "../components/ListPageOverview.jsx";
+
+const lazyWithRetry = (componentImport) =>
+  React.lazy(async () => {
+    const pageHasBeenForceRefreshed = JSON.parse(
+      window.sessionStorage.getItem("omnisuite_chunk_refreshed") || "false",
+    );
+    try {
+      const component = await componentImport();
+      window.sessionStorage.setItem("omnisuite_chunk_refreshed", "false");
+      return component;
+    } catch (error) {
+      if (!pageHasBeenForceRefreshed) {
+        window.sessionStorage.setItem("omnisuite_chunk_refreshed", "true");
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+
+const DashboardPage = React.lazy(
+  () => import("../pages/dashboard/DashboardPage.jsx"),
+);
+const HomePage = React.lazy(() => import("../pages/home/HomePage.jsx"));
+const AdministrationHome = lazyWithRetry(
+  () => import("../pages/modules/administration/AdministrationHome.jsx"),
+);
+const SalesHome = React.lazy(
+  () => import("../pages/modules/sales/SalesHome.jsx"),
+);
+const InventoryHome = React.lazy(
+  () => import("../pages/modules/inventory/InventoryHome.jsx"),
+);
+const PurchaseHome = React.lazy(
+  () => import("../pages/modules/purchase/PurchaseHome.jsx"),
+);
+const FinanceRoutes = React.lazy(
+  () => import("../pages/modules/finance/FinanceRoutes.jsx"),
+);
+const HumanResourcesHome = React.lazy(
+  () => import("../pages/modules/human-resources/HumanResourcesHome.jsx"),
+);
+const MaintenanceHome = React.lazy(
+  () => import("../pages/modules/maintenance/MaintenanceHome.jsx"),
+);
+const EnvironmentalHealthSafetyHome = React.lazy(
+  () =>
+    import("../pages/modules/environmental-health-safety/EnvironmentalHealthSafetyHome.jsx"),
+);
+const FacilitiesHome = React.lazy(
+  () => import("../pages/modules/facilities/FacilitiesHome.jsx"),
+);
+const AssetManagementHome = React.lazy(
+  () => import("../pages/modules/asset-management/AssetManagementHome.jsx"),
+);
+const ProjectManagementHome = lazyWithRetry(
+  () => import("../pages/modules/project-management/ProjectManagementHome.jsx"),
+);
+const ProductionHome = React.lazy(
+  () => import("../pages/modules/production/ProductionHome.jsx"),
+);
+const PosHome = React.lazy(() => import("../pages/modules/pos/PosHome.jsx"));
+const BusinessIntelligenceHome = React.lazy(
+  () =>
+    import("../pages/modules/business-intelligence/BusinessIntelligenceHome.jsx"),
+);
+const ServiceManagementHome = React.lazy(
+  () => import("../pages/modules/service-management/ServiceManagementHome.jsx"),
+);
+const TransportLayout = React.lazy(
+  () => import("../pages/modules/transport/TransportLayout.jsx"),
+);
+const ExecutiveOverviewRoutes = React.lazy(
+  () =>
+    import("../pages/modules/executive-overview/ExecutiveOverviewRoutes.jsx"),
+);
+const SystemConfigurationHome = React.lazy(
+  () =>
+    import("../pages/modules/system-configuration/SystemConfigurationHome.jsx"),
+);
+const NotificationsPage = React.lazy(
+  () => import("../pages/NotificationsPage.jsx"),
+);
+const SocialFeedPage = React.lazy(
+  () => import("../pages/social/SocialFeedPage.jsx"),
+);
+const RoleSetup = React.lazy(() => import("../pages/admin/RoleSetup.jsx"));
+const UserPermissions = React.lazy(
+  () => import("../pages/admin/UserPermissions.jsx"),
+);
+const SocialFeedNotification = React.lazy(
+  () => import("../components/CompanyFeed/SocialFeedNotification.jsx"),
+);
+const DashboardPermissions = React.lazy(
+  () => import("../pages/admin/DashboardPermissions.jsx"),
+);
+const ProjectNotesPage = React.lazy(
+  () => import("../pages/modules/project-management/notes/ProjectNotesPage.jsx"),
+);
+const ProjectPlanPage = React.lazy(
+  () => import("../pages/modules/project-management/plan/ProjectPlanPage.jsx"),
+);
+import addNotification from "../utils/addNotification.js";
+
+import logoDark from "../assets/resources/OMNISUITE_WHITE_LOGO.png";
+import logoLight from "../assets/resources/OMNISUITE_LOGO_CLEAR.png";
+import clearIcon from "../assets/resources/OMNISUITE_ICON_CLEAR.png";
+import PaymentPackageModal from "../components/PaymentPackageModal.jsx";
+import { api } from "../api/client.js";
+import useOfflineQueue from "../offline/useOfflineQueue.js";
+import FloatingInstallButton from "../components/FloatingInstallButton.jsx";
+import OmniSuiteFavoriteButton from "../components/OmniSuiteFavoriteButton.jsx";
+import { recordPageVisit, resolvePageMetadata } from "../utils/favorites.js";
+import { toast } from "react-toastify";
+import {
+  Bell,
+  Menu,
+  Settings,
+  Banknote,
+  Archive,
+  ShoppingCart,
+  Landmark,
+  Users,
+  Wrench,
+  Blocks,
+  Factory,
+  ShoppingBasket,
+  AreaChart,
+  Headset,
+  Presentation,
+  Truck,
+  Home,
+  Building2,
+  Calculator,
+  ShieldAlert,
+  X,
+  WifiOff,
+  ChevronDown,
+  ChevronRight,
+} from "lucide-react";
+import FloatingChat from "../components/chat/FloatingChat.jsx";
+import BanksAiFloating from "../components/ai/BanksAiFloating.jsx";
+import FloatingCreateButton from "../components/FloatingCreateButton.jsx";
+import useSocket from "../hooks/useSocket.js";
+import { MODULES_REGISTRY } from "../data/modulesRegistry.js";
+import { MODULE_SECTIONS } from "../data/userAssignedSections.js";
+import { MODULE_HOME_SECTIONS } from "../data/moduleHomeSectionsRegistry.js";
+
+const AppRoutes = React.memo(function AppRoutes({ user }) {
+  return (
+    <React.Suspense
+      fallback={
+        <div className="flex items-center justify-center min-h-[50vh] p-8">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+            <span className="text-xs text-slate-400">Loading module...</span>
+          </div>
+        </div>
+      }
+    >
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route path="/dashboard" element={<DashboardPage />} />
+        <Route path="/administration/*" element={<AdministrationHome />} />
+        <Route path="/sales/*" element={<SalesHome />} />
+        <Route path="/inventory/*" element={<InventoryHome />} />
+        <Route path="/purchase/*" element={<PurchaseHome />} />
+        <Route path="/finance/*" element={<FinanceRoutes />} />
+        <Route path="/human-resources/*" element={<HumanResourcesHome />} />
+        <Route path="/maintenance/*" element={<MaintenanceHome />} />
+        <Route path="/facilities/*" element={<FacilitiesHome />} />
+        <Route
+          path="/environmental-health-safety/*"
+          element={<EnvironmentalHealthSafetyHome />}
+        />
+        <Route
+          path="/ehs/*"
+          element={<Navigate to="/environmental-health-safety" replace />}
+        />
+        <Route
+          path="/hse/*"
+          element={<Navigate to="/environmental-health-safety" replace />}
+        />
+        <Route path="/assets/*" element={<AssetManagementHome />} />
+        <Route path="/asset-management/*" element={<AssetManagementHome />} />
+        <Route
+          path="/project-management/*"
+          element={<ProjectManagementHome />}
+        />
+        <Route path="/production/*" element={<ProductionHome />} />
+        <Route path="/pos/*" element={<PosHome />} />
+        <Route
+          path="/business-intelligence/*"
+          element={<BusinessIntelligenceHome />}
+        />
+        <Route
+          path="/service-management/*"
+          element={<ServiceManagementHome />}
+        />
+        <Route path="/transport/*" element={<TransportLayout />} />
+        <Route
+          path="/executive-overview/*"
+          element={<ExecutiveOverviewRoutes />}
+        />
+        <Route
+          path="/administration/access/dashboard-permissions"
+          element={<DashboardPermissions />}
+        />
+        <Route path="/notifications" element={<NotificationsPage />} />
+        <Route path="/notes" element={<ProjectNotesPage />} />
+        <Route path="/project-management/notes" element={<ProjectNotesPage />} />
+        <Route path="/project-plan" element={<ProjectPlanPage />} />
+        <Route path="/project-plan/:projectId" element={<ProjectPlanPage />} />
+        <Route path="/project-management/plan" element={<ProjectPlanPage />} />
+        <Route path="/project-management/plan/:projectId" element={<ProjectPlanPage />} />
+        <Route path="/social-feed" element={<SocialFeedPage />} />
+        <Route path="/social-feed/:id" element={<SocialFeedPage />} />
+        <Route path="/admin/roles" element={<RoleSetup />} />
+        <Route path="/admin/roles/new" element={<RoleSetup />} />
+        <Route path="/admin/roles/:id" element={<RoleSetup />} />
+        <Route path="/admin/user-permissions" element={<UserPermissions />} />
+        <Route path="/admin/reports/user-login-activity" element={<Navigate to="/administration/reports/user-login-activity" replace />} />
+        <Route path="/admin/reports/user-activity" element={<Navigate to="/administration/reports/user-login-activity" replace />} />
+        <Route path="/admin/reports/audit" element={<Navigate to="/administration/reports/system-log-book" replace />} />
+        <Route path="/admin/user-activity" element={<Navigate to="/administration/reports/user-login-activity" replace />} />
+        <Route
+          path="/system-configuration/*"
+          element={
+            user?.id === 1 || user?.id === 2 ? (
+              <SystemConfigurationHome />
+            ) : (
+              <Navigate to="/" replace />
+            )
+          }
+        />
+      </Routes>
+    </React.Suspense>
+  );
+});
+
+const modules = [
+  {
+    key: "system-configuration",
+    label: "System Configuration",
+    shortLabel: "Config",
+    path: "/system-configuration",
+    icon: <Settings />,
+  },
+  {
+    key: "administration",
+    label: "System Admin",
+    shortLabel: "Admin",
+    path: "/administration",
+    icon: <Settings />,
+  },
+  {
+    key: "sales",
+    label: "Sales Management",
+    shortLabel: "Sales",
+    path: "/sales",
+    icon: <Banknote />,
+  },
+  {
+    key: "inventory",
+    label: "Inventory Management",
+    shortLabel: "Inventory",
+    path: "/inventory",
+    icon: <Archive />,
+  },
+  {
+    key: "purchase",
+    label: "Procurement",
+    shortLabel: "Purchase",
+    path: "/purchase",
+    icon: <ShoppingCart />,
+  },
+  {
+    key: "finance",
+    label: "Finance",
+    shortLabel: "Finance",
+    path: "/finance",
+    icon: <Landmark />,
+  },
+  {
+    key: "human-resources",
+    label: "Human Resources",
+    shortLabel: "HR",
+    path: "/human-resources",
+    icon: <Users />,
+  },
+  {
+    key: "maintenance",
+    label: "Maintenance",
+    shortLabel: "Maintenance",
+    path: "/maintenance",
+    icon: <Wrench />,
+  },
+  {
+    key: "facilities",
+    label: "Facilities Management",
+    shortLabel: "Facilities",
+    path: "/facilities",
+    icon: <Building2 />,
+  },
+  {
+    key: "environmental-health-safety",
+    label: "Health & Safety (EHS)",
+    shortLabel: "EHS",
+    path: "/environmental-health-safety",
+    icon: <ShieldAlert />,
+  },
+  {
+    key: "assets",
+    label: "Asset Management",
+    shortLabel: "Assets",
+    path: "/assets",
+    icon: <Calculator />,
+  },
+  {
+    key: "project-management",
+    label: "Project Management",
+    shortLabel: "Projects",
+    path: "/project-management",
+    icon: <Blocks />,
+  },
+  {
+    key: "production",
+    label: "Manufacturing",
+    shortLabel: "Production",
+    path: "/production",
+    icon: <Factory />,
+  },
+  {
+    key: "pos",
+    label: "POS",
+    shortLabel: "POS",
+    path: "/pos",
+    icon: <ShoppingBasket />,
+  },
+  {
+    key: "business-intelligence",
+    label: "Business Intelligence",
+    shortLabel: "BI",
+    path: "/business-intelligence",
+    icon: <AreaChart />,
+  },
+  {
+    key: "service-management",
+    label: "Field Service Management",
+    shortLabel: "Service",
+    path: "/service-management",
+    icon: <Headset />,
+  },
+  {
+    key: "executive-overview",
+    label: "Executive Overview",
+    shortLabel: "Executive",
+    path: "/executive-overview",
+    icon: <Presentation />,
+  },
+  {
+    key: "transport",
+    label: "Transport & Logistics",
+    shortLabel: "Transport",
+    path: "/transport",
+    icon: <Truck />,
+  },
+];
+
+
+const MODULE_HOME_PATHS = new Set([
+  "/",
+  "/dashboard",
+  "/asset-management",
+  ...modules.map((m) => m.path.replace(/\/+$/, "")),
+]);
+
+function isModuleHomeOrSection(pathname, search = "") {
+  if (!pathname) return false;
+  const normalized = pathname.replace(/\/+$/, "") || "/";
+  if (MODULE_HOME_PATHS.has(normalized)) {
+    return true;
+  }
+  const segments = normalized.split("/").filter(Boolean);
+  if (
+    segments.length === 2 &&
+    (segments[1] === "dashboard" || segments[1] === "dashboards")
+  ) {
+    if (MODULE_HOME_PATHS.has(`/${segments[0]}`)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+const BACKGROUND_GET_CONFIG = { __background: true };
+
+function scheduleDeferredTask(task, delayMs = 200) {
+  let settled = false;
+  let timeoutId = null;
+  let idleId = null;
+
+  const run = () => {
+    if (settled) return;
+    settled = true;
+    if (timeoutId !== null) window.clearTimeout(timeoutId);
+    if (
+      idleId !== null &&
+      typeof window !== "undefined" &&
+      typeof window.cancelIdleCallback === "function"
+    ) {
+      window.cancelIdleCallback(idleId);
+    }
+    Promise.resolve()
+      .then(task)
+      .catch(() => {});
+  };
+
+  if (typeof window !== "undefined") {
+    timeoutId = window.setTimeout(run, delayMs);
+    if (typeof window.requestIdleCallback === "function") {
+      idleId = window.requestIdleCallback(run, { timeout: delayMs + 300 });
+    }
+  } else {
+    run();
+  }
+
+  return () => {
+    settled = true;
+    if (timeoutId !== null && typeof window !== "undefined") {
+      window.clearTimeout(timeoutId);
+    }
+    if (
+      idleId !== null &&
+      typeof window !== "undefined" &&
+      typeof window.cancelIdleCallback === "function"
+    ) {
+      window.cancelIdleCallback(idleId);
+    }
+  };
+}
+
+/**
+ * AppShell component
+ * Acts as the primary shell around all authenticated routes.
+ * Initializes real-time sockets, manages offline queue state, and handles user session inactivity.
+ *
+ * @returns {JSX.Element} The rendered application shell.
+ */
+export default function AppShell() {
+  const { token, user, scope, setScope, logout } = useAuth();
+  const {
+    isModuleEnabled,
+    canViewModule,
+    canPerformAction,
+    globalOverrides,
+    canPerformPageAction,
+    ensurePagePerms,
+    basePathFrom,
+    canAccessFeatureKey,
+    canAccessPath,
+    appBackground,
+    roleFeatures,
+    permissions,
+    isSuper,
+  } = usePermission();
+  const { theme } = useTheme();
+  const isDark =
+    theme === "dark" ||
+    (typeof document !== "undefined" &&
+      document.documentElement.classList.contains("dark"));
+  const resolvedBg = useMemo(
+    () => resolveBackgroundForTheme(appBackground, isDark),
+    [appBackground, isDark],
+  );
+
+  // Dynamic top 3 modules for mobile bottom navigation ordered by number of assigned pages
+  const topMobileModules = useMemo(() => {
+    // 1. Filter modules assigned / viewable to this user
+    const assigned = modules.filter((m) => {
+      if (m.key === "system-configuration") {
+        return Number(user?.id) === 1 || Number(user?.id) === 2;
+      }
+      return canViewModule(m.key);
+    });
+
+    // 2. Count accessible / assigned pages per module
+    const withPageCounts = assigned.map((m, index) => {
+      let pageCount = 0;
+      const modInfo = MODULES_REGISTRY[m.key] || {};
+      const regFeatures = (modInfo.features || []).filter(
+        (f) => f.type !== "dashboard"
+      );
+
+      // Unique page keys from MODULES_REGISTRY and MODULE_SECTIONS
+      const allPageKeys = new Set(regFeatures.map((f) => f.key));
+      const sections = MODULE_SECTIONS[m.key] || [];
+      sections.forEach((sec) => {
+        (sec.features || []).forEach((f) => {
+          if (f.type !== "dashboard" && f.key) {
+            allPageKeys.add(f.key);
+          }
+        });
+      });
+
+      // Count pages accessible to the user
+      allPageKeys.forEach((fKey) => {
+        if (canAccessFeatureKey(m.key, fKey)) {
+          pageCount++;
+        }
+      });
+
+      // Also account for any roleFeatures specific to this module that might not be in registry
+      if (roleFeatures && roleFeatures.size > 0) {
+        const prefix = `${m.key}:`;
+        roleFeatures.forEach((rf) => {
+          if (rf.startsWith(prefix)) {
+            const subKey = rf.slice(prefix.length);
+            if (!allPageKeys.has(subKey) && !subKey.includes("dashboard")) {
+              pageCount++;
+            }
+          }
+        });
+      }
+
+      return {
+        ...m,
+        pageCount,
+        originalIndex: index,
+      };
+    });
+
+    // Prefer modules that have at least 1 assigned page
+    const validModules = withPageCounts.filter((m) => m.pageCount > 0);
+    const candidates = validModules.length > 0 ? validModules : withPageCounts;
+
+    // Sort descending by number of assigned pages; tie-break by original index
+    candidates.sort((a, b) => {
+      if (b.pageCount !== a.pageCount) {
+        return b.pageCount - a.pageCount;
+      }
+      return a.originalIndex - b.originalIndex;
+    });
+
+    // Return all assigned modules sorted by priority so user can slide through all modules on mobile & tablet
+    return candidates;
+  }, [
+    user?.id,
+    canViewModule,
+    canAccessFeatureKey,
+    roleFeatures,
+    permissions,
+    isSuper,
+  ]);
+  const { pending, failed, completed, items, lastEvent } = useOfflineQueue();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [queueOpen, setQueueOpen] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [savedToast, setSavedToast] = useState(false);
+  const isUserId1 = Number(user?.sub || user?.id) === 1;
+  const lastChatToneAtRef = useRef(0);
+  const listPageContentRef = useRef(null);
+  useEffect(() => {
+    if (lastEvent === "queued") {
+      setSavedToast(true);
+      const t = setTimeout(() => setSavedToast(false), 3000);
+      return () => clearTimeout(t);
+    }
+  }, [lastEvent]);
+
+  useEffect(() => {
+    if (sessionStorage.getItem("triggerRenewal") === "true") {
+      sessionStorage.removeItem("triggerRenewal");
+      setShowPaymentModal(true);
+    }
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+
+    async function checkLicense() {
+      if (Number(user?.id) === 1) return;
+      const companyId = user?.company_id || user?.companyIds?.[0];
+      if (!companyId) return;
+
+      try {
+        const res = await api.get(`/licenses/company/${companyId}`);
+        if (mounted && res?.data) {
+          const l = res.data;
+          console.log("License Data:", l);
+          if (
+            [
+              "ACTIVE",
+              "EXPIRED",
+              "INACTIVE",
+              "SUSPENDED",
+              "CANCELLED",
+            ].includes(l.status)
+          ) {
+            const exp = new Date(l.expiry_date);
+            const graceDays = l.grace_days || 0;
+            const finalExp = new Date(
+              exp.getTime() + graceDays * 24 * 60 * 60 * 1000,
+            );
+            const now = new Date();
+            let daysRemaining = Math.max(
+              0,
+              Math.ceil((finalExp - now) / (1000 * 60 * 60 * 24)),
+            );
+
+            const alertDays =
+              l.alert_days !== undefined && l.alert_days !== null
+                ? l.alert_days
+                : 30;
+            console.log("License Expiry:", {
+              daysRemaining,
+              alertDays,
+              finalExp,
+              now,
+              status: l.status,
+            });
+
+            const shouldAlert =
+              l.status !== "ACTIVE" ||
+              daysRemaining <= alertDays ||
+              isNaN(daysRemaining);
+
+            if (shouldAlert) {
+              const formattedDate = new Date(
+                l.expiry_date,
+              ).toLocaleDateString();
+              let title = "";
+              let text = "";
+
+              if (l.status === "INACTIVE") {
+                title = "License Inactive";
+                text = "Your license is currently INACTIVE. Please renew.";
+              } else if (l.status === "SUSPENDED") {
+                title = "License Suspended";
+                text = "Your license is suspended. Please renew.";
+              } else if (l.status === "CANCELLED") {
+                title = "License Cancelled";
+                text = "Your license is cancelled. Please renew.";
+              } else {
+                title =
+                  daysRemaining === 0
+                    ? "License Expired"
+                    : "License Expiring Soon";
+                text =
+                  daysRemaining === 0
+                    ? `Your license expired on ${formattedDate} (including ${graceDays} days grace).`
+                    : `Your license expires on ${formattedDate} + ${graceDays} days grace period.`;
+              }
+
+              // Temporarily ignore the dismissal check to guarantee it shows during our testing
+              const isDismissed = false; // sessionStorage.getItem("licenseAlertDismissed") === "true";
+              const canDismiss = l.status === "ACTIVE" && daysRemaining > 0;
+              const canRenew = canAccessFeatureKey("system", "license-renewal");
+
+              if (!isDismissed || !canDismiss) {
+                Swal.fire({
+                  toast: true,
+                  position: "bottom-end",
+                  title,
+                  iconHtml: `<img src="${clearIcon}" style="height: 64px; width: auto; object-fit: contain;" />`,
+                  text,
+                  showCancelButton: canDismiss,
+                  showConfirmButton: canRenew,
+                  confirmButtonColor: "#2563eb",
+                  cancelButtonColor: "#64748b",
+                  confirmButtonText: "Renew",
+                  cancelButtonText: "Dismiss",
+                  width: "20em",
+                  padding: "0.5em",
+                  customClass: {
+                    container: "z-[999999]",
+                    title: "text-sm m-0 p-0",
+                    htmlContainer: "text-xs m-1 p-0",
+                    actions: "m-0 p-0 scale-75",
+                    icon: "border-0 m-0 mr-2",
+                  },
+                  timerProgressBar: true,
+                  showCloseButton: canDismiss,
+                  background: "rgba(255, 255, 255, 1)",
+                }).then((result) => {
+                  if (result.isConfirmed) {
+                    setShowPaymentModal(true);
+                  } else if (result.isDismissed) {
+                    sessionStorage.setItem("licenseAlertDismissed", "true");
+                  }
+                });
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.error("License check error:", err);
+      }
+    }
+
+    checkLicense();
+    return () => {
+      mounted = false;
+    };
+  }, [user]);
+
+  const [online, setOnline] = useState(
+    typeof navigator !== "undefined" ? navigator.onLine !== false : true,
+  );
+  useEffect(() => {
+    function onOnline() {
+      setOnline(true);
+      touchLastActivity();
+    }
+    function onOffline() {
+      // Validate with network probe before assuming offline to prevent sleep/screen-lock glitches
+      fetch("/api/health", { method: "HEAD", cache: "no-store" })
+        .then(() => setOnline(true))
+        .catch(() => {
+          if (typeof navigator !== "undefined" && navigator.onLine === false) {
+            setOnline(false);
+          }
+        });
+    }
+    function onWakeOrFocus() {
+      touchLastActivity();
+      setOnline(true);
+      api.get("/auth/me", BACKGROUND_GET_CONFIG).catch(() => {});
+    }
+    window.addEventListener("online", onOnline);
+    window.addEventListener("offline", onOffline);
+    window.addEventListener("focus", onWakeOrFocus);
+    document.addEventListener("visibilitychange", onWakeOrFocus);
+    return () => {
+      window.removeEventListener("online", onOnline);
+      window.removeEventListener("offline", onOffline);
+      window.removeEventListener("focus", onWakeOrFocus);
+      document.removeEventListener("visibilitychange", onWakeOrFocus);
+    };
+  }, []);
+  useEffect(() => {
+    try {
+      if ("serviceWorker" in navigator) {
+        function playChatTone() {
+          try {
+            const now = Date.now();
+            if (now - Number(lastChatToneAtRef.current || 0) < 800) return;
+            lastChatToneAtRef.current = now;
+            const AudioCtx =
+              window.AudioContext || window.webkitAudioContext || null;
+            if (!AudioCtx) return;
+            const ctx = new AudioCtx();
+            const o = ctx.createOscillator();
+            const g = ctx.createGain();
+            o.type = "triangle";
+            o.frequency.setValueAtTime(880, ctx.currentTime);
+            g.gain.setValueAtTime(0.0001, ctx.currentTime);
+            g.gain.exponentialRampToValueAtTime(0.05, ctx.currentTime + 0.01);
+            o.connect(g).connect(ctx.destination);
+            o.start();
+            setTimeout(() => {
+              o.frequency.setValueAtTime(660, ctx.currentTime);
+            }, 150);
+            setTimeout(() => {
+              g.gain.exponentialRampToValueAtTime(
+                0.0001,
+                ctx.currentTime + 0.01,
+              );
+              o.stop();
+              ctx.close();
+            }, 700);
+          } catch {}
+        }
+        const handler = (e) => {
+          const data = e?.data || {};
+          if (data.type === "navigate" && typeof data.url === "string") {
+            const url = data.url;
+            setTimeout(() => {
+              if (url.startsWith("/chat?cid=")) {
+                try {
+                  const m = url.match(/cid=(\d+)/);
+                  const cid = m ? Number(m[1]) : null;
+                  if (cid) {
+                    localStorage.setItem(
+                      "omni.chat.lastConversationId",
+                      String(cid),
+                    );
+                    window.dispatchEvent(new Event("omni.chat.open"));
+                  }
+                } catch {}
+                navigate("/");
+              } else {
+                navigate(url);
+              }
+            }, 0);
+          }
+          if (data.type === "chat_push") {
+            if (
+              typeof document !== "undefined" &&
+              document.visibilityState === "visible"
+            ) {
+              const run =
+                typeof window !== "undefined" &&
+                typeof window.requestIdleCallback === "function"
+                  ? window.requestIdleCallback
+                  : (fn) => setTimeout(fn, 0);
+              run(() => playChatTone());
+            }
+          }
+        };
+        navigator.serviceWorker.addEventListener("message", handler);
+        return () =>
+          navigator.serviceWorker.removeEventListener("message", handler);
+      }
+    } catch {}
+  }, [navigate]);
+
+  useEffect(() => {
+    try {
+      if (typeof sessionStorage !== "undefined") {
+        const path = location.pathname + (location.search || "");
+        sessionStorage.setItem("last_path", path);
+      }
+    } catch {}
+  }, [location.pathname, location.search]);
+  useEffect(() => {
+    async function logPageView() {
+      try {
+        if (import.meta && import.meta.env && import.meta.env.DEV) {
+          return;
+        }
+        const path = location.pathname || "/";
+        const seg = path.split("/").filter(Boolean)[0] || "dashboard";
+        const moduleName = seg
+          .replace(/-/g, " ")
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+        try {
+          await api.post("/admin/activity/log", {
+            module_name: moduleName,
+            action: "VIEW",
+            ref_no: String(user?.username || ""),
+            message: "Page View",
+            url_path: path,
+            event_time: new Date().toISOString(),
+          });
+        } catch {}
+      } catch {}
+    }
+    logPageView();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [location.pathname]);
+
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const sidebarTouchStart = useRef(null);
+  const handleSidebarTouchStart = (e) => {
+    sidebarTouchStart.current = {
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY,
+    };
+  };
+  const handleSidebarTouchEnd = (e) => {
+    if (!sidebarTouchStart.current) return;
+    const dx = e.changedTouches[0].clientX - sidebarTouchStart.current.x;
+    const dy = e.changedTouches[0].clientY - sidebarTouchStart.current.y;
+    sidebarTouchStart.current = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) && dx < 0) {
+      setSidebarOpen(false);
+    }
+  };
+  useEffect(() => {
+    if (sidebarOpen && window.innerWidth < 768) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [sidebarOpen]);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const profileRef = useRef(null);
+  const [contextModalOpen, setContextModalOpen] = useState(false);
+    // Automatically close the side menu bar when a page is opened
+  // (Excludes module homes and module home sections)
+  useEffect(() => {
+    if (isModuleHomeOrSection(location.pathname, location.search)) {
+      return;
+    }
+    setSidebarOpen(false);
+  }, [location.pathname, location.search]);
+  const [lowStockPrompted, setLowStockPrompted] = useState(false);
+  const [lowStockCount, setLowStockCount] = useState(0);
+  const [unreadCount, setUnreadCount] = useState(0);
+  const [changePwModalOpen, setChangePwModalOpen] = useState(false);
+  const [pwCurrent, setPwCurrent] = useState("");
+  const [pwNew, setPwNew] = useState("");
+  const [pwConfirm, setPwConfirm] = useState("");
+  const [pwChanging, setPwChanging] = useState(false);
+  const [showPwCurrent, setShowPwCurrent] = useState(false);
+  const [showPwNew, setShowPwNew] = useState(false);
+  const [showPwConfirm, setShowPwConfirm] = useState(false);
+  const [welcomeModalOpen, setWelcomeModalOpen] = useState(false);
+  useEffect(() => {
+    if (user?.status === "N") {
+      setWelcomeModalOpen(true);
+    }
+  }, [user?.status]);
+  useEffect(() => {
+    try {
+      const raw =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("omni.unread_notification_count")
+          : null;
+      if (raw != null && raw !== "") {
+        const n = Number(raw);
+        if (Number.isFinite(n) && n >= 0) {
+          setUnreadCount(n);
+        }
+      }
+    } catch {}
+  }, []);
+  const socket = useSocket();
+  useEffect(() => {
+    if (!socket) return;
+    function onNewNotif(payload) {
+      try {
+        setUnreadCount((n) => {
+          const next = (n || 0) + 1;
+          try {
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem(
+                "omni.unread_notification_count",
+                String(next),
+              );
+            }
+          } catch {}
+          return next;
+        });
+      } catch {}
+    }
+    socket.on("notifications:new", onNewNotif);
+    return () => {
+      socket.off("notifications:new", onNewNotif);
+    };
+  }, [socket]);
+
+  const [pushPromptAllowed, setPushPromptAllowed] = useState(false);
+  const [pushPromptRolledDown, setPushPromptRolledDown] = useState(false);
+
+  const dismissPushPrompt = () => {
+    setPushPromptRolledDown(false);
+    setPushPromptAllowed(false);
+  };
+
+  useEffect(() => {
+    if (!token) {
+      setPushPromptAllowed(false);
+      setPushPromptRolledDown(false);
+      return;
+    }
+    let showTimer = null;
+    let hideTimer = null;
+    try {
+      const raw =
+        typeof localStorage !== "undefined"
+          ? localStorage.getItem("push_enabled")
+          : null;
+      const enabled = raw === "1";
+      const perm =
+        typeof window !== "undefined" && "Notification" in window
+          ? window.Notification.permission
+          : "denied";
+      const canPrompt =
+        typeof window !== "undefined" &&
+        "serviceWorker" in navigator &&
+        "PushManager" in window &&
+        "Notification" in window;
+
+      if (!canPrompt || enabled || perm === "granted") {
+        setPushPromptAllowed(false);
+        setPushPromptRolledDown(false);
+        return;
+      }
+
+      // Eligible: hidden on login, rolls down 1 minute after login, stays for 30 seconds, then rolls up back
+      setPushPromptAllowed(true);
+      setPushPromptRolledDown(false);
+
+      showTimer = setTimeout(() => {
+        setPushPromptRolledDown(true);
+
+        hideTimer = setTimeout(() => {
+          setPushPromptRolledDown(false);
+        }, 30000);
+      }, 60000);
+    } catch {
+      setPushPromptAllowed(false);
+      setPushPromptRolledDown(false);
+    }
+
+    return () => {
+      if (showTimer) clearTimeout(showTimer);
+      if (hideTimer) clearTimeout(hideTimer);
+    };
+  }, [token]);
+
+  async function enablePushNow() {
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.setItem("push_enabled", "1");
+      }
+      if (
+        typeof window === "undefined" ||
+        !("serviceWorker" in navigator) ||
+        !("PushManager" in window) ||
+        !("Notification" in window)
+      ) {
+        dismissPushPrompt();
+        return;
+      }
+      if (window.Notification.permission === "denied") {
+        dismissPushPrompt();
+        return;
+      }
+      if (window.Notification.permission !== "granted") {
+        try {
+          const perm = await window.Notification.requestPermission();
+          if (perm !== "granted") {
+            dismissPushPrompt();
+            return;
+          }
+        } catch {
+          dismissPushPrompt();
+          return;
+        }
+      }
+      const reg = await navigator.serviceWorker.ready;
+      let publicKey = "";
+      try {
+        const res = await api.get("/push/public-key");
+        publicKey = String(res.data?.publicKey || "");
+      } catch {
+        publicKey = "";
+      }
+      if (!publicKey) {
+        dismissPushPrompt();
+        return;
+      }
+      function urlBase64ToUint8Array(base64String) {
+        const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+        const base64 = (base64String + padding)
+          .replace(/-/g, "+")
+          .replace(/_/g, "/");
+        const rawData = window.atob(base64);
+        const outputArray = new Uint8Array(rawData.length);
+        for (let i = 0; i < rawData.length; ++i) {
+          outputArray[i] = rawData.charCodeAt(i);
+        }
+        return outputArray;
+      }
+      const applicationServerKey = urlBase64ToUint8Array(publicKey);
+      const existing = await reg.pushManager.getSubscription();
+      if (existing && existing.endpoint) {
+        try {
+          await api.post("/push/subscribe", {
+            subscription: existing.toJSON(),
+          });
+        } catch {}
+        dismissPushPrompt();
+        return;
+      }
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey,
+      });
+      try {
+        await api.post("/push/subscribe", { subscription: sub.toJSON() });
+      } catch {}
+      dismissPushPrompt();
+    } catch {
+      dismissPushPrompt();
+    }
+  }
+
+  const [branchOptions, setBranchOptions] = useState([]);
+  const [selectedBranchId, setSelectedBranchId] = useState(
+    () => scope?.branchId || null,
+  );
+  const [companies, setCompanies] = useState([]);
+
+  useEffect(() => {
+    if (scope?.branchId) {
+      setSelectedBranchId(scope.branchId);
+    }
+  }, [scope?.branchId]);
+
+  const profile = useMemo(() => {
+    const username = user?.username || user?.name || "Guest";
+    const role =
+      user?.role ||
+      (Array.isArray(user?.roles) ? user.roles[0] : null) ||
+      "Developer";
+
+    // Resolve the active branch from the branchOptions list so the name
+    // reflects the currently switched branch, not the JWT default.
+    const activeBranch = Array.isArray(branchOptions)
+      ? branchOptions.find((b) => Number(b.id) === Number(scope?.branchId))
+      : null;
+    const companyName =
+      activeBranch?.company_name ||
+      user?.companyName ||
+      `Company #${scope?.companyId ?? "-"}`;
+    const branchName =
+      activeBranch?.name ||
+      user?.branchName ||
+      `Branch #${scope?.branchId ?? "-"}`;
+
+    return { username, role, companyName, branchName };
+  }, [scope?.branchId, scope?.companyId, user, branchOptions]);
+
+  const roleOptions = useMemo(
+    () =>
+      Array.isArray(user?.roles) ? user.roles : user?.role ? [user.role] : [],
+    [user?.roles, user?.role],
+  );
+  const [selectedRole, setSelectedRole] = useState(() =>
+    Array.isArray(user?.roles) ? user.roles[0] : user?.role || null,
+  );
+  const [dbRoles, setDbRoles] = useState([]);
+  const [dbRolesLoading, setDbRolesLoading] = useState(false);
+  useEffect(() => {
+    const userId = Number(user?.sub || user?.id);
+    if (!Number.isFinite(userId)) {
+      setDbRoles([]);
+      return;
+    }
+    let mounted = true;
+    async function loadRoles() {
+      setDbRolesLoading(true);
+      try {
+        const res = await api.get(`/admin/users/${userId}/roles`);
+        const items =
+          (res.data && res.data.data && Array.isArray(res.data.data.items)
+            ? res.data.data.items
+            : Array.isArray(res.data?.items)
+              ? res.data.items
+              : []) || [];
+        if (mounted) setDbRoles(items);
+        if (mounted && items.length > 0 && !selectedRole) {
+          setSelectedRole(items[0]?.name || items[0]?.code || null);
+        }
+      } catch {
+        if (mounted) setDbRoles([]);
+      } finally {
+        if (mounted) setDbRolesLoading(false);
+      }
+    }
+    loadRoles();
+    return () => {
+      mounted = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  useEffect(() => {
+    setLowStockPrompted(false);
+    setLowStockCount(0);
+    setUnreadCount(0);
+  }, [scope?.companyId, scope?.branchId]);
+
+  useEffect(() => {
+    let cancelled = false;
+    async function subscribePush() {
+      try {
+        const raw =
+          typeof localStorage !== "undefined"
+            ? localStorage.getItem("push_enabled")
+            : null;
+        const enabled = raw === null ? true : String(raw) === "1";
+        if (!enabled) return;
+        if (typeof window === "undefined") return;
+        if (!("serviceWorker" in navigator)) return;
+        if (!("PushManager" in window)) return;
+        if (!("Notification" in window)) return;
+        if (window.Notification.permission !== "granted") {
+          return;
+        }
+        const reg = await navigator.serviceWorker.ready;
+        let publicKey = "";
+        try {
+          const res = await api.get("/push/public-key");
+          publicKey = String(res.data?.publicKey || "");
+        } catch {
+          publicKey = "";
+        }
+        if (!publicKey) return;
+        function urlBase64ToUint8Array(base64String) {
+          const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+          const base64 = (base64String + padding)
+            .replace(/-/g, "+")
+            .replace(/_/g, "/");
+          const rawData = window.atob(base64);
+          const outputArray = new Uint8Array(rawData.length);
+          for (let i = 0; i < rawData.length; ++i) {
+            outputArray[i] = rawData.charCodeAt(i);
+          }
+          return outputArray;
+        }
+        const applicationServerKey = urlBase64ToUint8Array(publicKey);
+        const existing = await reg.pushManager.getSubscription();
+        if (existing && existing.endpoint) {
+          try {
+            await api.post("/push/subscribe", {
+              subscription: existing.toJSON(),
+            });
+          } catch {}
+          return;
+        }
+        const sub = await reg.pushManager.subscribe({
+          userVisibleOnly: true,
+          applicationServerKey,
+        });
+        if (cancelled) return;
+        try {
+          await api.post("/push/subscribe", { subscription: sub.toJSON() });
+        } catch {}
+      } catch {}
+    }
+    subscribePush();
+    return () => {
+      cancelled = true;
+    };
+  }, [token]);
+  const authFailedRef = useRef(false);
+  useEffect(() => {
+    let cancelled = false;
+    let pollTimer = null;
+
+    async function loadUnread() {
+      try {
+        if (!token || !online || authFailedRef.current) return;
+        const res = await api.get(
+          "/workflows/notifications",
+          BACKGROUND_GET_CONFIG,
+        );
+        const items = Array.isArray(res.data?.items) ? res.data.items : [];
+        const unread = items.filter((n) => Number(n.is_read) !== 1).length;
+        setUnreadCount(unread);
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem(
+              "omni.unread_notification_count",
+              String(unread),
+            );
+          }
+        } catch {}
+        if (typeof window !== "undefined") {
+          try {
+            const storeKey = "notified_notification_ids";
+            const prevRaw = localStorage.getItem(storeKey);
+            const prev = prevRaw ? JSON.parse(prevRaw) : [];
+            const prevSet = new Set(Array.isArray(prev) ? prev : []);
+            const nativeAllowed =
+              "Notification" in window &&
+              window.Notification?.permission === "granted";
+            const icon =
+              theme === "dark"
+                ? "/OMNISUITE_ICON_CLEAR.png"
+                : "/OMNISUITE_ICON_CLEAR.png";
+            // Identify all new unread notifications that haven't been alerted yet
+            const pendingNotifs = items.filter((n) => {
+              const id = Number(n.id);
+              const isUnread = Number(n.is_read) !== 1;
+              return isUnread && !prevSet.has(id);
+            });
+
+            if (pendingNotifs.length === 1) {
+              // Single notification: display directly
+              const single = pendingNotifs[0];
+              try {
+                addNotification({
+                  title: String(single.title || "Notification"),
+                  message: String(single.message || ""),
+                  native: nativeAllowed,
+                  icon,
+                  onClick: () => {
+                    if (single.link) navigate(String(single.link));
+                    else navigate("/notifications");
+                  },
+                });
+              } catch {}
+              prevSet.add(Number(single.id));
+            } else if (pendingNotifs.length > 1) {
+              // Multiple notifications: Consolidate into ONE single push notification
+              // Group and count distinct notification types
+              const typeCounts = {};
+              for (const n of pendingNotifs) {
+                const title = String(n.title || "").trim();
+                const msg = String(n.message || "").toLowerCase();
+                const link = String(n.link || "").toLowerCase();
+                const t = String(n.type || "").toLowerCase();
+
+                let category = "General Alert";
+                if (t.includes("stock") || title.toLowerCase().includes("stock") || msg.includes("reorder") || link.includes("low-stock")) {
+                  category = "Low Stock Alert";
+                } else if (t.includes("approval_req") || title.toLowerCase().includes("approval required") || title.toLowerCase().includes("pending approval") || msg.includes("requires your approval")) {
+                  category = "Approval Request";
+                } else if (t.includes("approved") || title.toLowerCase().includes("approved")) {
+                  category = "Document Approved";
+                } else if (t.includes("reject") || title.toLowerCase().includes("rejected") || title.toLowerCase().includes("returned")) {
+                  category = "Document Rejected";
+                } else if (t.includes("workflow") || link.includes("workflow") || title.toLowerCase().includes("workflow")) {
+                  category = "Workflow Update";
+                } else if (t.includes("post") || t.includes("feed") || title.toLowerCase().includes("post") || link.includes("feed")) {
+                  category = "Social Feed Post";
+                } else if (t.includes("petty") || t.includes("voucher") || link.includes("finance") || title.toLowerCase().includes("voucher") || title.toLowerCase().includes("cash")) {
+                  category = "Finance Voucher";
+                } else if (t.includes("task") || t.includes("project") || link.includes("project") || title.toLowerCase().includes("project")) {
+                  category = "Project Task";
+                } else if (title) {
+                  category = title;
+                }
+
+                typeCounts[category] = (typeCounts[category] || 0) + 1;
+                prevSet.add(Number(n.id));
+              }
+
+              const totalCount = pendingNotifs.length;
+              // Format breakdown of types, e.g. "10 Low Stock Alerts, 1 Approval Request, 1 Document Approved"
+              const typeBreakdown = Object.entries(typeCounts)
+                .map(([type, count]) => {
+                  const plural = count === 1 ? type : (type.endsWith("s") ? type : `${type}s`);
+                  return `${count} ${plural}`;
+                })
+                .join(", ");
+
+              try {
+                addNotification({
+                  title: `🔔 You have ${totalCount} new notifications`,
+                  message: `${typeBreakdown}. Click to review all notifications.`,
+                  native: nativeAllowed,
+                  icon,
+                  onClick: () => {
+                    navigate("/notifications");
+                  },
+                });
+              } catch {}
+            }
+
+            localStorage.setItem(storeKey, JSON.stringify(Array.from(prevSet)));
+          } catch {}
+        }
+      } catch (err) {
+        if (err?.response?.status === 401) authFailedRef.current = true;
+      }
+    }
+
+    async function checkLowStock() {
+      try {
+        if (lowStockPrompted) return;
+        const res = await api.get(
+          "/inventory/alerts/low-stock",
+          BACKGROUND_GET_CONFIG,
+        );
+        const items = Array.isArray(res.data?.items) ? res.data.items : [];
+        if (!items.length) return;
+        setLowStockPrompted(true);
+        setLowStockCount(items.length);
+        const count = items.length;
+        const nativeAllowed =
+          typeof window !== "undefined" &&
+          "Notification" in window &&
+          window.Notification?.permission === "granted";
+        const icon =
+          theme === "dark"
+            ? "/OMNISUITE_ICON_CLEAR.png"
+            : "/OMNISUITE_ICON_CLEAR.png";
+        // Suppress inline/pop-up messages completely per requirement
+      } catch {}
+    }
+    if (token && online) {
+      const cancelLowStock = scheduleDeferredTask(checkLowStock, 250);
+      const cancelUnread = scheduleDeferredTask(loadUnread, 350);
+      return () => {
+        cancelled = true;
+        cancelLowStock();
+        cancelUnread();
+      };
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [scope?.companyId, scope?.branchId, lowStockPrompted, token, online]);
+
+  useEffect(() => {
+    if (!token) return;
+    let throttleTimer = null;
+    const handleActivity = () => {
+      if (throttleTimer) return;
+      throttleTimer = setTimeout(() => {
+        touchLastActivity();
+        throttleTimer = null;
+      }, 5000); // Throttle activity updates to once every 5 seconds
+    };
+
+    window.addEventListener("mousemove", handleActivity, { passive: true });
+    window.addEventListener("keydown", handleActivity, { passive: true });
+    window.addEventListener("click", handleActivity, { passive: true });
+    window.addEventListener("scroll", handleActivity, { passive: true });
+
+    return () => {
+      window.removeEventListener("mousemove", handleActivity);
+      window.removeEventListener("keydown", handleActivity);
+      window.removeEventListener("click", handleActivity);
+      window.removeEventListener("scroll", handleActivity);
+      if (throttleTimer) clearTimeout(throttleTimer);
+    };
+  }, [token]);
+
+  useEffect(() => {
+    if (!token) return;
+    const inactivityTimer = setInterval(() => {
+      const timeoutMs = getInactivityTimeoutMs();
+      if (timeoutMs <= 0) return;
+      const lastActivity = getLastActivity();
+      if (lastActivity > 0 && Date.now() - lastActivity > timeoutMs) {
+        logout({ redirect: false });
+      }
+    }, 30000);
+    return () => clearInterval(inactivityTimer);
+  }, [token, logout]);
+
+  // Persistent Keep-Alive Heartbeat: keep connection alive and prevent disconnection when computer is inactive
+  useEffect(() => {
+    if (!token) return;
+    const keepAliveTimer = setInterval(() => {
+      touchLastActivity();
+      api.get("/auth/me", BACKGROUND_GET_CONFIG).catch(() => {});
+    }, 90000); // Heartbeat every 90 seconds
+    return () => clearInterval(keepAliveTimer);
+  }, [token]);
+
+  useEffect(() => {
+    if (!("serviceWorker" in navigator)) return;
+    function onSwMessage(ev) {
+      try {
+        const t = String(ev?.data?.type || "");
+        if (t === "workflow_push") {
+          if (!window.__omniSocketConnected) {
+            setUnreadCount((n) => {
+              const next = (n || 0) + 1;
+              try {
+                if (typeof localStorage !== "undefined") {
+                  localStorage.setItem(
+                    "omni.unread_notification_count",
+                    String(next),
+                  );
+                }
+              } catch {}
+              return next;
+            });
+          }
+        }
+      } catch {}
+    }
+    navigator.serviceWorker.addEventListener("message", onSwMessage);
+    return () =>
+      navigator.serviceWorker.removeEventListener("message", onSwMessage);
+  }, []);
+
+  useEffect(() => {
+    const roles = Array.isArray(user?.roles)
+      ? user.roles
+      : user?.role
+        ? [user.role]
+        : [];
+    if (roles.length && !roles.includes(selectedRole)) {
+      setSelectedRole(roles[0]);
+    }
+  }, [user?.roles, user?.role, selectedRole]);
+
+  useEffect(() => {
+    let mounted = true;
+    async function loadUserBranches() {
+      try {
+        const res = await api.get("/auth/user-branches", BACKGROUND_GET_CONFIG);
+        const items = Array.isArray(res.data?.items) ? res.data.items : [];
+        if (mounted) {
+          setBranchOptions(items);
+          if (!selectedBranchId && !scope?.branchId && items.length > 0) {
+            setSelectedBranchId(Number(items[0].id));
+          }
+        }
+      } catch (err) {
+        console.error("Failed to load branches:", err);
+        setBranchOptions([]);
+      }
+    }
+    const cancelLoad = scheduleDeferredTask(loadUserBranches, 250);
+    return () => {
+      mounted = false;
+      cancelLoad();
+    };
+  }, [scope?.branchId]);
+  useEffect(() => {
+    let mounted = true;
+    async function loadCompanies() {
+      try {
+        const res = await api.get("/admin/companies", BACKGROUND_GET_CONFIG);
+        const items = Array.isArray(res.data?.items) ? res.data.items : [];
+        if (mounted) setCompanies(items);
+      } catch {
+        if (mounted) setCompanies([]);
+      }
+    }
+    const cancelLoad = scheduleDeferredTask(loadCompanies, 300);
+    return () => {
+      mounted = false;
+      cancelLoad();
+    };
+  }, []);
+  const currentBranchName = useMemo(() => {
+    const targetId = Number(scope?.branchId ?? selectedBranchId);
+    let found = null;
+    if (targetId) {
+      found = branchOptions.find((b) => Number(b.id) === targetId);
+    }
+    if (!found) {
+      found =
+        branchOptions.find((b) => b.name === profile.branchName) ||
+        (branchOptions.length ? branchOptions[0] : null);
+    }
+    if (found) {
+      const comp = found.company_name || `Company #${found.company_id}`;
+      return `${found.name} (${comp})`;
+    }
+    return profile.branchName;
+  }, [branchOptions, scope?.branchId, selectedBranchId, profile.branchName]);
+  const currentCompanyName = useMemo(() => {
+    const found = branchOptions.find(
+      (b) => Number(b.id) === Number(scope?.branchId),
+    );
+    if (found) {
+      return found.company_name || `Company #${found.company_id}`;
+    }
+    if (branchOptions.length === 1) {
+      const b = branchOptions[0];
+      return b.company_name || `Company #${b.company_id}`;
+    }
+    const mapped = companies.find(
+      (c) => Number(c.id) === Number(scope?.companyId),
+    );
+    if (mapped) return mapped.name;
+    return user?.companyName || `Company #${scope?.companyId ?? "-"}`;
+  }, [
+    branchOptions,
+    scope?.branchId,
+    user?.companyName,
+    scope?.companyId,
+    companies,
+  ]);
+  useEffect(() => {
+    const hasMultipleRoles =
+      (Array.isArray(dbRoles) && dbRoles.length > 1) ||
+      (Array.isArray(roleOptions) && roleOptions.length > 1);
+    const hasMultipleBranches = Array.isArray(branchOptions)
+      ? branchOptions.length > 1
+      : false;
+    if (hasMultipleRoles && hasMultipleBranches) {
+      setContextModalOpen(true);
+    }
+  }, [dbRoles, roleOptions, branchOptions]);
+
+  const isRootPage = useMemo(() => {
+    const path = location.pathname.replace(/\/+$/, "") || "/";
+    if (path === "/" || path === "/dashboard") return true;
+    return modules.some((m) => m.path === path);
+  }, [location.pathname]);
+
+  useEffect(() => {
+    function onDocClick(e) {
+      if (!profileRef.current) return;
+      if (!profileRef.current.contains(e.target)) setProfileOpen(false);
+    }
+
+    document.addEventListener("mousedown", onDocClick);
+    return () => document.removeEventListener("mousedown", onDocClick);
+  }, []);
+
+  useEffect(() => {
+    // Proactively prefetch page-level permissions on route change
+    try {
+      if (ensurePagePerms && typeof location?.pathname === "string") {
+        const path = location.pathname || "/";
+        const cancelPrefetch = scheduleDeferredTask(
+          () => ensurePagePerms(path),
+          300,
+        );
+        return () => cancelPrefetch();
+      }
+    } catch {}
+  }, [location.pathname, ensurePagePerms]);
+
+  useEffect(() => {
+    let raf = 0;
+    const labels = {
+      create: ["+", "new", "create", "generate", "add"],
+      delete: ["delete", "deactivate", "remove"],
+      edit: ["edit", "update"],
+      view: ["view", "open", "details", "preview"],
+    };
+    const norm = (s) =>
+      String(s || "")
+        .toLowerCase()
+        .replace(/\s+/g, " ")
+        .trim();
+    const matches = (t, group) => {
+      if (!t) return false;
+      if (group.includes("+") && t.includes("+")) return true;
+      for (const w of group) {
+        if (w === "+") continue;
+        const re = new RegExp(
+          `\\b${w.replace(/[.*+?^${}()|[\\]\\\\]/g, "\\$&")}\\b`,
+          "i",
+        );
+        if (re.test(t)) return true;
+      }
+      return false;
+    };
+    const resolveFeatureKey = () => {
+      const path = (window.location && window.location.pathname) || "/";
+      const parts = path.split("/").filter(Boolean);
+      if (parts.length >= 2) return `${parts[0]}:${parts[1]}`;
+      return null;
+    };
+    const resolveBasePath = () => {
+      const path = (window.location && window.location.pathname) || "/";
+      try {
+        return basePathFrom(path);
+      } catch {
+        const parts = path.split("/").filter(Boolean);
+        if (parts.length >= 2) return `/${parts[0]}/${parts[1]}`;
+        if (parts.length === 1) return `/${parts[0]}`;
+        return "/";
+      }
+    };
+    const apply = () => {
+      const fk = resolveFeatureKey();
+      const go = globalOverrides || {
+        view: false,
+        create: false,
+        edit: false,
+        delete: false,
+      };
+      const base = resolveBasePath();
+      const pageAllow = {
+        view: canPerformPageAction ? canPerformPageAction(base, "view") : null,
+        create: canPerformPageAction
+          ? canPerformPageAction(base, "create")
+          : null,
+        edit: canPerformPageAction ? canPerformPageAction(base, "edit") : null,
+        delete: canPerformPageAction
+          ? canPerformPageAction(base, "delete")
+          : null,
+      };
+      if (
+        (pageAllow.view === null ||
+          pageAllow.create === null ||
+          pageAllow.edit === null ||
+          pageAllow.delete === null) &&
+        ensurePagePerms
+      ) {
+        try {
+          ensurePagePerms(base);
+        } catch {}
+      }
+      const allow = {
+        view:
+          pageAllow.view !== null
+            ? pageAllow.view
+            : fk
+              ? canPerformAction(fk, "view")
+              : true,
+        create:
+          pageAllow.create !== null
+            ? pageAllow.create
+            : fk
+              ? canPerformAction(fk, "create")
+              : true,
+        edit:
+          pageAllow.edit !== null
+            ? pageAllow.edit
+            : fk
+              ? canPerformAction(fk, "edit")
+              : true,
+        delete:
+          pageAllow.delete !== null
+            ? pageAllow.delete
+            : fk
+              ? canPerformAction(fk, "delete")
+              : true,
+      };
+      const nodes = Array.from(
+        document.querySelectorAll(
+          'button, a, [role="button"], input[type="button"], input[type="submit"]',
+        ),
+      );
+      const attrNames = [
+        "aria-label",
+        "title",
+        "data-label",
+        "data-title",
+        "data-tooltip",
+        "name",
+        "alt",
+        "value",
+      ];
+      const extractTitle = (el) => {
+        for (const n of attrNames) {
+          const v = el.getAttribute && el.getAttribute(n);
+          if (v && String(v).trim()) return String(v);
+        }
+        // Try dataset fallbacks
+        try {
+          const ds = el.dataset || {};
+          for (const k of Object.keys(ds || {})) {
+            const v = ds[k];
+            if (v && String(v).trim()) return String(v);
+          }
+        } catch {}
+        // Fall back to text content
+        return el.textContent || "";
+      };
+      for (const el of nodes) {
+        try {
+          if (
+            (el.getAttribute &&
+              (el.getAttribute("data-rbac-exempt") === "" ||
+                el.getAttribute("data-rbac-exempt") === "true")) ||
+            (el.closest &&
+              (el.closest("[data-rbac-exempt='true']") ||
+                el.closest("[data-rbac-exempt]") ||
+                el.closest("header") ||
+                el.closest("aside") ||
+                el.closest("nav") ||
+                el.closest(".app-header") ||
+                el.closest(".app-sidebar") ||
+                el.closest("form") ||
+                el.closest(".form-section") ||
+                el.closest("[data-form]")))
+          ) {
+            continue;
+          }
+        } catch {}
+        const titleRaw = extractTitle(el);
+        const t = norm(titleRaw);
+        let action = null;
+        // Prefer explicit data-action or similar hints
+        try {
+          const ds = el.dataset || {};
+          const da = String(ds.action || ds.permission || ds.permAction || "")
+            .toLowerCase()
+            .trim();
+          if (
+            da === "view" ||
+            da === "create" ||
+            da === "edit" ||
+            da === "delete"
+          ) {
+            action = da;
+          }
+        } catch {}
+        if (matches(t, labels.create)) {
+          action = "create";
+        } else if (matches(t, labels.delete)) {
+          action = "delete";
+        } else if (matches(t, labels.edit)) {
+          action = "edit";
+        } else if (matches(t, labels.view)) {
+          action = "view";
+        }
+        if (!action) continue;
+        const allowed = allow[action];
+        if (allowed) {
+          el.hidden = false;
+          el.style.display = "";
+          el.style.pointerEvents = "";
+          el.style.opacity = "";
+          el.setAttribute("aria-disabled", "false");
+          if ("disabled" in el) el.disabled = false;
+        } else {
+          el.hidden = true;
+          el.style.pointerEvents = "none";
+          el.style.opacity = "0.6";
+          el.setAttribute("aria-disabled", "true");
+          if ("disabled" in el) el.disabled = true;
+        }
+      }
+    };
+    const schedule = () => {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(apply);
+    };
+    const mo = new MutationObserver(() => schedule());
+    mo.observe(document.body, { childList: true, subtree: true });
+    schedule();
+    const onRbac = () => schedule();
+    const onStorage = (e) => {
+      try {
+        const k = String(e?.key || "");
+        if (
+          k === "rbac_allow_all_view" ||
+          k === "rbac_allow_all_create" ||
+          k === "rbac_allow_all_edit" ||
+          k === "rbac_allow_all_delete"
+        ) {
+          schedule();
+        }
+      } catch {
+        schedule();
+      }
+    };
+    window.addEventListener("rbac:changed", onRbac);
+    window.addEventListener("rbac:updated", onRbac);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      cancelAnimationFrame(raf);
+      mo.disconnect();
+      window.removeEventListener("rbac:changed", onRbac);
+      window.removeEventListener("rbac:updated", onRbac);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, [location.pathname, canPerformAction, globalOverrides]);
+
+  // Track page visits for auto-generating frequently visited pages in Favorites section
+  useEffect(() => {
+    if (location.pathname) {
+      const meta = resolvePageMetadata(location.pathname);
+      recordPageVisit(user?.id, {
+        path: location.pathname,
+        title: meta.title,
+        module: meta.module,
+        iconKey: meta.iconKey,
+      });
+    }
+  }, [location.pathname, user?.id]);
+
+  return (
+    <div className="min-h-screen text-slate-900 dark:text-slate-100 flex flex-col bg-slate-50 dark:bg-slate-900">
+      {/* Floating Social Feed Notification - Always Visible */}
+      <SocialFeedNotification />
+
+      <header
+        data-rbac-exempt="true"
+        className="h-14 flex justify-between items-center px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md shadow-apple-xs z-50 sticky top-0"
+      >
+        <div className="flex items-center gap-3 flex-nowrap">
+          <button
+            type="button"
+            aria-label="Toggle navigation menu"
+            data-rbac-exempt="true"
+            onClick={() => setSidebarOpen((v) => !v)}
+            className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors active:scale-95"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          <Link
+            to="/"
+            className="inline-flex items-center"
+            aria-label="Go to Home"
+          >
+            <img
+              src={theme === "dark" ? logoDark : logoLight}
+              alt="OmniSuite"
+              className="h-8 w-auto"
+            />
+          </Link>
+        </div>
+        <div className="flex items-center gap-3 flex-nowrap">
+          {/* <div className="badge bg-brand-100 dark:bg-brand-900/50 text-brand-800 dark:text-brand-200 border border-brand-300 dark:border-brand-700">
+            Role-based + Branch-based
+          </div> */}
+          <OmniSuiteFavoriteButton />
+          <FloatingInstallButton />
+          <ThemeToggle />
+          <Link
+            to="/notifications"
+            className="relative inline-flex items-center justify-center w-10 h-10 rounded-lg text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-800 transition-colors"
+            aria-label="Notifications"
+            title="Notifications"
+          >
+            <Bell className="w-5 h-5" />
+            {unreadCount > 0 ? (
+              <span className="absolute -top-1 -right-1 min-w-[18px] h-5 px-1 rounded-full bg-red-600 text-white text-[10px] font-bold flex items-center justify-center">
+                {unreadCount > 99 ? "99+" : unreadCount}
+              </span>
+            ) : null}
+          </Link>
+
+          <div className="relative" ref={profileRef}>
+            <button
+              type="button"
+              onClick={() => setProfileOpen((v) => !v)}
+              className="inline-flex items-center gap-2.5 px-2.5 py-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors text-slate-700 dark:text-slate-200"
+              aria-label="User profile menu"
+            >
+              {/* User Avatar */}
+              <div className="w-7 h-7 rounded-lg overflow-hidden bg-brand-900/10 dark:bg-white/10 text-brand-900 dark:text-white flex items-center justify-center font-bold text-xs shrink-0 ring-1 ring-slate-200 dark:ring-slate-700">
+                {user?.profile_picture_url || user?.avatar_url ? (
+                  <img
+                    src={user?.profile_picture_url || user?.avatar_url}
+                    alt=""
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span>
+                    {(user?.full_name || profile.username || "U")
+                      .charAt(0)
+                      .toUpperCase()}
+                  </span>
+                )}
+              </div>
+
+              {/* Username */}
+              <span className="text-sm font-semibold truncate max-w-[120px] sm:max-w-[160px]">
+                {user?.full_name || profile.username}
+              </span>
+
+              {/* Dropdown Icon */}
+              <ChevronDown
+                className={`w-3.5 h-3.5 text-slate-400 dark:text-slate-500 transition-transform duration-200 ${
+                  profileOpen ? "rotate-180 text-brand-600 dark:text-brand-400" : ""
+                }`}
+              />
+            </button>
+
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-80 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-erp-lg overflow-hidden z-50">
+                <div className="p-4 border-b border-slate-200 dark:border-slate-700">
+                  <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                    {profile.username}
+                  </div>
+                </div>
+                <div className="p-4 space-y-3">
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="text-xs font-medium text-slate-600 dark:text-slate-400">
+                      Branch
+                    </div>
+                    <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
+                      {currentBranchName}
+                    </div>
+                  </div>
+                  <div className="pt-1">
+                    <button
+                      type="button"
+                      onClick={() => setContextModalOpen(true)}
+                      className="w-full text-sm font-semibold text-white px-4 py-2 rounded-lg bg-ticker-blue hover:opacity-90 transition-opacity"
+                      disabled={
+                        (dbRoles.length > 1 || roleOptions.length > 1) &&
+                        branchOptions.length > 1
+                      }
+                    >
+                      Switch Branch
+                    </button>
+                  </div>
+
+                  <div className="pt-3 border-t border-slate-200 dark:border-slate-700">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setProfileOpen(false);
+                        setChangePwModalOpen(true);
+                        setPwCurrent("");
+                        setPwNew("");
+                        setPwConfirm("");
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-semibold text-white bg-ticker-green hover:opacity-90 transition-opacity"
+                    >
+                      <svg
+                        className="w-4 h-4 flex-shrink-0"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                        />
+                      </svg>
+                      <span className="flex-1 text-left">Change Password</span>
+                      <svg
+                        className="w-4 h-4"
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 5l7 7-7 7"
+                        />
+                      </svg>
+                    </button>
+                  </div>
+                  <div className="flex justify-end">
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        setProfileOpen(false);
+                        await logout({ redirect: true });
+                      }}
+                      className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg font-medium text-sm transition-colors shadow-xs border border-red-200 hover:bg-red-50 dark:hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-400"
+                      style={{ backgroundColor: "#ffffff", color: "#dc2626" }}
+                    >
+                      <svg
+                        className="w-4 h-4"
+                        style={{ color: "#dc2626" }}
+                        fill="none"
+                        stroke="currentColor"
+                        viewBox="0 0 24 24"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"
+                        />
+                      </svg>
+                      Logout
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </header>
+      {savedToast && (
+        <div className="px-6 py-2 bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 border-b border-green-300 dark:border-green-800 text-sm">
+          Saved Offline
+        </div>
+      )}
+      {!online && (
+        <div className="px-6 py-2 bg-amber-50 dark:bg-amber-950/70 text-amber-900 dark:text-amber-200 border-b border-amber-200 dark:border-amber-800 text-sm flex items-center justify-between">
+          <span>
+            Reconnecting to network. Your changes are saved and will sync
+            automatically.
+          </span>
+        </div>
+      )}
+      {queueOpen && (
+        <div className="px-6 py-3 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-950">
+          <div className="text-sm">
+            Pending {pending} • Failed {failed} • Completed {completed}
+          </div>
+          <div className="mt-3">
+            <div className="grid grid-cols-1 gap-2">
+              {items.map((it) => (
+                <div
+                  key={it.id}
+                  className="flex items-center justify-between px-3 py-2 rounded border border-slate-200 dark:border-slate-800"
+                >
+                  <div className="text-xs">
+                    <span className="font-semibold">
+                      {it.method.toUpperCase()}
+                    </span>{" "}
+                    <span className="text-slate-500">{it.url}</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={
+                        it.status === "pending"
+                          ? "badge bg-yellow-100 text-yellow-800 border-yellow-300 dark:bg-yellow-900 dark:text-yellow-200 dark:border-yellow-800"
+                          : it.status === "failed"
+                            ? "badge bg-red-100 text-red-800 border-red-300 dark:bg-red-900 dark:text-red-200 dark:border-red-800"
+                            : "badge bg-green-100 text-green-800 border-green-300 dark:bg-green-900 dark:text-green-200 dark:border-green-800"
+                      }
+                    >
+                      {it.status}
+                    </span>
+                  </div>
+                </div>
+              ))}
+              {items.length === 0 && (
+                <div className="text-xs text-slate-500">No queued items</div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+      {contextModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40">
+          <div className="w-full max-w-md card p-6 shadow-erp-lg bg-white dark:bg-slate-900">
+            <div className="flex justify-between items-center">
+              <h2 className="text-lg font-bold">Switch Role & Branch</h2>
+              <button
+                type="button"
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 transition-colors"
+                onClick={() => setContextModalOpen(false)}
+                aria-label="Close"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="mt-4 space-y-4">
+              {/* <div>
+                <label className="label">Company</label>
+                <div className="input">{currentCompanyName}</div>
+              </div> */}
+              <div>
+                <label className="label">Role</label>
+                {dbRoles.length > 1 || roleOptions.length > 1 ? (
+                  <select
+                    className="input w-full"
+                    value={selectedRole || ""}
+                    onChange={(e) => setSelectedRole(e.target.value)}
+                    disabled={dbRolesLoading}
+                  >
+                    {(dbRoles.length ? dbRoles : roleOptions).map((r) => {
+                      const name = typeof r === "string" ? r : r.name || r.code;
+                      const key = typeof r === "string" ? r : r.id;
+                      return (
+                        <option key={key} value={name}>
+                          {name}
+                        </option>
+                      );
+                    })}
+                  </select>
+                ) : (
+                  <div className="input">{selectedRole || profile.role}</div>
+                )}
+              </div>
+              <div>
+                <label className="label">Branch</label>
+                {branchOptions.length > 1 ? (
+                  <select
+                    className="input w-full"
+                    value={String(selectedBranchId || scope?.branchId || "")}
+                    onChange={(e) =>
+                      setSelectedBranchId(Number(e.target.value))
+                    }
+                  >
+                    {branchOptions.map((b) => (
+                      <option key={b.id} value={b.id}>
+                        {b.name} ({b.company_name || `Company #${b.company_id}`}
+                        )
+                      </option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="input">{currentBranchName}</div>
+                )}
+              </div>
+            </div>
+            <div className="mt-6 flex justify-end gap-2">
+              <button
+                type="button"
+                className="btn-secondary"
+                onClick={() => setContextModalOpen(false)}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="btn-primary"
+                disabled={
+                  ((dbRoles.length > 1 || roleOptions.length > 1) &&
+                    !selectedRole) ||
+                  (branchOptions.length > 1 && !selectedBranchId)
+                }
+                onClick={() => {
+                  const chosen = branchOptions.find(
+                    (b) =>
+                      Number(b.id) ===
+                      Number(selectedBranchId || scope?.branchId),
+                  );
+                  setScope((prev) => ({
+                    ...prev,
+                    companyId: chosen
+                      ? Number(chosen.company_id)
+                      : prev.companyId,
+                    branchId: chosen ? Number(chosen.id) : prev.branchId,
+                  }));
+                  setContextModalOpen(false);
+                  setProfileOpen(false);
+                  navigate("/");
+                }}
+              >
+                Apply
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {welcomeModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 sm:p-6">
+          <div className="w-full max-w-sm sm:max-w-md card p-5 sm:p-6 shadow-erp-lg bg-white dark:bg-slate-900 text-center max-h-[90vh] overflow-y-auto">
+            <div className="mx-auto w-12 sm:w-14 h-12 sm:h-14 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center mb-3 sm:mb-4">
+              <svg
+                className="w-6 sm:w-7 h-6 sm:h-7 text-blue-600 dark:text-blue-300"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+                />
+              </svg>
+            </div>
+            <h2 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-slate-100">
+              Welcome!
+            </h2>
+            <p className="mt-2 text-xs sm:text-sm text-slate-500 dark:text-slate-400">
+              To keep your account secure, please change your password before
+              proceeding
+            </p>
+            <button
+              type="button"
+              className="btn-primary w-full mt-5 sm:mt-6"
+              onClick={() => {
+                setWelcomeModalOpen(false);
+                setChangePwModalOpen(true);
+                setPwCurrent("");
+                setPwNew("");
+                setPwConfirm("");
+              }}
+            >
+              Change Password
+            </button>
+          </div>
+        </div>
+      )}
+      {changePwModalOpen && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/40 p-4 sm:p-6">
+          <div className="w-full max-w-sm sm:max-w-md card shadow-erp-2xl bg-white dark:bg-slate-900 flex flex-col max-h-[90vh]">
+            <div className="p-5 sm:p-6 overflow-y-auto flex-1 min-h-0">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-base sm:text-lg font-bold">
+                  Change Password
+                </h2>
+              </div>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Current Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPwCurrent ? "text" : "password"}
+                      placeholder="Enter current password"
+                      className="input w-full pr-10"
+                      value={pwCurrent}
+                      onChange={(e) => setPwCurrent(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwCurrent((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      tabIndex={-1}
+                    >
+                      {showPwCurrent ? (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    New Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPwNew ? "text" : "password"}
+                      placeholder="Enter new password"
+                      className="input w-full pr-10"
+                      value={pwNew}
+                      onChange={(e) => setPwNew(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwNew((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      tabIndex={-1}
+                    >
+                      {showPwNew ? (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-xs sm:text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                    Verify Password
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPwConfirm ? "text" : "password"}
+                      placeholder="Re-enter new password"
+                      className="input w-full pr-10"
+                      value={pwConfirm}
+                      onChange={(e) => setPwConfirm(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPwConfirm((v) => !v)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                      tabIndex={-1}
+                    >
+                      {showPwConfirm ? (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M13.875 18.825A10.05 10.05 0 0112 19c-4.478 0-8.268-2.943-9.543-7a9.97 9.97 0 011.563-3.029m5.858.908a3 3 0 114.243 4.243M9.878 9.878l4.242 4.242M9.88 9.88l-3.29-3.29m7.532 7.532l3.29 3.29M3 3l3.59 3.59m0 0A9.953 9.953 0 0112 5c4.478 0 8.268 2.943 9.543 7a10.025 10.025 0 01-4.132 5.411m0 0L21 21"
+                          />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-5 h-5"
+                          fill="none"
+                          stroke="currentColor"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                          />
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                          />
+                        </svg>
+                      )}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="p-5 sm:p-6 bg-slate-50 dark:bg-slate-800/50 border-t border-slate-200 dark:border-slate-700 shrink-0">
+              <button
+                type="button"
+                className="btn-primary w-full py-2.5 text-base shadow-md"
+                data-rbac-exempt="true"
+                disabled={pwChanging}
+                onClick={async () => {
+                  if (!pwCurrent || !pwNew || !pwConfirm) {
+                    toast.error("Fill in all password fields");
+                    return;
+                  }
+                  if (pwNew.length < 6) {
+                    toast.error("New password must be at least 6 characters");
+                    return;
+                  }
+                  if (pwNew !== pwConfirm) {
+                    toast.error("New password and confirmation do not match");
+                    return;
+                  }
+                  setPwChanging(true);
+                  try {
+                    await api.post("/auth/change-password", {
+                      currentPassword: pwCurrent,
+                      newPassword: pwNew,
+                      confirmNewPassword: pwConfirm,
+                    });
+                    toast.success("Password changed successfully");
+                    setPwCurrent("");
+                    setPwNew("");
+                    setPwConfirm("");
+                    setChangePwModalOpen(false);
+                    const stored = readStoredAuth();
+                    if (stored?.user) {
+                      stored.user.status = "Y";
+                      writeStoredAuth(stored);
+                    }
+                  } catch (err) {
+                    const msg =
+                      err?.response?.data?.message ||
+                      err?.message ||
+                      "Failed to change password";
+                    toast.error(msg);
+                  } finally {
+                    setPwChanging(false);
+                  }
+                }}
+              >
+                {pwChanging ? "Saving..." : "Update Password Now"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <div
+        className={
+          "flex-1 relative z-10 " +
+          (sidebarOpen ? "grid md:grid-cols-[280px_1fr]" : "grid grid-cols-1")
+        }
+      >
+        {sidebarOpen && (
+          <button
+            type="button"
+            aria-label="Close navigation menu"
+            data-rbac-exempt="true"
+            onClick={() => setSidebarOpen(false)}
+            className="fixed inset-0 z-50 bg-black/40 md:hidden transition-opacity duration-300 animate-in fade-in"
+          />
+        )}
+
+        <aside
+          data-rbac-exempt="true"
+          onTouchStart={handleSidebarTouchStart}
+          onTouchEnd={handleSidebarTouchEnd}
+          className={
+            "md:sticky md:top-[56px] md:h-[calc(100vh-56px)] border-b md:border-b-0 md:border-r border-slate-800 dark:border-slate-800 p-5 bg-brand-950 dark:bg-slate-950 shadow-lg overflow-y-auto no-scrollbar z-[60] transition-all duration-300 ease-in-out " +
+            (sidebarOpen
+              ? "fixed inset-y-0 left-0 w-[280px] top-[56px] translate-x-0 md:static md:translate-x-0"
+              : "fixed inset-y-0 left-0 w-[280px] top-[56px] -translate-x-full md:static md:translate-x-0 md:hidden")
+          }
+        >
+          <nav className="space-y-1 pb-6">
+            <NavLink
+              to="/"
+              end
+              onClick={() => {
+                if (window.innerWidth < 768) setSidebarOpen(false);
+              }}
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ` +
+                (isActive
+                  ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
+                  : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
+              }
+            >
+              <span
+                className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity"
+                aria-hidden="true"
+              >
+                <Home />
+              </span>
+              <span>Home</span>
+            </NavLink>
+            {isUserId1 ? (
+              // Default module names menu bar for User ID = 1 (System Super Admin)
+              modules
+                .filter((m) => {
+                  if (m.key === "system-configuration") {
+                    return Number(user?.id) === 1 || Number(user?.id) === 2;
+                  }
+                  // Use PermissionContext to check if module should appear in sidebar
+                  return canViewModule(m.key);
+                })
+                .map((m) => (
+                  <NavLink
+                    key={m.key}
+                    to={m.path}
+                    onClick={() => {
+                      if (window.innerWidth < 768) setSidebarOpen(false);
+                    }}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ` +
+                      (isActive
+                        ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
+                        : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
+                    }
+                  >
+                    <span
+                      className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity"
+                      aria-hidden="true"
+                    >
+                      {m.icon}
+                    </span>
+                    <span>{m.label}</span>
+                  </NavLink>
+                ))
+            ) : (
+              // Replaced with sections / sub-modules where pages are grouped in module homes
+              <div className="space-y-4 pt-1">
+                {MODULE_HOME_SECTIONS.filter((mod) => {
+                  if (mod.moduleKey === "system-configuration") {
+                    return Number(user?.id) === 1 || Number(user?.id) === 2;
+                  }
+                  return canViewModule(mod.moduleKey);
+                }).map((mod) => {
+                  const accessibleSections = (mod.sections || [])
+                    .map((sec) => {
+                      const visibleItems = (sec.items || []).filter((item) => {
+                        if (isSuper) return true;
+                        if (
+                          item.feature_key &&
+                          !canAccessFeatureKey(mod.moduleKey, item.feature_key)
+                        ) {
+                          return false;
+                        }
+                        if (item.path && canAccessPath && !canAccessPath(item.path)) {
+                          return false;
+                        }
+                        return true;
+                      });
+                      return { ...sec, visibleItems };
+                    })
+                    .filter(
+                      (sec) =>
+                        sec.visibleItems.length > 0 || (sec.items || []).length === 0
+                    );
+
+                  if (accessibleSections.length === 0) return null;
+
+                  return (
+                    <div key={mod.moduleKey} className="space-y-1">
+                      {/* Module group context heading */}
+                      <div className="px-3 pt-2.5 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400/80 dark:text-slate-500 border-t border-slate-800/60 first:border-t-0 flex items-center justify-between">
+                        <Link
+                          to={mod.modulePath}
+                          onClick={() => {
+                            if (window.innerWidth < 768) setSidebarOpen(false);
+                          }}
+                          className="hover:text-white transition-colors truncate"
+                          title={`Go to ${mod.moduleLabel} Home`}
+                        >
+                          {mod.moduleLabel}
+                        </Link>
+                      </div>
+
+                      {/* Sections replacing module names */}
+                      {accessibleSections.map((sec) => {
+                        const secKey = `${mod.moduleKey}-${sec.key}`;
+                        const sectionTargetUrl = `${mod.modulePath}?section=${encodeURIComponent(
+                          sec.title
+                        )}`;
+
+                        const isChildActive = sec.visibleItems.some(
+                          (item) =>
+                            item.path &&
+                            (location.pathname === item.path ||
+                              location.pathname.startsWith(`${item.path}/`))
+                        );
+
+                        const isSectionHomeActive = (() => {
+                          if (location.pathname === mod.modulePath) {
+                            const searchParams = new URLSearchParams(
+                              location.search || ""
+                            );
+                            const secParam = searchParams.get("section");
+                            if (secParam) {
+                              return (
+                                secParam.toLowerCase() ===
+                                  sec.title.toLowerCase() ||
+                                secParam.toLowerCase() === sec.key.toLowerCase()
+                              );
+                            }
+                          }
+                          return false;
+                        })();
+
+                        const isSectionActive =
+                          isChildActive || isSectionHomeActive;
+
+                        return (
+                          <Link
+                            key={secKey}
+                            to={sectionTargetUrl}
+                            onClick={() => {
+                              if (window.innerWidth < 768) setSidebarOpen(false);
+                            }}
+                            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ${
+                              isSectionActive
+                                ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
+                                : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent"
+                            }`}
+                            title={sec.title}
+                          >
+                            <span
+                              className="w-5 h-5 flex items-center justify-center shrink-0 text-base opacity-80 group-hover:opacity-100 transition-opacity"
+                              aria-hidden="true"
+                            >
+                              {sec.icon || "📁"}
+                            </span>
+                            <span className="truncate">{sec.title}</span>
+                          </Link>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </nav>
+        </aside>
+
+        <main
+          className={`flex-1 overflow-x-hidden min-w-0 relative min-h-[calc(100vh-56px)] pb-20 md:pb-6 ${
+            resolvedBg.isSolid
+              ? resolvedBg.isSolidDark
+                ? "bg-[#0b0f19]"
+                : "bg-white"
+              : "bg-slate-100 dark:bg-[#0b0f19]"
+          }`}
+        >
+          {/* Main Application Background Image Layer (strictly inside main application area) */}
+          {resolvedBg.isSolid ? (
+            <div
+              aria-hidden="true"
+              className="fixed top-[56px] bottom-0 right-0 pointer-events-none z-0 transition-colors duration-300 ease-in-out"
+              style={{
+                left: sidebarOpen ? "280px" : "0px",
+                backgroundColor: resolvedBg.color,
+              }}
+            />
+          ) : resolvedBg.url ? (
+            <div
+              aria-hidden="true"
+              className="fixed top-[56px] bottom-0 right-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat transition-all duration-300 ease-in-out"
+              style={{
+                left: sidebarOpen ? "280px" : "0px",
+                backgroundImage: `url(${resolvedBg.url})`,
+                opacity: Math.max(
+                  0,
+                  Math.min(1, Number(resolvedBg.opacity ?? 40) / 100),
+                ),
+                filter:
+                  [
+                    resolvedBg.blur ? `blur(${resolvedBg.blur}px)` : "",
+                    resolvedBg.isCustom && isDark
+                      ? "brightness(0.38) contrast(1.15)"
+                      : "",
+                  ]
+                    .filter(Boolean)
+                    .join(" ") || undefined,
+              }}
+            />
+          ) : null}
+
+          <div
+            ref={listPageContentRef}
+            className="relative z-10 w-full max-w-full 2xl:max-w-[1600px] mx-auto p-2 md:p-2 lg:p-3"
+          >
+            {pushPromptAllowed ? (
+              <div
+                className={`transition-all duration-700 ease-in-out overflow-hidden transform ${
+                  pushPromptRolledDown
+                    ? "max-h-60 opacity-100 translate-y-0 mb-3"
+                    : "max-h-0 opacity-0 -translate-y-4 mb-0 pointer-events-none"
+                }`}
+              >
+                <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-3.5 px-4 flex flex-col gap-3 shadow-smoky-card">
+                  <div className="flex items-start sm:items-center gap-2.5">
+                    <span className="text-xl shrink-0">🔔</span>
+                    <div className="text-sm font-semibold text-slate-800 dark:text-slate-100 leading-snug">
+                      Enable push notifications to receive real-time approval and message alerts.
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2 pl-0 sm:pl-7">
+                    <button
+                      type="button"
+                      className="btn btn-primary text-xs font-semibold px-3.5 py-1.5 rounded-xl shadow-smoky-card cursor-pointer whitespace-nowrap inline-flex items-center justify-center"
+                      onClick={enablePushNow}
+                    >
+                      <span className="whitespace-nowrap">Enable Push</span>
+                    </button>
+                    <button
+                      type="button"
+                      className="btn btn-secondary text-xs font-medium px-3.5 py-1.5 rounded-xl shadow-smoky-card cursor-pointer whitespace-nowrap inline-flex items-center justify-center"
+                      onClick={dismissPushPrompt}
+                    >
+                      <span className="whitespace-nowrap">Dismiss</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ) : null}
+            <React.Suspense fallback={<div>Loading...</div>}>
+              <AppRoutes user={user} />
+            </React.Suspense>
+          </div>
+        </main>
+      </div>
+      {location.pathname &&
+      location.pathname.startsWith("/inventory/stock-verification") ? (
+        <FloatingCreateButton
+          to="/inventory/stock-verification/new"
+          title="New Verification"
+        />
+      ) : null}
+      <PaymentPackageModal
+        isOpen={showPaymentModal}
+        onClose={() => setShowPaymentModal(false)}
+        companyId={user?.company_id || user?.companyIds?.[0]}
+      />
+      <FloatingChat />
+      <BanksAiFloating />
+
+      {/* Apple-style Mobile Bottom Navigation Tab Bar for Small & Medium screens (< lg / 1024px) */}
+      <nav
+        aria-label="Mobile Navigation"
+        data-rbac-exempt="true"
+        className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200/90 dark:border-slate-800 z-40 flex items-center px-2 shadow-apple-dock pb-[env(safe-area-inset-bottom)]"
+      >
+        <NavLink
+          to="/"
+          end
+          className={({ isActive }) =>
+            `flex flex-col items-center justify-center shrink-0 min-w-[54px] px-2 py-1 transition-all duration-150 active:scale-95 border-r border-slate-200/60 dark:border-slate-800/80 ${
+              isActive
+                ? "text-brand-900 dark:text-brand-300 font-semibold"
+                : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+            }`
+          }
+        >
+          <Home className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px] leading-tight">Home</span>
+        </NavLink>
+
+        {/* Horizontally Slideable/Scrollable Module Icons for Small & Medium devices */}
+        <div 
+          className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-none no-scrollbar px-1.5 py-1"
+          style={{
+            WebkitOverflowScrolling: "touch",
+            scrollbarWidth: "none",
+            msOverflowStyle: "none",
+          }}
+        >
+          {topMobileModules.map((m) => (
+            <NavLink
+              key={m.key}
+              to={m.path}
+              className={({ isActive }) =>
+                `flex flex-col items-center justify-center shrink-0 min-w-[56px] px-2 py-1 rounded-xl transition-all duration-150 active:scale-95 ${
+                  isActive
+                    ? "text-brand-900 dark:text-brand-300 font-semibold bg-brand-50/60 dark:bg-brand-950/50"
+                    : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                }`
+              }
+            >
+              <span
+                className="w-5 h-5 mb-0.5 flex items-center justify-center shrink-0 [&>svg]:w-5 [&>svg]:h-5"
+                aria-hidden="true"
+              >
+                {m.icon}
+              </span>
+              <span className="text-[11px] leading-tight truncate max-w-[68px] text-center">
+                {m.shortLabel || m.label}
+              </span>
+            </NavLink>
+          ))}
+        </div>
+
+        <button
+          type="button"
+          aria-label="Toggle all modules menu"
+          data-rbac-exempt="true"
+          onClick={() => setSidebarOpen((v) => !v)}
+          className={`flex flex-col items-center justify-center shrink-0 min-w-[54px] px-2 py-1 border-l border-slate-200/60 dark:border-slate-800/80 transition-all duration-150 active:scale-95 ${
+            sidebarOpen
+              ? "text-brand-900 dark:text-brand-300 font-semibold"
+              : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+          }`}
+        >
+          <Menu className="w-5 h-5 mb-0.5" />
+          <span className="text-[11px] leading-tight">Menu</span>
+        </button>
+      </nav>
+    </div>
+  );
+}

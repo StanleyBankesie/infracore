@@ -1,0 +1,1853 @@
+import React, { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { api } from "../../../api/client.js";
+import { toast } from "react-toastify";
+import { useAuth } from "../../../auth/AuthContext.jsx";
+import { Brain, Sparkles, CheckCircle, ShieldCheck, Clock, Save, ArrowLeft, Database, ExternalLink, RefreshCw, Key, Check, Copy, Eye, EyeOff, Server } from "lucide-react";
+import BranchDataSharingSection from "../../../components/BranchDataSharingSection.jsx";
+import ExecutiveOverviewIsolationSection from "../../../components/ExecutiveOverviewIsolationSection.jsx";
+import BiIsolationSection from "../../../components/BiIsolationSection.jsx";
+import PosDayControlSection from "../../../components/PosDayControlSection.jsx";
+import AppModeControlSection from "../../../components/AppModeControlSection.jsx";
+import AppBackgroundControlSection from "../../../components/AppBackgroundControlSection.jsx";
+import BiometricLocationSecuritySection from "../../../components/BiometricLocationSecuritySection.jsx";
+
+export default function GeneralSettingsPage() {
+  const navigate = useNavigate();
+  const { user } = useAuth();
+  const [cloud, setCloud] = useState({ cloud_name: "", api_key: "", api_secret: "", folder: "", has_secret: false });
+  const [cloudLoading, setCloudLoading] = useState(false);
+  const [cloudSaving, setCloudSaving] = useState(false);
+  const [emailTestTo, setEmailTestTo] = useState("");
+  const [emailTesting, setEmailTesting] = useState(false);
+  const [loginBackgroundUrl, setLoginBackgroundUrl] = useState("");
+  const [loginBackgroundVersion, setLoginBackgroundVersion] = useState("");
+  const [loginBackgroundSaving, setLoginBackgroundSaving] = useState(false);
+  const [loginBackgroundOpacity, setLoginBackgroundOpacity] = useState(20);
+  const [loginBackgroundOpacitySaving, setLoginBackgroundOpacitySaving] = useState(false);
+  const [loginHeroImageUrl, setLoginHeroImageUrl] = useState("");
+  const [loginHeroImageVersion, setLoginHeroImageVersion] = useState("");
+  const [loginHeroImageSaving, setLoginHeroImageSaving] = useState(false);
+  const [inactivityTimeout, setInactivityTimeout] = useState(() => {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const val = localStorage.getItem("omnisuite.inactivityTimeout");
+        if (val !== null) return val;
+      }
+    } catch {}
+    return "60";
+  });
+
+  const [envVars, setEnvVars] = useState({
+    ARKESEL_API_KEY: "",
+    ARKESEL_SENDER_ID: "",
+    GREEN_API_ID_INSTANCE: "",
+    GREEN_API_TOKEN_INSTANCE: "",
+    SMTP_HOST: "",
+    SMTP_PORT: "",
+    SMTP_USER: "",
+    SMTP_PASS: "",
+    SMTP_FROM: "",
+    SMTP_SECURE: "false",
+    TEMPLATE_SALES_ORDER: "",
+    TEMPLATE_PURCHASE_ORDER: "",
+    TEMPLATE_SERVICE_ORDER: "",
+    TEMPLATE_MAINTENANCE_JOB: "",
+    TEMPLATE_PAYMENT_VOUCHER: "",
+  });
+  const [announcements, setAnnouncements] = useState("");
+  const [announcementsSaving, setAnnouncementsSaving] = useState(false);
+  const [envLoading, setEnvLoading] = useState(false);
+  const [envSaving, setEnvSaving] = useState(false);
+  
+  const [googleMapsApiKey, setGoogleMapsApiKey] = useState("");
+  const [googleMapsLoading, setGoogleMapsLoading] = useState(false);
+  const [googleMapsSaving, setGoogleMapsSaving] = useState(false);
+
+  // AI Configuration State (Groq & OpenRouter / 0x Alpha)
+  const [groqKey, setGroqKey] = useState("");
+  const [openRouterKey, setOpenRouterKey] = useState("");
+  const [aiStatus, setAiStatus] = useState(null);
+  const [groqSaving, setGroqSaving] = useState(false);
+  const [groqTesting, setGroqTesting] = useState(false);
+  const [openRouterSaving, setOpenRouterSaving] = useState(false);
+  const [openRouterTesting, setOpenRouterTesting] = useState(false);
+  const [selectedAiModel, setSelectedAiModel] = useState("openai/gpt-oss-120b");
+  const [banksAiEnabled, setBanksAiEnabled] = useState(() => {
+    try {
+      const val = localStorage.getItem("omnisuite.banks_ai_enabled");
+      if (val !== null) return val === "true";
+    } catch {}
+    return true;
+  });
+
+  // Banks AI Retention & History Policy State
+  const [retentionDays, setRetentionDays] = useState(30);
+  const [retentionSaving, setRetentionSaving] = useState(false);
+  const [chatHistoryStats, setChatHistoryStats] = useState(null);
+
+  // Neon PostgreSQL Cloud Database State
+  const [neonSettings, setNeonSettings] = useState({
+    apiKey: "",
+    maskedApiKey: "",
+    hasApiKey: false,
+    projectId: "soft-firefly-41205475",
+    orgId: "org-floral-violet-64520038",
+    branch: "production",
+    neonBranchId: "",
+    databaseUrl: "",
+    maskedDatabaseUrl: "",
+    hasDatabaseUrl: false,
+    databaseUrlUnpooled: "",
+    maskedDatabaseUrlUnpooled: "",
+    hasDatabaseUrlUnpooled: false,
+    consoleUrl: "",
+  });
+  const [neonLoading, setNeonLoading] = useState(false);
+  const [neonSaving, setNeonSaving] = useState(false);
+  const [neonTesting, setNeonTesting] = useState(false);
+  const [neonPulling, setNeonPulling] = useState(false);
+  const [neonTestResult, setNeonTestResult] = useState(null);
+  const [showDatabaseUrl, setShowDatabaseUrl] = useState(false);
+  const [showDatabaseUrlUnpooled, setShowDatabaseUrlUnpooled] = useState(false);
+  const [copiedField, setCopiedField] = useState(null);
+
+  const loadNeonSettings = async () => {
+    try {
+      setNeonLoading(true);
+      const res = await api.get("/admin/settings/neon");
+      if (res?.data?.success) {
+        setNeonSettings((prev) => ({
+          ...prev,
+          ...res.data,
+          apiKey: res.data.maskedApiKey || "",
+          databaseUrl: res.data.maskedDatabaseUrl || "",
+          databaseUrlUnpooled: res.data.maskedDatabaseUrlUnpooled || "",
+        }));
+      }
+    } catch (err) {
+      console.warn("Could not load Neon settings:", err?.response?.data?.message || err.message);
+    } finally {
+      setNeonLoading(false);
+    }
+  };
+
+  const isMaskedSecret = (val) => {
+    if (!val) return false;
+    const s = String(val);
+    return (
+      s.includes("••••") ||
+      s.includes("********") ||
+      s.includes("%E2%80%A2") ||
+      /:\*{3,}@/.test(s) ||
+      /:•{3,}@/.test(s)
+    );
+  };
+
+  const saveNeonSettings = async () => {
+    try {
+      setNeonSaving(true);
+      setNeonTestResult(null);
+      const payload = {
+        apiKey: isMaskedSecret(neonSettings.apiKey) ? undefined : neonSettings.apiKey.trim(),
+        projectId: neonSettings.projectId.trim(),
+        orgId: neonSettings.orgId.trim(),
+        branch: neonSettings.branch.trim(),
+        databaseUrl: isMaskedSecret(neonSettings.databaseUrl) ? undefined : neonSettings.databaseUrl.trim(),
+        databaseUrlUnpooled: isMaskedSecret(neonSettings.databaseUrlUnpooled) ? undefined : neonSettings.databaseUrlUnpooled.trim(),
+      };
+      const res = await api.post("/admin/settings/neon", payload);
+      toast.success(res?.data?.message || "Neon settings saved successfully");
+      await loadNeonSettings();
+
+      // Automatically test connection after saving
+      await testNeonConnection();
+    } catch (err) {
+      const errorMsg =
+        err?.response?.data?.message ||
+        (err?.response?.data?.error === "NOT_FOUND"
+          ? "Server endpoint not found. Please ensure the backend server has reloaded."
+          : err?.response?.data?.error) ||
+        err.message ||
+        "Failed to save Neon settings";
+      toast.error(errorMsg);
+      setNeonTestResult({
+        success: false,
+        error: errorMsg,
+      });
+    } finally {
+      setNeonSaving(false);
+    }
+  };
+
+  const testNeonConnection = async () => {
+    try {
+      setNeonTesting(true);
+      setNeonTestResult(null);
+      const res = await api.post("/admin/settings/neon/test", {
+        databaseUrl: isMaskedSecret(neonSettings.databaseUrl) ? undefined : neonSettings.databaseUrl.trim(),
+      });
+      if (res?.data?.success) {
+        setNeonTestResult({
+          success: true,
+          message: res.data.message,
+          database: res.data.database,
+          user: res.data.user,
+          version: res.data.version,
+          latencyMs: res.data.latencyMs,
+        });
+        toast.success(`Connected to Neon (${res.data.database}) in ${res.data.latencyMs}ms!`);
+      }
+    } catch (err) {
+      const rawError = err?.response?.data?.error || err?.response?.data?.message || err.message;
+      const errorMsg =
+        rawError === "NOT_FOUND"
+          ? "Backend route not found. Please ensure the backend server is reloaded."
+          : rawError || "Failed to connect to Neon database";
+      setNeonTestResult({
+        success: false,
+        error: errorMsg,
+      });
+      toast.error(errorMsg);
+    } finally {
+      setNeonTesting(false);
+    }
+  };
+
+  const pullNeonCredentials = async () => {
+    try {
+      setNeonPulling(true);
+      const res = await api.post("/admin/settings/neon/pull");
+      toast.success(res?.data?.message || "Successfully pulled latest credentials from Neon CLI");
+      await loadNeonSettings();
+    } catch (err) {
+      toast.error(err?.response?.data?.error || err.message || "Failed to pull from Neon CLI");
+    } finally {
+      setNeonPulling(false);
+    }
+  };
+
+  const copyToClipboard = (text, fieldName) => {
+    if (!text) return;
+    navigator.clipboard?.writeText(text);
+    setCopiedField(fieldName);
+    toast.info(`Copied ${fieldName} to clipboard`);
+    setTimeout(() => setCopiedField(null), 2500);
+  };
+
+  async function toggleBanksAi(checked) {
+    setBanksAiEnabled(checked);
+    try {
+      localStorage.setItem("omnisuite.banks_ai_enabled", String(checked));
+      window.dispatchEvent(
+        new CustomEvent("omni.banks_ai.visibility", {
+          detail: { enabled: checked },
+        }),
+      );
+      await api.post("/ai/toggle-visibility", { enabled: checked });
+      toast.success(
+        checked
+          ? "Ask Banks AI floating assistant is now enabled and visible."
+          : "Ask Banks AI floating assistant is now disabled and hidden.",
+      );
+    } catch (e) {
+      setBanksAiEnabled(!checked);
+      localStorage.setItem("omnisuite.banks_ai_enabled", String(!checked));
+      window.dispatchEvent(
+        new CustomEvent("omni.banks_ai.visibility", {
+          detail: { enabled: !checked },
+        }),
+      );
+      toast.error("Failed to update Ask Banks visibility");
+    }
+  }
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setCloudLoading(true);
+        const res = await api.get("/admin/settings/cloudinary");
+        const d = res?.data?.data || {};
+        if (!mounted) return;
+        setCloud(p => ({ ...p, cloud_name: d.cloud_name || "", api_key: d.api_key || "", folder: d.folder || "", has_secret: !!d.has_secret }));
+      } catch {} finally { if (mounted) setCloudLoading(false); }
+    })();
+
+    (async () => {
+      try {
+        setEnvLoading(true);
+        const res = await api.get("/admin/settings/env");
+        if (!mounted) return;
+        setEnvVars({
+          ARKESEL_API_KEY: res.data.ARKESEL_API_KEY || "",
+          ARKESEL_SENDER_ID: res.data.ARKESEL_SENDER_ID || "",
+          GREEN_API_ID_INSTANCE: res.data.GREEN_API_ID_INSTANCE || "",
+          GREEN_API_TOKEN_INSTANCE: res.data.GREEN_API_TOKEN_INSTANCE || "",
+          SMTP_HOST: res.data.SMTP_HOST || "",
+          SMTP_PORT: res.data.SMTP_PORT || "",
+          SMTP_USER: res.data.SMTP_USER || "",
+          SMTP_PASS: res.data.SMTP_PASS || "",
+          SMTP_FROM: res.data.SMTP_FROM || "",
+          SMTP_SECURE: res.data.SMTP_SECURE || "false",
+          TEMPLATE_SALES_ORDER: res.data.TEMPLATE_SALES_ORDER || "",
+          TEMPLATE_PURCHASE_ORDER: res.data.TEMPLATE_PURCHASE_ORDER || "",
+          TEMPLATE_SERVICE_ORDER: res.data.TEMPLATE_SERVICE_ORDER || "",
+          TEMPLATE_MAINTENANCE_JOB: res.data.TEMPLATE_MAINTENANCE_JOB || "",
+          TEMPLATE_PAYMENT_VOUCHER: res.data.TEMPLATE_PAYMENT_VOUCHER || "",
+        });
+      } catch (err) {
+        console.warn("Could not load environment variables:", err?.response?.data?.message || err.message);
+      } finally {
+        if (mounted) setEnvLoading(false);
+      }
+    })();
+
+    (async () => {
+      try {
+        setGoogleMapsLoading(true);
+        const res = await api.get("/admin/settings/google-maps");
+        if (mounted && res?.data?.data?.api_key) {
+          setGoogleMapsApiKey(res.data.data.api_key);
+        }
+      } catch {} finally { if (mounted) setGoogleMapsLoading(false); }
+    })();
+
+    (async () => {
+      try {
+        const res = await api.get("/ai/status");
+        if (mounted && res.data) {
+          setAiStatus(res.data);
+          if (res.data.defaultModel) setSelectedAiModel(res.data.defaultModel);
+          if (res.data.enabled !== undefined) {
+            setBanksAiEnabled(Boolean(res.data.enabled));
+            try {
+              localStorage.setItem("omnisuite.banks_ai_enabled", String(res.data.enabled));
+            } catch {}
+          }
+        }
+      } catch {}
+    })();
+
+    (async () => {
+      try {
+        const res = await api.get("/ai/retention-settings");
+        if (mounted && res.data) {
+          if (res.data.retentionDays !== undefined) {
+            setRetentionDays(res.data.retentionDays);
+          }
+          if (res.data.stats) {
+            setChatHistoryStats(res.data.stats);
+          }
+        }
+      } catch {}
+    })();
+
+    (async () => {
+      try {
+        const res = await api.get("/admin/settings/announcements");
+        if (mounted && res?.data?.announcements !== undefined) {
+          setAnnouncements(res.data.announcements);
+        }
+      } catch {}
+    })();
+
+    loadNeonSettings();
+
+    return () => { mounted = false; };
+  }, []);
+
+  async function saveGroqSettings() {
+    if (!groqKey.trim()) return;
+    try {
+      setGroqSaving(true);
+      const res = await api.post("/ai/save-key", { apiKey: groqKey.trim() });
+      toast.success(res.data?.message || "Groq AI Key verified and saved successfully!");
+      setGroqKey("");
+      const statusRes = await api.get("/ai/status");
+      setAiStatus(statusRes.data);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to verify Groq key");
+    } finally {
+      setGroqSaving(false);
+    }
+  }
+
+  async function saveOpenRouterSettings() {
+    if (!openRouterKey.trim()) return;
+    try {
+      setOpenRouterSaving(true);
+      const res = await api.post("/ai/save-openrouter-key", { apiKey: openRouterKey.trim() });
+      toast.success(res.data?.message || "OpenRouter (0x Alpha) Key verified and saved successfully!");
+      setOpenRouterKey("");
+      const statusRes = await api.get("/ai/status");
+      setAiStatus(statusRes.data);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to verify OpenRouter key");
+    } finally {
+      setOpenRouterSaving(false);
+    }
+  }
+
+  async function testGroqConnection() {
+    try {
+      setGroqTesting(true);
+      const res = await api.get("/ai/status");
+      if (res.data?.groq?.connected) {
+        toast.success("Groq Cloud AI Engine is connected and responding!");
+      } else {
+        toast.warn(res.data?.groq?.statusMessage || "Groq API key is not configured.");
+      }
+      setAiStatus(res.data);
+    } catch (e) {
+      toast.error("Failed to test connection to Groq API.");
+    } finally {
+      setGroqTesting(false);
+    }
+  }
+
+  async function testOpenRouterConnection() {
+    try {
+      setOpenRouterTesting(true);
+      const res = await api.get("/ai/status");
+      if (res.data?.openRouter?.connected) {
+        toast.success("OpenRouter (0x Alpha) AI Engine is connected and responding!");
+      } else {
+        toast.warn(res.data?.openRouter?.statusMessage || "OpenRouter API key is not configured.");
+      }
+      setAiStatus(res.data);
+    } catch (e) {
+      toast.error("Failed to test connection to OpenRouter API.");
+    } finally {
+      setOpenRouterTesting(false);
+    }
+  }
+
+  async function saveRetentionSettings() {
+    const days = parseInt(retentionDays, 10);
+    if (isNaN(days) || days < 0) {
+      toast.error("Please enter a valid number of days (0 or greater).");
+      return;
+    }
+    try {
+      setRetentionSaving(true);
+      const res = await api.post("/ai/retention-settings", { retentionDays: days });
+      toast.success(res.data?.message || `Chat retention set to ${days === 0 ? "Indefinite" : `${days} days`}.`);
+      if (res.data?.stats) {
+        setChatHistoryStats(res.data.stats);
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to save retention policy.");
+    } finally {
+      setRetentionSaving(false);
+    }
+  }
+
+  async function loadLoginBackgroundMeta() {
+    try {
+      const res = await api.get("/admin/settings/login-bg-info");
+      if (res.data) {
+        const hasBackground = !!res?.data?.hasBackground;
+        const version = res?.data?.version ? `?v=${res.data.version}` : "";
+        setLoginBackgroundUrl(hasBackground ? `/api/admin/settings/login-background${version}` : "");
+        setLoginBackgroundVersion(res?.data?.version || "");
+        if (typeof res?.data?.opacity === "number" && !isNaN(res.data.opacity)) {
+          setLoginBackgroundOpacity(res.data.opacity);
+        }
+      }
+    } catch {
+      setLoginBackgroundUrl("");
+      setLoginBackgroundVersion("");
+    }
+  }
+
+  useEffect(() => { loadLoginBackgroundMeta(); }, []);
+
+  async function uploadLoginBackground(file) {
+    if (!file) return;
+    try {
+      setLoginBackgroundSaving(true);
+      let uploadFile = file;
+      if (file.size > 300 * 1024) {
+        const compressed = await new Promise((resolve) => {
+          const img = new Image();
+          const url = URL.createObjectURL(file);
+          img.onload = () => {
+            URL.revokeObjectURL(url);
+            let w = img.naturalWidth, h = img.naturalHeight;
+            const maxDim = 1920;
+            if (w > maxDim || h > maxDim) {
+              if (w > h) { h = (h / w) * maxDim; w = maxDim; }
+              else { w = (w / h) * maxDim; h = maxDim; }
+            }
+            const c = document.createElement("canvas");
+            c.width = w; c.height = h;
+            const ctx = c.getContext("2d");
+            ctx.drawImage(img, 0, 0, w, h);
+            c.toBlob(blob => resolve(blob), "image/jpeg", 0.8);
+          };
+          img.src = url;
+        });
+        uploadFile = new File([compressed], file.name.replace(/\.[^.]+$/, ".jpg"), { type: "image/jpeg" });
+      }
+      const fd = new FormData();
+      fd.append("background", uploadFile);
+      await api.post("/admin/settings/login-background", fd, { headers: { "Content-Type": "multipart/form-data" } });
+      toast.success("Login background updated");
+      await loadLoginBackgroundMeta();
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to update login background");
+    } finally { setLoginBackgroundSaving(false); }
+  }
+
+  async function saveLoginBackgroundOpacity(targetOpacity) {
+    const val = typeof targetOpacity === "number" ? targetOpacity : loginBackgroundOpacity;
+    try {
+      setLoginBackgroundOpacitySaving(true);
+      await api.post("/admin/settings/login-background-opacity", { opacity: val });
+      toast.success(`Login background opacity saved (${val}%)`);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to save login background opacity");
+    } finally {
+      setLoginBackgroundOpacitySaving(false);
+    }
+  }
+
+  async function clearLoginBackground() {
+    try {
+      setLoginBackgroundSaving(true);
+      await api.delete("/admin/settings/login-background");
+      setLoginBackgroundUrl("");
+      setLoginBackgroundVersion("");
+      toast.success("Login background reset");
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to reset login background");
+    } finally { setLoginBackgroundSaving(false); }
+  }
+
+  async function loadLoginHeroImageMeta() {
+    try {
+      const res = await api.get("/admin/settings/login-hero-bg-info");
+      const hasBackground = !!res?.data?.hasBackground;
+      const version = res?.data?.updatedAt ? `?v=${encodeURIComponent(String(res.data.updatedAt))}` : "";
+      setLoginHeroImageUrl(hasBackground ? `/api/admin/settings/login-hero-background${version}` : "");
+      setLoginHeroImageVersion(res?.data?.updatedAt || "");
+    } catch {
+      setLoginHeroImageUrl("");
+      setLoginHeroImageVersion("");
+    }
+  }
+
+  useEffect(() => {
+    loadLoginHeroImageMeta();
+  }, []);
+
+  async function uploadLoginHeroImage(file) {
+    if (!file) return;
+    try {
+      setLoginHeroImageSaving(true);
+      // Automatically modify dimensions to suit the actual space/size of the Login Hero Image
+      // Target hero container is 576 x 720 px (4:5 ratio). Target 2x resolution: 1152 x 1440 px.
+      const compressed = await new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          try {
+            const targetWidth = 1152;
+            const targetHeight = 1440;
+            const targetRatio = targetWidth / targetHeight; // 0.8 (4:5)
+            const srcWidth = img.naturalWidth || img.width;
+            const srcHeight = img.naturalHeight || img.height;
+            const srcRatio = srcWidth / srcHeight;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = targetWidth;
+            canvas.height = targetHeight;
+            const ctx = canvas.getContext("2d");
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = "high";
+
+            // Default dark slate background matching theme
+            ctx.fillStyle = "#0f172a";
+            ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+            const isLandscape = srcWidth > srcHeight;
+
+            if (isLandscape) {
+              // Convert landscape to portrait (1152 × 1440 px) without cutting off content:
+              // 1. Draw blurred, ambient version of the landscape image to fill the 1152×1440 background
+              ctx.save();
+              const bgScale =
+                Math.max(targetWidth / srcWidth, targetHeight / srcHeight) * 1.05;
+              const bgW = srcWidth * bgScale;
+              const bgH = srcHeight * bgScale;
+              const bgX = (targetWidth - bgW) / 2;
+              const bgY = (targetHeight - bgH) / 2;
+
+              if (typeof ctx.filter !== "undefined") {
+                ctx.filter = "blur(35px) brightness(0.65)";
+                ctx.drawImage(img, bgX, bgY, bgW, bgH);
+                ctx.filter = "none";
+              } else {
+                ctx.drawImage(img, bgX, bgY, bgW, bgH);
+              }
+              ctx.restore();
+
+              // Dark ambient overlay for contrast and depth
+              ctx.fillStyle = "rgba(15, 23, 42, 0.35)";
+              ctx.fillRect(0, 0, targetWidth, targetHeight);
+
+              // 2. Fit the entire landscape image horizontally across 1152 px, centered vertically
+              const fitWidth = targetWidth;
+              const fitHeight = Math.round(targetWidth / srcRatio);
+              const fitY = Math.round((targetHeight - fitHeight) / 2);
+
+              // Subtle drop shadow behind the main graphic
+              ctx.save();
+              ctx.shadowColor = "rgba(0, 0, 0, 0.45)";
+              ctx.shadowBlur = 28;
+              ctx.shadowOffsetY = 6;
+              ctx.drawImage(
+                img,
+                0,
+                0,
+                srcWidth,
+                srcHeight,
+                0,
+                fitY,
+                fitWidth,
+                fitHeight,
+              );
+              ctx.restore();
+            } else {
+              // Portrait or square: smoothly scale & center-crop to exact 1152 × 1440 (4:5 ratio)
+              let sx = 0,
+                sy = 0,
+                sWidth = srcWidth,
+                sHeight = srcHeight;
+
+              if (srcRatio > targetRatio) {
+                sWidth = Math.round(srcHeight * targetRatio);
+                sx = Math.round((srcWidth - sWidth) / 2);
+              } else {
+                sHeight = Math.round(srcWidth / targetRatio);
+                sy = Math.round((srcHeight - sHeight) / 2);
+              }
+
+              ctx.drawImage(
+                img,
+                sx,
+                sy,
+                sWidth,
+                sHeight,
+                0,
+                0,
+                targetWidth,
+                targetHeight,
+              );
+            }
+
+            canvas.toBlob(
+              (blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("Canvas conversion failed"));
+              },
+              "image/jpeg",
+              0.9,
+            );
+          } catch (err) {
+            reject(err);
+          }
+        };
+        img.onerror = () => {
+          URL.revokeObjectURL(url);
+          reject(new Error("Failed to load image file"));
+        };
+        img.src = url;
+      });
+
+      const uploadFile = new File(
+        [compressed],
+        (file.name || "login-hero").replace(/\.[^.]+$/, ".jpg"),
+        { type: "image/jpeg" },
+      );
+
+      const fd = new FormData();
+      fd.append("background", uploadFile);
+      await api.post("/admin/settings/login-hero-background", fd, {
+        headers: { "Content-Type": "multipart/form-data" },
+      });
+      toast.success("Login hero image updated and automatically formatted to 1152×1440 (4:5 ratio)");
+      await loadLoginHeroImageMeta();
+    } catch (e) {
+      toast.error(
+        e?.response?.data?.message ||
+          e?.message ||
+          "Failed to update Login hero image",
+      );
+    } finally {
+      setLoginHeroImageSaving(false);
+    }
+  }
+
+  async function clearLoginHeroImage() {
+    try {
+      setLoginHeroImageSaving(true);
+      await api.delete("/admin/settings/login-hero-background");
+      setLoginHeroImageUrl("");
+      setLoginHeroImageVersion("");
+      toast.success("Login hero image reset");
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to reset Login hero image");
+    } finally {
+      setLoginHeroImageSaving(false);
+    }
+  }
+
+  async function saveCloudinary() {
+    try {
+      setCloudSaving(true);
+      await api.post("/admin/settings/cloudinary", {
+        cloud_name: cloud.cloud_name, api_key: cloud.api_key,
+        api_secret: cloud.api_secret || undefined, folder: cloud.folder || undefined,
+      });
+      toast.success("Cloudinary settings saved");
+      setCloud(p => ({ ...p, has_secret: true, api_secret: "" }));
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to save settings");
+    } finally { setCloudSaving(false); }
+  }
+
+  async function sendTestEmail() {
+    try {
+      setEmailTesting(true);
+      const res = await api.post("/admin/email/test", { to: emailTestTo || undefined });
+      const configured = !!res?.data?.configured;
+      const sent = !!res?.data?.sent;
+      const error = res?.data?.error;
+      if (sent) {
+        toast.success(`Test email sent to ${res?.data?.to || emailTestTo || "your address"}`);
+      } else if (!configured) {
+        toast.error("SMTP is not configured. Set SMTP_HOST and credentials first.");
+      } else {
+        toast.error(error ? `Failed to send: ${error}` : "Failed to send test email");
+      }
+    } catch (e) {
+      const msg = e?.response?.data?.error || e?.response?.data?.message || e?.message || "Failed to send test email";
+      toast.error(msg);
+    } finally {
+      setEmailTesting(false);
+    }
+  }
+
+  async function saveAnnouncements() {
+    try {
+      setAnnouncementsSaving(true);
+      await api.post("/admin/settings/announcements", { announcements });
+      toast.success("Announcements saved successfully.");
+    } catch (e) {
+      toast.error("Failed to save announcements");
+    } finally {
+      setAnnouncementsSaving(false);
+    }
+  }
+
+  async function saveEnvVars() {
+    try {
+      setEnvSaving(true);
+      await api.post("/admin/settings/env", envVars);
+      toast.success("Environment configurations saved successfully.");
+      
+      const res = await api.get("/admin/settings/env");
+      setEnvVars(prev => ({
+        ...prev,
+        ARKESEL_API_KEY: res.data.ARKESEL_API_KEY || "",
+        ARKESEL_SENDER_ID: res.data.ARKESEL_SENDER_ID || "",
+        GREEN_API_TOKEN_INSTANCE: res.data.GREEN_API_TOKEN_INSTANCE || "",
+        SMTP_PASS: res.data.SMTP_PASS || ""
+      }));
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to save environment variables");
+    } finally {
+      setEnvSaving(false);
+    }
+  }
+
+  async function saveGoogleMaps() {
+    try {
+      setGoogleMapsSaving(true);
+      await api.post("/admin/settings/google-maps", { api_key: googleMapsApiKey });
+      toast.success("Google Maps settings saved");
+      const res = await api.get("/admin/settings/google-maps");
+      if (res?.data?.data?.api_key) {
+        setGoogleMapsApiKey(res.data.data.api_key);
+      }
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to save settings");
+    } finally { setGoogleMapsSaving(false); }
+  }
+
+  async function saveGroqSettings() {
+    if (!groqKey.trim()) return;
+    try {
+      setGroqSaving(true);
+      const res = await api.post("/ai/save-key", { apiKey: groqKey.trim() });
+      toast.success(res.data?.message || "Groq AI Key verified and saved successfully!");
+      setGroqKey("");
+      const statusRes = await api.get("/ai/status");
+      setGroqStatus(statusRes.data);
+    } catch (e) {
+      toast.error(e?.response?.data?.message || e?.message || "Failed to verify Groq key");
+    } finally {
+      setGroqSaving(false);
+    }
+  }
+
+  async function testGroqConnection() {
+    try {
+      setGroqTesting(true);
+      const res = await api.get("/ai/status");
+      if (res.data?.connected) {
+        toast.success("Groq Cloud AI Engine is connected and responding!");
+      } else {
+        toast.warn(res.data?.statusMessage || "Groq API key is not yet configured.");
+      }
+      setGroqStatus(res.data);
+    } catch (e) {
+      toast.error("Failed to test connection to Groq API.");
+    } finally {
+      setGroqTesting(false);
+    }
+  }
+
+  if (user?.id !== 1) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-slate-500">
+        <h2 className="text-xl font-bold mb-2 text-slate-700">Access Denied</h2>
+        <p className="text-sm">You do not have permission to view System Configurations.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 max-w-4xl space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <div className="text-xs text-slate-500 mb-1 flex items-center gap-1.5">
+            <Link to="/system-configuration" className="text-brand-600 hover:underline">System Configuration</Link> / General Settings
+          </div>
+          <h1 className="text-2xl font-bold text-slate-800 dark:text-white">General Settings</h1>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Manage environment configurations, API integrations, AI copilot, and system defaults.</p>
+        </div>
+        <div>
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="btn btn-secondary inline-flex items-center gap-2"
+          >
+            <ArrowLeft size={16} /> Back
+          </button>
+        </div>
+      </div>
+
+      <div className="space-y-6">
+        {/* Banks AI Dual-Provider Configuration (Groq + OpenRouter 0x Alpha) */}
+        <div className="card border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+          <div className="card-body space-y-5">
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-brand-900 text-white flex items-center justify-center shadow-inner">
+                  <Brain size={22} className="text-primary animate-pulse" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span>Banks AI Intelligence Engine (Groq + OpenRouter 0x Alpha)</span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Configure API keys for Groq (high-speed LPU) and OpenRouter (0x Alpha / free failover engine with 1M token context).
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {aiStatus?.groq?.connected ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-2.5 py-1 rounded-full border border-emerald-300 dark:border-emerald-800">
+                    <CheckCircle size={12} className="text-emerald-500" /> Groq Active ({aiStatus.groq.maskedKey})
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-2.5 py-1 rounded-full border border-amber-300 dark:border-amber-800">
+                    Groq Unset
+                  </span>
+                )}
+
+                {aiStatus?.openRouter?.connected ? (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-purple-50 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 px-2.5 py-1 rounded-full border border-purple-300 dark:border-purple-800">
+                    <CheckCircle size={12} className="text-purple-500" /> 0x Alpha Active ({aiStatus.openRouter.maskedKey})
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-[11px] font-semibold bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 px-2.5 py-1 rounded-full border border-slate-300 dark:border-slate-700">
+                    0x Alpha Unset
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* Ask Banks Global Visibility Switch */}
+            <div className="flex items-center justify-between p-4 rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800">
+              <div className="space-y-0.5">
+                <div className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                  <Sparkles size={16} className="text-primary" />
+                  <span>Floating "Ask Banks" AI Button Visibility</span>
+                </div>
+                <div className="text-xs text-slate-600 dark:text-slate-400">
+                  When enabled, the floating "Ask Banks" button is visible across the entire application. When disabled, the floating button is hidden.
+                </div>
+              </div>
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  className="sr-only peer"
+                  checked={banksAiEnabled}
+                  onChange={(e) => toggleBanksAi(e.target.checked)}
+                />
+                <div className="w-11 h-6 bg-slate-300 peer-focus:outline-none rounded-full peer dark:bg-slate-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-brand-600"></div>
+              </label>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              {/* Groq Cloud Key Card */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-slate-800 dark:text-white uppercase tracking-wider">
+                    1. Groq Cloud API Key (Primary Fast Engine)
+                  </span>
+                  {aiStatus?.groq?.connected && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">● Connected</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="Enter gsk_... key"
+                    className="input w-full text-xs"
+                    value={groqKey}
+                    onChange={(e) => setGroqKey(e.target.value)}
+                    disabled={groqSaving}
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary whitespace-nowrap text-xs px-3.5"
+                    onClick={saveGroqSettings}
+                    disabled={groqSaving || !groqKey.trim()}
+                  >
+                    {groqSaving ? "Saving..." : "Save Groq Key"}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Get free key at <a href="https://console.groq.com/keys" target="_blank" rel="noreferrer" className="text-brand-600 dark:text-brand-400 underline font-medium">console.groq.com/keys</a></span>
+                  <button
+                    type="button"
+                    className="text-brand-600 dark:text-brand-400 hover:underline font-medium"
+                    onClick={testGroqConnection}
+                    disabled={groqTesting}
+                  >
+                    {groqTesting ? "Testing..." : "Test Groq"}
+                  </button>
+                </div>
+              </div>
+
+              {/* OpenRouter 0x Alpha Key Card */}
+              <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-bold text-purple-900 dark:text-purple-300 uppercase tracking-wider">
+                    2. OpenRouter API Key (0x Alpha / Failover)
+                  </span>
+                  {aiStatus?.openRouter?.connected && (
+                    <span className="text-[10px] text-purple-600 dark:text-purple-400 font-semibold">● Connected</span>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <input
+                    type="password"
+                    placeholder="Enter sk-or-v1-... key"
+                    className="input w-full text-xs"
+                    value={openRouterKey}
+                    onChange={(e) => setOpenRouterKey(e.target.value)}
+                    disabled={openRouterSaving}
+                  />
+                  <button
+                    type="button"
+                    className="btn-primary bg-purple-600 hover:bg-purple-700 border-none text-white whitespace-nowrap text-xs px-3.5"
+                    onClick={saveOpenRouterSettings}
+                    disabled={openRouterSaving || !openRouterKey.trim()}
+                  >
+                    {openRouterSaving ? "Saving..." : "Save 0x Alpha Key"}
+                  </button>
+                </div>
+                <div className="flex items-center justify-between text-[11px]">
+                  <span className="text-slate-400">Get OpenRouter key at <a href="https://openrouter.ai/keys" target="_blank" rel="noreferrer" className="text-purple-600 dark:text-purple-400 underline font-medium">openrouter.ai/keys</a></span>
+                  <button
+                    type="button"
+                    className="text-purple-600 dark:text-purple-400 hover:underline font-medium"
+                    onClick={testOpenRouterConnection}
+                    disabled={openRouterTesting}
+                  >
+                    {openRouterTesting ? "Testing..." : "Test OpenRouter"}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Model Selection & Auto-Failover Summary */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 grid grid-cols-1 md:grid-cols-2 gap-4 items-center">
+              <div>
+                <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block mb-1">
+                  Default AI Model Preference
+                </label>
+                <select
+                  value={selectedAiModel}
+                  onChange={(e) => setSelectedAiModel(e.target.value)}
+                  className="input w-full text-xs"
+                >
+                  <optgroup label="🚀 OpenRouter (0x Alpha & Free Models)">
+                    <option value="stealth/ox-alpha">0x Alpha (stealth/ox-alpha: 1M Context, High Reasoning & Tools)</option>
+                    <option value="openrouter/free">OpenRouter Free Auto-Router (Dynamic Free Tool Engine)</option>
+                    <option value="meta-llama/llama-3.3-70b-instruct:free">Llama 3.3 70B Instruct [OpenRouter Free Tier]</option>
+                    <option value="qwen/qwen-2.5-72b-instruct:free">Qwen 2.5 72B Instruct [OpenRouter Free Tier]</option>
+                  </optgroup>
+                  <optgroup label="⚡ Groq Cloud High Speed Models">
+                    <option value="openai/gpt-oss-120b">GPT-OSS 120B (Best: Deep ERP Reasoning & Tools)</option>
+                    <option value="llama-3.3-70b-versatile">Llama 3.3 70B Versatile (Meta Flagship)</option>
+                    <option value="qwen/qwen3.6-27b">Qwen 3.6 27B (High Efficiency & Code Reasoning)</option>
+                    <option value="llama-3.1-8b-instant">Llama 3.1 8B Instant (Ultra-Fast)</option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <div className="text-[11px] text-slate-500 dark:text-slate-400 space-y-1 bg-white dark:bg-slate-900/50 p-3 rounded-lg border border-slate-200 dark:border-slate-800">
+                <div className="font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1">
+                  <ShieldCheck size={13} className="text-emerald-500" />
+                  <span>Smart Auto-Failover Active</span>
+                </div>
+                <p>
+                  If Groq reaches its daily free token quota (HTTP 429), Banks AI automatically routes prompts to OpenRouter <strong>0x Alpha</strong> with zero user downtime.
+                </p>
+              </div>
+            </div>
+
+            {/* Banks AI Chat History Retention & Auto-Deletion Policy */}
+            <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <div className="space-y-0.5">
+                  <div className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
+                    <Clock size={16} className="text-brand-600 dark:text-brand-400" />
+                    <span>Banks AI Chat History & Auto-Deletion Retention Policy</span>
+                  </div>
+                  <div className="text-xs text-slate-600 dark:text-slate-400">
+                    Set the number of days after which the system automatically deletes past chat conversations. Set to 0 to keep history indefinitely.
+                  </div>
+                </div>
+
+                {chatHistoryStats && (
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                      Total Messages: <strong>{chatHistoryStats.totalMessages ?? 0}</strong>
+                    </span>
+                    <span className="text-[11px] font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 px-2.5 py-1 rounded-full border border-slate-200 dark:border-slate-700">
+                      Retention: <strong>{Number(retentionDays) > 0 ? `${retentionDays} Days` : "Indefinite"}</strong>
+                    </span>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-4 items-center bg-white dark:bg-slate-900 p-4 rounded-xl border border-slate-200 dark:border-slate-800">
+                <div className="md:col-span-5 space-y-1">
+                  <label className="text-xs font-semibold text-slate-700 dark:text-slate-300 block">
+                    Auto-Delete History After (Days)
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="number"
+                      min="0"
+                      max="3650"
+                      step="1"
+                      placeholder="e.g. 30 (0 = Keep indefinitely)"
+                      className="input w-full text-xs pr-14"
+                      value={retentionDays}
+                      onChange={(e) => setRetentionDays(e.target.value)}
+                      disabled={retentionSaving}
+                    />
+                    <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-slate-400 pointer-events-none">
+                      Days
+                    </span>
+                  </div>
+                  <span className="text-[10px] text-slate-500 dark:text-slate-400 block">
+                    {Number(retentionDays) > 0
+                      ? `System automatically deletes records older than ${retentionDays} day(s).`
+                      : "0 = Chat conversations are kept indefinitely without auto-deletion."}
+                  </span>
+                </div>
+
+                <div className="md:col-span-7 flex flex-wrap items-center justify-start md:justify-end gap-2 pt-2 md:pt-0">
+                  <button
+                    type="button"
+                    className="btn-primary text-xs px-3.5 py-2 flex items-center gap-1.5"
+                    onClick={saveRetentionSettings}
+                    disabled={retentionSaving}
+                  >
+                    <Save size={13} />
+                    {retentionSaving ? "Saving Policy..." : "Save Retention Policy"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-4">
+            <div>
+              <div className="text-lg font-semibold">Global Broadcast / Announcements</div>
+              <div className="text-sm text-slate-500">Post a message that displays on the dashboard or header for all system users.</div>
+            </div>
+            <div>
+              <textarea
+                className="input w-full h-24 resize-none"
+                placeholder="e.g. System maintenance scheduled for tonight at 11:00 PM."
+                value={announcements}
+                onChange={e => setAnnouncements(e.target.value)}
+                disabled={announcementsSaving}
+              />
+            </div>
+            <div className="flex justify-end">
+              <button type="button" className="btn-primary" onClick={saveAnnouncements} disabled={announcementsSaving}>
+                {announcementsSaving ? "Saving..." : "Save Announcement"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-4">
+            <div>
+              <div className="text-lg font-semibold">Communication & Service Credentials</div>
+              <div className="text-sm text-slate-500">Configure external API integrations and keys for SMS, WhatsApp, and Mail.</div>
+            </div>
+
+            {envLoading ? (
+              <div className="text-sm text-slate-500">Loading configurations...</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="border-b pb-3">
+                  <div className="font-medium text-slate-700 mb-2">Arkesel SMS Gateway</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">API Key</label>
+                      <input type="password" placeholder={envVars.ARKESEL_API_KEY === "********" ? "•••••••• (unchanged)" : ""} className="input w-full" value={envVars.ARKESEL_API_KEY === "********" ? "" : envVars.ARKESEL_API_KEY} onChange={e => setEnvVars(p => ({ ...p, ARKESEL_API_KEY: e.target.value }))} disabled={envSaving} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Sender ID</label>
+                      <input type="text" placeholder={envVars.ARKESEL_SENDER_ID === "********" ? "•••••••• (unchanged)" : ""} className="input w-full" value={envVars.ARKESEL_SENDER_ID === "********" ? "" : envVars.ARKESEL_SENDER_ID} onChange={e => setEnvVars(p => ({ ...p, ARKESEL_SENDER_ID: e.target.value }))} disabled={envSaving} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-b pb-3">
+                  <div className="font-medium text-slate-700 mb-2">Green API (WhatsApp)</div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">ID Instance</label>
+                      <input type="text" className="input w-full" value={envVars.GREEN_API_ID_INSTANCE} onChange={e => setEnvVars(p => ({ ...p, GREEN_API_ID_INSTANCE: e.target.value }))} disabled={envSaving} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Token Instance</label>
+                      <input type="password" placeholder={envVars.GREEN_API_TOKEN_INSTANCE === "********" ? "•••••••• (unchanged)" : ""} className="input w-full" value={envVars.GREEN_API_TOKEN_INSTANCE === "********" ? "" : envVars.GREEN_API_TOKEN_INSTANCE} onChange={e => setEnvVars(p => ({ ...p, GREEN_API_TOKEN_INSTANCE: e.target.value }))} disabled={envSaving} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-b pb-3">
+                  <div className="font-medium text-slate-700 mb-2">SMTP Mail Configuration</div>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Host</label>
+                      <input type="text" className="input w-full" value={envVars.SMTP_HOST} onChange={e => setEnvVars(p => ({ ...p, SMTP_HOST: e.target.value }))} disabled={envSaving} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Port</label>
+                      <input type="text" className="input w-full" value={envVars.SMTP_PORT} onChange={e => setEnvVars(p => ({ ...p, SMTP_PORT: e.target.value }))} disabled={envSaving} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Secure (SSL/TLS)</label>
+                      <select className="input w-full" value={envVars.SMTP_SECURE} onChange={e => setEnvVars(p => ({ ...p, SMTP_SECURE: e.target.value }))} disabled={envSaving}>
+                        <option value="false">False (Port 587)</option>
+                        <option value="true">True (Port 465)</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Username</label>
+                      <input type="text" className="input w-full" value={envVars.SMTP_USER} onChange={e => setEnvVars(p => ({ ...p, SMTP_USER: e.target.value }))} disabled={envSaving} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">Password</label>
+                      <input type="password" placeholder={envVars.SMTP_PASS === "********" ? "•••••••• (unchanged)" : ""} className="input w-full" value={envVars.SMTP_PASS === "********" ? "" : envVars.SMTP_PASS} onChange={e => setEnvVars(p => ({ ...p, SMTP_PASS: e.target.value }))} disabled={envSaving} />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-slate-700">From Address</label>
+                      <input type="text" className="input w-full" value={envVars.SMTP_FROM} onChange={e => setEnvVars(p => ({ ...p, SMTP_FROM: e.target.value }))} disabled={envSaving} />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="font-medium text-slate-700">Messaging Templates</div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">Sales Order Template</label>
+                    <textarea className="input w-full h-24 resize-none" value={envVars.TEMPLATE_SALES_ORDER} onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_SALES_ORDER: e.target.value }))} disabled={envSaving}></textarea>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">Purchase Order Template</label>
+                    <textarea className="input w-full h-24 resize-none" value={envVars.TEMPLATE_PURCHASE_ORDER} onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_PURCHASE_ORDER: e.target.value }))} disabled={envSaving}></textarea>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">Service Order Template</label>
+                    <textarea className="input w-full h-24 resize-none" value={envVars.TEMPLATE_SERVICE_ORDER} onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_SERVICE_ORDER: e.target.value }))} disabled={envSaving}></textarea>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">Maintenance Job Template</label>
+                    <textarea className="input w-full h-24 resize-none" value={envVars.TEMPLATE_MAINTENANCE_JOB} onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_MAINTENANCE_JOB: e.target.value }))} disabled={envSaving}></textarea>
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700">Payment Voucher Template</label>
+                    <textarea className="input w-full h-24 resize-none" value={envVars.TEMPLATE_PAYMENT_VOUCHER} onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_PAYMENT_VOUCHER: e.target.value }))} disabled={envSaving}></textarea>
+                  </div>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-2 pt-2">
+              <button type="button" className="btn-primary bg-green-600 hover:bg-green-700 border-none text-white" onClick={saveEnvVars} disabled={envSaving}>
+                {envSaving ? "Saving..." : "Save Credentials"}
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Neon PostgreSQL Cloud Database Configuration */}
+        <div className="card border-slate-200 dark:border-slate-800 shadow-sm bg-white dark:bg-slate-900">
+          <div className="card-body space-y-5">
+            {/* Header */}
+            <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#00E599]/20 to-[#00E599]/5 border border-[#00E599]/40 text-[#00E599] flex items-center justify-center shadow-inner">
+                  <Database size={22} className="text-[#00E599]" />
+                </div>
+                <div>
+                  <div className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
+                    <span>Neon PostgreSQL Cloud Database</span>
+                    <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      Serverless
+                    </span>
+                  </div>
+                  <div className="text-xs text-slate-500">
+                    Configure your Neon connection strings, API key, and project metadata for cloud database replication and workflows.
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2">
+                {neonSettings.hasDatabaseUrl ? (
+                  <span className="inline-flex items-center gap-1.5 text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 px-3 py-1 rounded-full border border-emerald-200 dark:border-emerald-800">
+                    <CheckCircle size={13} className="text-emerald-500" />
+                    <span>Project Linked ({neonSettings.projectId || "Active"})</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 px-3 py-1 rounded-full border border-amber-300 dark:border-amber-800">
+                    Database Unconfigured
+                  </span>
+                )}
+
+                {neonSettings.consoleUrl && (
+                  <a
+                    href={neonSettings.consoleUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="inline-flex items-center gap-1 text-xs font-semibold px-3 py-1 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition"
+                  >
+                    <span>Neon Console</span>
+                    <ExternalLink size={12} />
+                  </a>
+                )}
+              </div>
+            </div>
+
+            {/* Form Fields */}
+            {neonLoading ? (
+              <div className="text-sm text-slate-500 py-4">Loading Neon configurations...</div>
+            ) : (
+              <div className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <div>
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                      Project ID
+                    </label>
+                    <input
+                      type="text"
+                      className="input w-full text-xs"
+                      placeholder="e.g. soft-firefly-41205475"
+                      value={neonSettings.projectId}
+                      onChange={(e) => setNeonSettings((p) => ({ ...p, projectId: e.target.value }))}
+                      disabled={neonSaving}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                      Organization ID
+                    </label>
+                    <input
+                      type="text"
+                      className="input w-full text-xs"
+                      placeholder="e.g. org-floral-violet-64520038"
+                      value={neonSettings.orgId}
+                      onChange={(e) => setNeonSettings((p) => ({ ...p, orgId: e.target.value }))}
+                      disabled={neonSaving}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300 block mb-1">
+                      Target Branch
+                    </label>
+                    <input
+                      type="text"
+                      className="input w-full text-xs"
+                      placeholder="production"
+                      value={neonSettings.branch}
+                      onChange={(e) => setNeonSettings((p) => ({ ...p, branch: e.target.value }))}
+                      disabled={neonSaving}
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                      Neon API Key
+                    </label>
+                    <span className="text-[11px] text-slate-400">
+                      Generate keys at <a href="https://console.neon.tech/app/settings/api-keys" target="_blank" rel="noreferrer" className="text-brand-600 dark:text-brand-400 underline font-medium">console.neon.tech/app/settings/api-keys</a>
+                    </span>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type="password"
+                      className="input w-full text-xs pr-10"
+                      placeholder={neonSettings.hasApiKey ? "•••••••••••• (API Key Configured)" : "Enter napi_... API Key"}
+                      value={neonSettings.apiKey}
+                      onChange={(e) => setNeonSettings((p) => ({ ...p, apiKey: e.target.value }))}
+                      disabled={neonSaving}
+                    />
+                    <div className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                      <Key size={15} />
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connection Strings */}
+                <div className="space-y-3 pt-2">
+                  {/* Pooled Connection String */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <span>Pooled Connection String (DATABASE_URL)</span>
+                        <span className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.2 rounded-full border border-emerald-200 dark:border-emerald-800">Recommended</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowDatabaseUrl(!showDatabaseUrl)}
+                        className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
+                      >
+                        {showDatabaseUrl ? <EyeOff size={13} /> : <Eye size={13} />}
+                        <span>{showDatabaseUrl ? "Hide" : "Show"}</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showDatabaseUrl ? "text" : "password"}
+                        className="input w-full text-xs pr-20 font-mono"
+                        placeholder="postgresql://neondb_owner:***@...-pooler.aws.neon.tech/neondb?sslmode=require"
+                        value={neonSettings.databaseUrl}
+                        onChange={(e) => setNeonSettings((p) => ({ ...p, databaseUrl: e.target.value }))}
+                        disabled={neonSaving}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(neonSettings.databaseUrl, "DATABASE_URL")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition flex items-center gap-1"
+                        title="Copy connection string"
+                      >
+                        {copiedField === "DATABASE_URL" ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        <span>{copiedField === "DATABASE_URL" ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Direct Connection String (Unpooled) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <span>Direct / Unpooled Connection String (DATABASE_URL_UNPOOLED)</span>
+                        <span className="text-[10px] text-slate-400">For migrations and administrative sessions</span>
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowDatabaseUrlUnpooled(!showDatabaseUrlUnpooled)}
+                        className="text-[11px] text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 flex items-center gap-1"
+                      >
+                        {showDatabaseUrlUnpooled ? <EyeOff size={13} /> : <Eye size={13} />}
+                        <span>{showDatabaseUrlUnpooled ? "Hide" : "Show"}</span>
+                      </button>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showDatabaseUrlUnpooled ? "text" : "password"}
+                        className="input w-full text-xs pr-20 font-mono"
+                        placeholder="postgresql://neondb_owner:***@...aws.neon.tech/neondb?sslmode=require"
+                        value={neonSettings.databaseUrlUnpooled}
+                        onChange={(e) => setNeonSettings((p) => ({ ...p, databaseUrlUnpooled: e.target.value }))}
+                        disabled={neonSaving}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => copyToClipboard(neonSettings.databaseUrlUnpooled, "DATABASE_URL_UNPOOLED")}
+                        className="absolute right-2 top-1/2 -translate-y-1/2 px-2.5 py-1 text-[11px] font-medium text-slate-600 dark:text-slate-300 hover:text-brand-600 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition flex items-center gap-1"
+                        title="Copy direct connection string"
+                      >
+                        {copiedField === "DATABASE_URL_UNPOOLED" ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                        <span>{copiedField === "DATABASE_URL_UNPOOLED" ? "Copied" : "Copy"}</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Connection Test Result Banner */}
+                {neonTestResult && (
+                  <div
+                    className={`p-3.5 rounded-xl border text-xs flex items-start gap-2.5 transition-all ${
+                      neonTestResult.success
+                        ? "bg-emerald-50 dark:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800/60 text-emerald-800 dark:text-emerald-200"
+                        : "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200"
+                    }`}
+                  >
+                    <div className="shrink-0 mt-0.5">
+                      {neonTestResult.success ? (
+                        <CheckCircle size={16} className="text-emerald-600 dark:text-emerald-400" />
+                      ) : (
+                        <ShieldCheck size={16} className="text-rose-600 dark:text-rose-400" />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-semibold">
+                        {neonTestResult.success ? "Connection Verified Successfully" : "Connection Failed"}
+                      </div>
+                      <div className="mt-0.5 leading-relaxed">
+                        {neonTestResult.success ? (
+                          <span>
+                            Connected to database <strong>{neonTestResult.database}</strong> as <strong>{neonTestResult.user}</strong> ({neonTestResult.version}) in <strong>{neonTestResult.latencyMs}ms</strong>.
+                          </span>
+                        ) : (
+                          <span>{neonTestResult.error}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      className="btn-primary inline-flex items-center gap-2 text-xs px-4 py-2"
+                      onClick={saveNeonSettings}
+                      disabled={neonSaving}
+                    >
+                      <Save size={14} />
+                      <span>{neonSaving ? "Saving..." : "Save Neon Credentials"}</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      className="btn btn-secondary inline-flex items-center gap-2 text-xs px-4 py-2"
+                      onClick={testNeonConnection}
+                      disabled={neonTesting}
+                    >
+                      <Server size={14} />
+                      <span>{neonTesting ? "Testing Connection..." : "Test Connection"}</span>
+                    </button>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="btn btn-outline inline-flex items-center gap-1.5 text-xs px-3.5 py-2 text-slate-600 dark:text-slate-300"
+                    onClick={pullNeonCredentials}
+                    disabled={neonPulling}
+                    title="Pull latest connection strings from Neon CLI"
+                  >
+                    <RefreshCw size={13} className={neonPulling ? "animate-spin" : ""} />
+                    <span>{neonPulling ? "Syncing..." : "Sync from Neon CLI"}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-4">
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <div className="text-lg font-semibold text-slate-900 dark:text-white">Login Background Image</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Set the background image and adjust its opacity for the login and password reset forms.
+                </div>
+              </div>
+              <div className="relative w-28 h-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 overflow-hidden flex items-center justify-center shrink-0 shadow-sm">
+                <div
+                  className="absolute inset-0 bg-cover bg-center transition-opacity duration-200"
+                  style={{
+                    backgroundImage: loginBackgroundUrl ? `url(${loginBackgroundUrl})` : "url(/BACKGROUND.jpg)",
+                    opacity: loginBackgroundOpacity / 100,
+                  }}
+                />
+                <span className="relative z-10 text-[10px] font-bold px-1.5 py-0.5 rounded bg-black/70 text-white backdrop-blur-xs">
+                  {loginBackgroundOpacity}%
+                </span>
+              </div>
+            </div>
+
+            {/* Opacity Control Slider & Presets */}
+            <div className="p-3.5 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2.5">
+              <div className="flex items-center justify-between text-sm">
+                <span className="font-semibold text-slate-700 dark:text-slate-200">
+                  Background Opacity: <span className="text-brand-600 dark:text-brand-400 font-bold">{loginBackgroundOpacity}%</span>
+                </span>
+                <span className="text-xs text-slate-500 dark:text-slate-400">
+                  {loginBackgroundOpacity <= 15 ? "Subtle / Recommended" : loginBackgroundOpacity <= 40 ? "Medium" : "Prominent"}
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  step="5"
+                  value={loginBackgroundOpacity}
+                  onChange={(e) => setLoginBackgroundOpacity(Number(e.target.value))}
+                  className="w-full accent-brand-600 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg cursor-pointer"
+                />
+                <button
+                  type="button"
+                  onClick={() => saveLoginBackgroundOpacity()}
+                  disabled={loginBackgroundOpacitySaving}
+                  className="btn-primary text-xs py-1.5 px-3 shrink-0"
+                >
+                  {loginBackgroundOpacitySaving ? "Saving..." : "Save Opacity"}
+                </button>
+              </div>
+              <div className="flex flex-wrap items-center gap-1.5 pt-1">
+                <span className="text-[11px] text-slate-500 dark:text-slate-400 mr-1">Presets:</span>
+                {[5, 10, 15, 20, 30, 50, 80, 100].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => {
+                      setLoginBackgroundOpacity(preset);
+                      saveLoginBackgroundOpacity(preset);
+                    }}
+                    className={`px-2.5 py-0.5 text-xs rounded-md font-medium transition-all ${
+                      loginBackgroundOpacity === preset
+                        ? "bg-brand-600 text-white font-bold shadow-xs"
+                        : "bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-600"
+                    }`}
+                  >
+                    {preset}%
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-wrap gap-2">
+              <label className="btn-primary cursor-pointer">
+                {loginBackgroundSaving ? "Saving..." : "Upload Background"}
+                <input type="file" accept="image/*" className="hidden" disabled={loginBackgroundSaving} onChange={e => { const file = e.target.files?.[0] || null; e.target.value = ""; uploadLoginBackground(file); }} />
+              </label>
+              <button type="button" className="btn-outline" disabled={loginBackgroundSaving || !loginBackgroundUrl} onClick={clearLoginBackground}>Reset to Default</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <div className="text-lg font-semibold text-slate-900 dark:text-white">Login Hero Image</div>
+                <div className="text-sm text-slate-500 dark:text-slate-400">
+                  Featured visual on the right side of the login portal. Uploaded images are automatically formatted to the exact 4:5 hero dimensions (1152 × 1440 px). Landscape images are automatically converted to portrait with ambient background fill so no content is cut off.
+                </div>
+              </div>
+              {loginHeroImageUrl ? (
+                <div className="w-28 sm:w-32 h-36 sm:h-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-900 overflow-hidden flex items-center justify-center shadow-md relative group shrink-0">
+                  <img src={loginHeroImageUrl} alt="Hero Background Preview" className="w-full h-full object-contain rounded-xl p-1" />
+                  <span className="absolute bottom-1 right-1 text-[9px] font-bold px-1.5 py-0.5 rounded bg-black/60 text-white backdrop-blur-xs">
+                    4:5
+                  </span>
+                </div>
+              ) : (
+                <div className="w-28 sm:w-32 h-36 sm:h-40 rounded-xl border border-dashed border-slate-300 dark:border-slate-700 flex flex-col items-center justify-center text-xs text-slate-500 font-medium shrink-0 bg-white dark:bg-slate-900">
+                  <span>Default hero</span>
+                  <span className="text-[10px] text-slate-400 mt-1">4:5 ratio</span>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <label className="btn-primary cursor-pointer inline-flex items-center gap-1.5">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" />
+                </svg>
+                <span>{loginHeroImageSaving ? "Processing & Uploading..." : "Upload Hero Image"}</span>
+                <input type="file" accept="image/*" className="hidden" disabled={loginHeroImageSaving} onChange={e => { const file = e.target.files?.[0] || null; e.target.value = ""; uploadLoginHeroImage(file); }} />
+              </label>
+              <button type="button" className="btn-outline" disabled={loginHeroImageSaving || !loginHeroImageUrl} onClick={clearLoginHeroImage}>Reset to Default</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div className="flex justify-between items-start gap-4">
+              <div>
+                <div className="text-lg font-semibold">Security & Inactivity</div>
+                <div className="text-sm text-slate-500">Set how many minutes until an inactive user is automatically logged out. Set to 0 to disable.</div>
+              </div>
+            </div>
+            <div className="flex flex-wrap gap-2 items-center">
+              <input type="number" min="0" className="input w-32" value={inactivityTimeout}
+                onChange={e => { const val = e.target.value; setInactivityTimeout(val); try { if (typeof localStorage !== "undefined") localStorage.setItem("omnisuite.inactivityTimeout", val); } catch {} }} />
+              <span className="text-sm text-slate-600">minutes</span>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div className="text-lg font-semibold">Email</div>
+            <div className="text-sm text-slate-500">Send a test email to verify SMTP settings.</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-700">Recipient</label>
+                <input className="input w-full" value={emailTestTo} onChange={e => setEmailTestTo(e.target.value)} placeholder="user@example.com (optional)" />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className="btn-primary" onClick={sendTestEmail} disabled={emailTesting}>{emailTesting ? "Sending..." : "Send Test Email"}</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div className="text-lg font-semibold">Cloudinary Storage</div>
+            <div className="text-sm text-slate-500">Store attachments in Cloudinary; links are saved to document records.</div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs font-medium text-slate-700">Cloud Name</label>
+                <input className="input w-full" value={cloud.cloud_name} onChange={e => setCloud(p => ({ ...p, cloud_name: e.target.value }))} disabled={cloudLoading || cloudSaving} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700">API Key</label>
+                <input className="input w-full" value={cloud.api_key} onChange={e => setCloud(p => ({ ...p, api_key: e.target.value }))} disabled={cloudLoading || cloudSaving} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700">API Secret</label>
+                <input type="password" placeholder={cloud.has_secret && !cloud.api_secret ? "•••••••• (unchanged)" : ""} className="input w-full" value={cloud.api_secret} onChange={e => setCloud(p => ({ ...p, api_secret: e.target.value }))} disabled={cloudLoading || cloudSaving} />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-slate-700">Folder (optional)</label>
+                <input className="input w-full" value={cloud.folder} onChange={e => setCloud(p => ({ ...p, folder: e.target.value }))} disabled={cloudLoading || cloudSaving} />
+              </div>
+            </div>
+            <div className="flex gap-2">
+              <button type="button" className="btn-primary" onClick={saveCloudinary} disabled={cloudSaving}>{cloudSaving ? "Saving..." : "Save Cloudinary Settings"}</button>
+            </div>
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div>
+              <div className="text-lg font-semibold">Google Maps</div>
+              <div className="text-sm text-slate-500">Enter your Google Maps API Key to enable map features.</div>
+            </div>
+            {googleMapsLoading ? <div className="text-sm text-slate-500">Loading...</div> : (
+              <div className="max-w-md space-y-3">
+                <div>
+                  <label className="text-xs font-medium text-slate-700">API Key</label>
+                  <input type="text" className="input w-full" placeholder="AIzaSy..." value={googleMapsApiKey} onChange={e => setGoogleMapsApiKey(e.target.value)} disabled={googleMapsSaving} />
+                </div>
+                <div className="flex gap-2">
+                  <button type="button" className="btn-primary" disabled={googleMapsSaving} onClick={saveGoogleMaps}>
+                    {googleMapsSaving ? "Saving..." : "Save Google Maps Settings"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+
+        <AppModeControlSection />
+
+        <AppBackgroundControlSection />
+
+        <BranchDataSharingSection />
+
+        <ExecutiveOverviewIsolationSection />
+
+        <BiIsolationSection />
+
+        <PosDayControlSection />
+
+        <BiometricLocationSecuritySection />
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div className="text-lg font-semibold">Compliance Notification Template</div>
+            <div className="text-sm text-slate-500">Message template sent when a vehicle compliance document is expiring soon or expired.</div>
+            <ComplianceTemplateSection />
+          </div>
+        </div>
+
+        <div className="card">
+          <div className="card-body space-y-3">
+            <div className="text-lg font-semibold">Servicing Notification Template</div>
+            <div className="text-sm text-slate-500">Message template sent when a vehicle is due for servicing.</div>
+            <ServicingTemplateSection />
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function ComplianceTemplateSection() {
+  const [template, setTemplate] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await api.get("/transport/templates/compliance");
+        setTemplate(res.data?.template || "");
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  async function handleSave() {
+    try {
+      setSaving(true);
+      await api.put("/transport/templates/compliance", { template });
+      toast.success("Compliance template updated");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update compliance template");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="text-sm text-slate-500">Loading template...</div>;
+
+  return (
+    <div className="space-y-3">
+      <textarea
+        className="input w-full h-24"
+        value={template}
+        onChange={(e) => setTemplate(e.target.value)}
+        placeholder="Enter template..."
+      />
+      <div className="flex justify-between items-center text-xs text-slate-500">
+        <div>Variables: {"{registration_number}"}, {"{compliance_type}"}, {"{expiry_date}"}, {"{days_left}"}</div>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save Template"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function ServicingTemplateSection() {
+  const [template, setTemplate] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    async function load() {
+      try {
+        setLoading(true);
+        const res = await api.get("/transport/templates/servicing");
+        setTemplate(res.data?.template || "");
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    load();
+  }, []);
+
+  async function handleSave() {
+    try {
+      setSaving(true);
+      await api.put("/transport/templates/servicing", { template });
+      toast.success("Servicing template updated");
+    } catch (err) {
+      toast.error(err.response?.data?.error || "Failed to update servicing template");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (loading) return <div className="text-sm text-slate-500">Loading template...</div>;
+
+  return (
+    <div className="space-y-3">
+      <textarea
+        className="input w-full h-24"
+        value={template}
+        onChange={(e) => setTemplate(e.target.value)}
+        placeholder="Enter template..."
+      />
+      <div className="flex justify-between items-center text-xs text-slate-500">
+        <div>Variables: {"{registration_number}"}, {"{current_mileage}"}, {"{next_service_mileage}"}, {"{due_date}"}</div>
+        <button
+          type="button"
+          className="btn-primary"
+          onClick={handleSave}
+          disabled={saving}
+        >
+          {saving ? "Saving..." : "Save Template"}
+        </button>
+      </div>
+    </div>
+  );
+}
