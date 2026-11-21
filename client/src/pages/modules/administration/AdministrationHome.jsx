@@ -354,6 +354,7 @@ export default function AdministrationHome() {
         element={<UserPermissions />}
       />
       <Route path="/access/dashboard-permissions" element={<DashboardPermissions />} />
+      <Route path="/dashboard-permissions" element={<DashboardPermissions />} />
       <Route path="/access/user-overrides" element={<UserOverrides />} />
       <Route path="/access/user-overrides/new" element={<UserOverrides initialCreate={true} />} />
       <Route

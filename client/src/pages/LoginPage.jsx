@@ -522,11 +522,11 @@ export default function LoginPage() {
               <div className="bg-white/95 backdrop-blur-md px-4 sm:px-5 py-1.5 sm:py-2 rounded-full shadow-sm flex items-center gap-2.5 border border-slate-200">
                 <img
                   src="/OMNISUITE_ICON_CLEAR.png"
-                  alt="Omnisuite ERP"
+                  alt="Omnisuite PMP"
                   className="h-6 sm:h-7 w-auto object-contain"
                 />
-                <span className="font-extrabold text-slate-900 text-base sm:text-lg tracking-tight">
-                  Omnisuite ERP
+                <span className="font-normal text-slate-900 text-base sm:text-lg tracking-tight">
+                  Omnisuite PMP
                 </span>
               </div>
             </div>
@@ -563,7 +563,7 @@ export default function LoginPage() {
                   id="username"
                   name="username"
                   type="text"
-                  className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 focus:ring-3 focus:ring-blue-400/20 outline-none transition-all"
+                  className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-sm sm:text-base font-normal text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 focus:ring-3 focus:ring-blue-400/20 outline-none transition-all"
                   ref={usernameRef}
                   autoComplete="username"
                   required
@@ -656,7 +656,7 @@ export default function LoginPage() {
                     id="password"
                     name="password"
                     type={showPassword ? "text" : "password"}
-                    className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-sm sm:text-base font-semibold text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 focus:ring-3 focus:ring-blue-400/20 outline-none transition-all pr-12"
+                    className="w-full px-4 py-2.5 sm:py-3 rounded-xl border border-slate-300 dark:border-slate-700 text-sm sm:text-base font-normal text-slate-900 dark:text-slate-100 bg-white dark:bg-slate-900 shadow-xs focus:border-blue-500 focus:ring-3 focus:ring-blue-400/20 outline-none transition-all pr-12"
                     ref={passwordRef}
                     autoComplete="current-password"
                     required
@@ -814,7 +814,7 @@ export default function LoginPage() {
                           opacity: idx === announcementIndex ? 1 : 0,
                         }}
                       >
-                        <p className="text-slate-900 text-xs sm:text-sm font-semibold leading-snug w-full truncate">
+                        <p className="text-slate-900 text-xs sm:text-sm font-normal leading-snug w-full truncate">
                           {ann}
                         </p>
                       </div>
@@ -829,7 +829,7 @@ export default function LoginPage() {
                     <Gift size={15} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-slate-700 text-xs truncate">
+                    <h4 className="font-normal text-slate-700 text-xs truncate">
                       {bd.full_name}'s Birthday
                     </h4>
                     <p className="text-slate-500 text-[10px]">
@@ -845,7 +845,7 @@ export default function LoginPage() {
                     <Award size={15} />
                   </div>
                   <div className="flex-1 min-w-0">
-                    <h4 className="font-semibold text-slate-700 text-xs truncate">
+                    <h4 className="font-normal text-slate-700 text-xs truncate">
                       {an.full_name}'s Work Anniversary
                     </h4>
                     <p className="text-slate-500 text-[10px]">

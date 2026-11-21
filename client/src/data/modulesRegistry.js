@@ -17,6 +17,7 @@ export const MODULES_REGISTRY = {
       { key: "roles", label: "Role Setup", type: "feature" },
       { key: "user-permissions", label: "User Permissions", type: "feature" },
       { key: "user-overrides", label: "Exceptional Permissions", type: "feature" },
+      { key: "dashboard-permissions", label: "Dashboard Permissions", type: "feature" },
 
       { key: "users", label: "User Management", type: "feature" },
       { key: "settings", label: "Settings", type: "feature" },
@@ -430,8 +431,19 @@ export const MODULES_REGISTRY = {
       { key: "resource-allocation-report", label: "Resource Allocation Report", type: "feature" },
     ],
     dashboards: [
-
-
+      { key: "dashboard", label: "Project Dashboard", type: "dashboard" },
+      { key: "pm-total-projects", label: "Total Projects", type: "dashboard" },
+      { key: "pm-active-projects", label: "Active Projects", type: "dashboard" },
+      { key: "pm-open-tasks", label: "Open Tasks", type: "dashboard" },
+      { key: "pm-overdue-tasks", label: "Overdue Tasks", type: "dashboard" },
+      { key: "pm-total-milestones", label: "Total Milestones", type: "dashboard" },
+      { key: "pm-achieved-milestones", label: "Achieved Milestones", type: "dashboard" },
+      { key: "pm-total-budget", label: "Total Project Budget", type: "dashboard" },
+      { key: "pm-logged-hours", label: "Total Logged Hours", type: "dashboard" },
+      { key: "pm-pending-requisitions", label: "Pending Requisitions", type: "dashboard" },
+      { key: "pm-open-claims", label: "Open Payment Claims", type: "dashboard" },
+      { key: "pm-active-variations", label: "Active Variations", type: "dashboard" },
+      { key: "pm-open-snags", label: "Open Snags & Issues", type: "dashboard" },
     ]
   },
 

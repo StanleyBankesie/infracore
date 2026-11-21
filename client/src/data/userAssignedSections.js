@@ -342,6 +342,7 @@ export const MODULE_SECTIONS = {
         { key: "roles", label: "Role Setup", path: "/administration/access/roles" },
         { key: "user-permissions", label: "User Permissions", path: "/administration/access/user-permissions" },
         { key: "user-overrides", label: "Exceptional Permissions", path: "/administration/access/user-overrides" },
+        { key: "dashboard-permissions", label: "Dashboard Permissions", path: "/administration/access/dashboard-permissions" },
       ],
     },
     {

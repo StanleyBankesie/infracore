@@ -298,6 +298,7 @@ const ModuleDashboard = ({
 
     if (
       mk &&
+      mk !== "project-management" &&
       hasDashboards &&
       canAccessDb &&
       isDashboardAllowed &&

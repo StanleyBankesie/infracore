@@ -328,8 +328,19 @@ export const FEATURES_REGISTRY = {
       { feature_key: "project-management:equipment-logs", type: "feature", label: "Plant & Equipment Logs", path: "/project-management/equipment-logs" },
     ],
     dashboards: [
-
-
+      { feature_key: "project-management:dashboard", type: "dashboard", label: "Project Dashboard", path: "/project-management/dashboard" },
+      { feature_key: "project-management:pm-total-projects", type: "dashboard", label: "Total Projects", path: "/project-management" },
+      { feature_key: "project-management:pm-active-projects", type: "dashboard", label: "Active Projects", path: "/project-management" },
+      { feature_key: "project-management:pm-open-tasks", type: "dashboard", label: "Open Tasks", path: "/project-management" },
+      { feature_key: "project-management:pm-overdue-tasks", type: "dashboard", label: "Overdue Tasks", path: "/project-management" },
+      { feature_key: "project-management:pm-total-milestones", type: "dashboard", label: "Total Milestones", path: "/project-management" },
+      { feature_key: "project-management:pm-achieved-milestones", type: "dashboard", label: "Achieved Milestones", path: "/project-management" },
+      { feature_key: "project-management:pm-total-budget", type: "dashboard", label: "Total Project Budget", path: "/project-management" },
+      { feature_key: "project-management:pm-logged-hours", type: "dashboard", label: "Total Logged Hours", path: "/project-management" },
+      { feature_key: "project-management:pm-pending-requisitions", type: "dashboard", label: "Pending Requisitions", path: "/project-management" },
+      { feature_key: "project-management:pm-open-claims", type: "dashboard", label: "Open Payment Claims", path: "/project-management" },
+      { feature_key: "project-management:pm-active-variations", type: "dashboard", label: "Active Variations", path: "/project-management" },
+      { feature_key: "project-management:pm-open-snags", type: "dashboard", label: "Open Snags & Issues", path: "/project-management" },
     ],
   },
 

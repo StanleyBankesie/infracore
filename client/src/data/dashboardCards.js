@@ -53,9 +53,18 @@ export const DASHBOARD_CARDS = {
     { key: "prod-yield", label: "Production Yield" },
   ],
   projects: [
+    { key: "pm-total-projects", label: "Total Projects", aliases: ["total-projects"] },
     { key: "pm-active-projects", label: "Active Projects", aliases: ["active-projects"] },
+    { key: "pm-open-tasks", label: "Open Tasks", aliases: ["open-tasks", "active-tasks"] },
     { key: "pm-overdue-tasks", label: "Overdue Tasks", aliases: ["overdue-tasks"] },
     { key: "pm-total-milestones", label: "Total Milestones", aliases: ["total-milestones"] },
+    { key: "pm-achieved-milestones", label: "Achieved Milestones", aliases: ["achieved-milestones"] },
+    { key: "pm-total-budget", label: "Total Project Budget", aliases: ["total-budget", "project-budget"] },
+    { key: "pm-logged-hours", label: "Total Logged Hours", aliases: ["logged-hours", "total-hours"] },
+    { key: "pm-pending-requisitions", label: "Pending Requisitions", aliases: ["pm-material-requisitions"] },
+    { key: "pm-open-claims", label: "Open Payment Claims", aliases: ["open-claims", "pending-claims"] },
+    { key: "pm-active-variations", label: "Active Variations", aliases: ["active-variations", "change-orders"] },
+    { key: "pm-open-snags", label: "Open Snags & Issues", aliases: ["open-snags", "snags", "defects"] },
   ],
   pos: [
     { key: "pos-today-sales", label: "Today Sales", aliases: ["today-sales"] },

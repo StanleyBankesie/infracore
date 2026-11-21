@@ -31,7 +31,7 @@ function permKey(module_key, dashboard_key, card_key, ticker_key) {
  * 
  * @returns {JSX.Element} The dashboard permissions view.
  */
-export default function DashboardPermissions() {
+export default function DashboardPermissions({ embedded = false, defaultCompanyId = null, onBack = null }) {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { refreshPermissions } = usePermission();
@@ -41,6 +41,94 @@ export default function DashboardPermissions() {
   const [userToggles, setUserToggles] = useState({});
   const [togglesInitialized, setTogglesInitialized] = useState(false);
   const [licensedModules, setLicensedModules] = useState(null);
+  const [assignedModules, setAssignedModules] = useState(null);
+  const [loadingAccess, setLoadingAccess] = useState(false);
+
+  const CANONICAL_ALIASES = useMemo(() => ({
+    "human-resources": ["hr"],
+    "project-management": ["projects", "pm"],
+    "service-management": ["service", "sm"],
+    "business-intelligence": ["bi"],
+    "executive-overview": ["executive"],
+    "administration": ["admin"],
+  }), []);
+
+  const SHORT_TO_CANONICAL = useMemo(() => ({
+    hr: "human-resources",
+    projects: "project-management",
+    pm: "project-management",
+    service: "service-management",
+    sm: "service-management",
+    bi: "business-intelligence",
+    executive: "executive-overview",
+    admin: "administration",
+  }), []);
+
+  const isModuleLicensed = (modKey) => {
+    if (!licensedModules) return false;
+    if (!Array.isArray(licensedModules) || licensedModules.length === 0) return false;
+
+    const keyLower = String(modKey || "").toLowerCase().trim();
+    if (!keyLower) return false;
+    if (licensedModules.includes("*")) return true;
+
+    const canonical = (SHORT_TO_CANONICAL[keyLower] || keyLower).toLowerCase();
+    const aliases = new Set([
+      keyLower,
+      canonical,
+      ...(CANONICAL_ALIASES[canonical] || []),
+      ...(CANONICAL_ALIASES[keyLower] || []),
+    ]);
+
+    for (const lic of licensedModules) {
+      const licLower = String(lic || "").toLowerCase().trim();
+      if (licLower === "*") return true;
+      for (const a of aliases) {
+        if (licLower === a) return true;
+        if (licLower.startsWith(`page:${a}:`)) return true;
+        if (licLower.startsWith(`card:${a}`)) return true;
+      }
+    }
+    return false;
+  };
+
+  const isModuleAssigned = (modKey) => {
+    if (!assignedModules) return false;
+    if (!Array.isArray(assignedModules) || assignedModules.length === 0) return false;
+
+    const keyLower = String(modKey || "").toLowerCase().trim();
+    if (!keyLower) return false;
+    if (assignedModules.includes("*")) return true;
+
+    const canonical = (SHORT_TO_CANONICAL[keyLower] || keyLower).toLowerCase();
+    const aliases = new Set([
+      keyLower,
+      canonical,
+      ...(CANONICAL_ALIASES[canonical] || []),
+      ...(CANONICAL_ALIASES[keyLower] || []),
+    ]);
+
+    for (const ass of assignedModules) {
+      const assLower = String(ass || "").toLowerCase().trim();
+      if (assLower === "*") return true;
+      for (const a of aliases) {
+        if (assLower === a) return true;
+        if (assLower.startsWith(`${a}:`)) return true;
+      }
+    }
+    return false;
+  };
+
+  const isModuleAllowed = (modKey) => {
+    return isModuleLicensed(modKey) && isModuleAssigned(modKey);
+  };
+
+  useEffect(() => {
+    if (defaultCompanyId && users.length > 0 && !selectedUserId) {
+      const match = users.find((u) => String(u.company_id) === String(defaultCompanyId));
+      if (match) setSelectedUserId(String(match.id));
+    }
+  }, [defaultCompanyId, users, selectedUserId]);
 
   useEffect(() => {
     setUserToggles({});
@@ -59,25 +147,90 @@ export default function DashboardPermissions() {
   }, [perms, togglesInitialized]);
 
   useEffect(() => {
-    async function fetchLicense() {
+    let isMounted = true;
+    async function fetchUserAccess() {
       if (!selectedUserId || users.length === 0) {
         setLicensedModules(null);
+        setAssignedModules(null);
         return;
       }
       const selectedUser = users.find((u) => String(u.id) === String(selectedUserId));
-      if (!selectedUser || !selectedUser.company_id) {
-        setLicensedModules(null);
-        return;
-      }
+      const companyId = selectedUser?.company_id || defaultCompanyId || 1;
+
+      setLoadingAccess(true);
       try {
-        const res = await api.get(`/licenses/company/${selectedUser.company_id}`);
-        setLicensedModules(res.data?.modules || []);
-      } catch (err) {
-        setLicensedModules([]);
+        let licMods = [];
+        let assMods = [];
+
+        // 1. Fetch user permissions (returns assigned modules & licensed tokens)
+        try {
+          const permRes = await api.get(`/admin/user-permissions?user_id=${selectedUserId}`);
+          if (Array.isArray(permRes.data?.modules)) {
+            assMods = permRes.data.modules;
+          }
+          if (Array.isArray(permRes.data?.licensed_modules) && permRes.data.licensed_modules.length > 0) {
+            licMods = permRes.data.licensed_modules;
+          }
+        } catch (err) {
+          console.warn("[DashboardPermissions] Error loading user permissions:", err);
+        }
+
+        // 2. Fetch company license directly if licMods is empty
+        if (!licMods || licMods.length === 0) {
+          try {
+            const licRes = await api.get(`/licenses/company/${companyId}`);
+            if (Array.isArray(licRes.data?.modules)) {
+              licMods = licRes.data.modules;
+            }
+          } catch (err) {
+            console.warn("[DashboardPermissions] Error loading company license:", err);
+          }
+        }
+
+        // 3. Fallback for assigned modules if empty: check roles
+        if (!assMods || assMods.length === 0) {
+          try {
+            const rolesRes = await api.get(`/admin/users/${selectedUserId}/roles`);
+            const roleItems = Array.isArray(rolesRes.data?.data?.items)
+              ? rolesRes.data.data.items
+              : Array.isArray(rolesRes.data?.items)
+                ? rolesRes.data.items
+                : [];
+            if (roleItems.length > 0) {
+              const modPromises = roleItems.map((r) =>
+                api.get(`/admin/role-modules/${r.id}`).catch(() => ({ data: [] }))
+              );
+              const modResults = await Promise.all(modPromises);
+              const collected = new Set();
+              modResults.forEach((res) => {
+                const list = Array.isArray(res.data) ? res.data : [];
+                list.forEach((m) => {
+                  if (m.module_key) collected.add(m.module_key);
+                });
+              });
+              assMods = Array.from(collected);
+            }
+          } catch (err) {
+            console.warn("[DashboardPermissions] Error loading fallback roles:", err);
+          }
+        }
+
+        if (isMounted) {
+          setLicensedModules(licMods || []);
+          setAssignedModules(assMods || []);
+        }
+      } finally {
+        if (isMounted) {
+          setLoadingAccess(false);
+        }
       }
     }
-    fetchLicense();
-  }, [selectedUserId, users]);
+
+    fetchUserAccess();
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedUserId, users, defaultCompanyId]);
 
   const modules = useMemo(() => {
     const base = Object.entries(MODULES_REGISTRY).map(([key, val]) => {
@@ -448,20 +601,25 @@ export default function DashboardPermissions() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className={embedded ? "p-4 sm:p-6 space-y-6" : "p-6 space-y-6"}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Dashboard Permissions</h1>
-          <p className="text-sm text-slate-600">
-            Control which dashboards/cards/tickers a user can view
+          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Permissions</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Control which dashboards, cards, and tickers a user can view
           </p>
         </div>
-        <button
-          className="btn btn-secondary"
-          onClick={() => navigate("/administration")}
-        >
-          Back to Admin
-        </button>
+        {!embedded && (
+          <button
+            className="btn btn-secondary"
+            onClick={() => {
+              if (onBack) onBack();
+              else navigate("/administration");
+            }}
+          >
+            Back to Admin
+          </button>
+        )}
       </div>
       <div className="card">
         <div className="card-body space-y-4">
@@ -473,55 +631,66 @@ export default function DashboardPermissions() {
               onChange={(e) => setSelectedUserId(e.target.value)}
             >
               <option value="">Choose a user…</option>
-              {users.map((u) => (
-                <option key={u.id} value={u.id}>
-                  {u.username || u.full_name || `User #${u.id}`}
-                </option>
-              ))}
+              {users.map((u) => {
+                const isCompanyUser = defaultCompanyId && String(u.company_id) === String(defaultCompanyId);
+                return (
+                  <option key={u.id} value={u.id}>
+                    {u.username || u.full_name || `User #${u.id}`}
+                    {u.company_name ? ` — ${u.company_name}` : ""}
+                    {isCompanyUser ? " ★ (Current Company)" : ""}
+                  </option>
+                );
+              })}
             </select>
           </div>
 
           {selectedUserId && (
             <div className="space-y-6">
-              {modules.map((m) => {
-                let cards = KNOWN_CARDS[m.key] || [];
-                if (m.key === "home") {
-                  if (licensedModules && Array.isArray(licensedModules) && licensedModules.length > 0) {
-                    const canonicalToShort = {
-                      "human-resources": "hr",
-                      "project-management": "projects",
-                      "service-management": "service",
-                      "business-intelligence": "bi",
-                      "executive-overview": "executive",
-                      "administration": "admin",
-                    };
-                    const shortToCanonical = {
-                      hr: "human-resources",
-                      projects: "project-management",
-                      service: "service-management",
-                      bi: "business-intelligence",
-                      executive: "executive-overview",
-                      admin: "administration",
-                    };
-                    cards = cards.filter((c) => {
-                      const mod = c.moduleGroup;
-                      const isAllowedByLic =
-                        licensedModules.includes(mod) ||
-                        licensedModules.includes(shortToCanonical[mod] || mod) ||
-                        licensedModules.includes(canonicalToShort[mod] || mod) ||
-                        licensedModules.includes(m.key);
-                      const isCurrentlyEnabled = getView("home", null, c.key, null);
-                      return isAllowedByLic || isCurrentlyEnabled;
-                    });
+              {loadingAccess ? (
+                <div className="card p-8 text-center text-slate-500 rounded-xl">
+                  <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-brand-500 border-t-transparent mb-2"></div>
+                  <p className="text-sm font-medium">Loading user module permissions and licenses...</p>
+                </div>
+              ) : (() => {
+                const visibleModules = modules.filter((m) => {
+                  if (m.key === "home") {
+                    const homeCards = (KNOWN_CARDS["home"] || []).filter((c) =>
+                      isModuleAllowed(c.moduleGroup)
+                    );
+                    return homeCards.length > 0;
                   }
-                }
-                const hasDashboards = m.dashboards.length > 0;
-                const hasCards = cards.length > 0;
-                if (!hasDashboards && !hasCards && m.key !== "home")
-                  return null;
+                  if (!isModuleAllowed(m.key)) return false;
+                  const cards = KNOWN_CARDS[m.key] || [];
+                  const hasDashboards = m.dashboards.length > 0;
+                  const hasCards = cards.length > 0;
+                  return hasDashboards || hasCards;
+                });
 
-                return (
-                  <div key={m.key} className="border rounded-lg">
+                if (visibleModules.length === 0) {
+                  return (
+                    <div className="p-8 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
+                      <p className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                        No assigned or licensed modules found for this user
+                      </p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                        Only modules that are actively licensed for the company and assigned to the user can be configured here.
+                      </p>
+                    </div>
+                  );
+                }
+
+                return visibleModules.map((m) => {
+                  let cards = KNOWN_CARDS[m.key] || [];
+                  if (m.key === "home") {
+                    cards = cards.filter((c) => isModuleAllowed(c.moduleGroup));
+                  }
+                  const hasDashboards = m.dashboards.length > 0;
+                  const hasCards = cards.length > 0;
+                  if (!hasDashboards && !hasCards && m.key !== "home")
+                    return null;
+
+                  return (
+                    <div key={m.key} className="border rounded-lg">
                     <div className="px-4 py-3 bg-slate-50 border-b flex items-center justify-between">
                       <div className="font-semibold">
                         {m.icon} {m.name}
@@ -792,9 +961,10 @@ export default function DashboardPermissions() {
                     </div>
                   </div>
                 );
-              })}
-            </div>
-          )}
+              });
+            })()}
+          </div>
+        )}
         </div>
       </div>
     </div>

@@ -216,7 +216,7 @@ export default function Sidebar() {
     },
     {
       key: "administration",
-      label: "System Admin",
+      label: "System Administration",
       icon: "⚙️",
       path: "/administration",
       children: [

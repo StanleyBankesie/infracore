@@ -595,6 +595,15 @@ export const MODULE_HOME_SECTIONS = [
     modulePath: "/project-management",
     sections: [
       {
+        key: "pm-dashboard",
+        title: "Project Dashboard",
+        path: "/project-management/dashboard",
+        icon: "📊",
+        items: [
+          { title: "Project Dashboard", path: "/project-management/dashboard", feature_key: "dashboard", icon: "📊" },
+        ],
+      },
+      {
         key: "pm-initiation",
         title: "Project Initiation",
         icon: "🚀",
@@ -712,7 +721,7 @@ export const MODULE_HOME_SECTIONS = [
   },
   {
     moduleKey: "administration",
-    moduleLabel: "System Admin",
+    moduleLabel: "System Administration",
     modulePath: "/administration",
     sections: [
       {
@@ -733,6 +742,7 @@ export const MODULE_HOME_SECTIONS = [
           { title: "Role Setup", path: "/admin/roles/new", feature_key: "roles", icon: "🛡️" },
           { title: "User Permissions Matrix", path: "/admin/user-permissions", feature_key: "user-permissions", icon: "📋" },
           { title: "Exceptional Permissions", path: "/administration/exceptional-permissions", feature_key: "user-overrides", icon: "⚡" },
+          { title: "Dashboard Permissions", path: "/administration/access/dashboard-permissions", feature_key: "dashboard-permissions", icon: "📊" },
         ],
       },
       {

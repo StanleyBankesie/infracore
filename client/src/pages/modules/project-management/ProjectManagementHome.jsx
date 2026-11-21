@@ -82,6 +82,15 @@ export const projectManagementSections = [
     description: "Project proposal, objectives, scope and approval.",
     items: [
       {
+        title: "Executive Project Dashboard",
+        path: "/project-management/dashboard",
+        actions: [
+          { label: "View", path: "/project-management/dashboard", type: "outline" }
+        ],
+        description: "Portfolio performance, KPI metrics, project health index, and real-time delivery velocity",
+        icon: "📊",
+      },
+      {
         title: "Projects",
         path: "/project-management/projects",
         actions: [
@@ -90,6 +99,16 @@ export const projectManagementSections = [
         ],
         description: "Manage end-to-end project lifecycles, objectives, and charter",
         icon: "📁",
+      },
+      {
+        title: "Project Milestones & Phase Gates",
+        path: "/project-management/milestones",
+        actions: [
+          { label: "Register", path: "/project-management/milestones", type: "outline" },
+          { label: "Roadmap", path: "/project-management/reports/milestone-roadmap", type: "primary" }
+        ],
+        description: "Interactive milestone register, phase-gate completion verification, stage approvals, and delivery roadmap",
+        icon: "🚩",
       },
       {
         title: "Project Proposals & Quotations",
@@ -165,6 +184,16 @@ export const projectManagementSections = [
         icon: "📊",
       },
       {
+        title: "Critical Path & Schedule Monitoring",
+        path: "/project-management/gantt?showCritical=1",
+        actions: [
+          { label: "Critical Path", path: "/project-management/gantt?showCritical=1", type: "primary" },
+          { label: "Gantt", path: "/project-management/gantt", type: "outline" }
+        ],
+        description: "Zero-float critical path identification, schedule slippage monitoring, and baseline variance",
+        icon: "⚡",
+      },
+      {
         title: "Task Calendar",
         path: "/project-management/calendar",
         actions: [
@@ -182,6 +211,16 @@ export const projectManagementSections = [
         ],
         description: "Comprehensive cost estimation, rate analysis, Work Plan/WBS-linked budgeting, and project costing schedules for all project types",
         icon: "💰",
+      },
+      {
+        title: "Bill of Quantities (BOQ)",
+        path: "/project-management/boqs",
+        actions: [
+          { label: "View", path: "/project-management/boqs", type: "outline" },
+          { label: "Cost Sheets", path: "/project-management/costing", type: "primary" }
+        ],
+        description: "Detailed Bill of Quantities items, unit rate measurement, tender bills, and material breakdowns",
+        icon: "📑",
       },
       {
         title: "Resource Management",
@@ -240,6 +279,16 @@ export const projectManagementSections = [
         icon: "⏱️",
       },
       {
+        title: "Work Plan & WBS Execution",
+        path: "/project-management/reports/workplan-wbs",
+        actions: [
+          { label: "WBS Report", path: "/project-management/reports/workplan-wbs", type: "outline" },
+          { label: "Assign Tasks", path: "/project-management/tasks/assignment", type: "primary" }
+        ],
+        description: "Execution status by Work Breakdown Structure, active work packages, and deliverables",
+        icon: "🏗️",
+      },
+      {
         title: "Material Requisitions",
         path: "/project-management/material-requisitions",
         actions: [
@@ -268,6 +317,16 @@ export const projectManagementSections = [
         ],
         description: "Track on-site material consumption against specific work tasks",
         icon: "🔨",
+      },
+      {
+        title: "Site Storage & Temporal Warehouse",
+        path: "/project-management/reports/temporal-warehouses",
+        actions: [
+          { label: "Stock Levels", path: "/project-management/reports/temporal-warehouses", type: "outline" },
+          { label: "Requisition", path: "/project-management/material-requisitions/new", type: "primary" }
+        ],
+        description: "On-site temporal warehouse stock availability, receipts, issues, and material balance tracking",
+        icon: "🏬",
       },
       {
         title: "Daily Project Report",
@@ -312,6 +371,26 @@ export const projectManagementSections = [
         ],
         description: "Earned Value Management, CPI, SPI, EAC, and cost code tracking",
         icon: "📊",
+      },
+      {
+        title: "Earned Value & Cost Variance",
+        path: "/project-management/reports/cost-variance",
+        actions: [
+          { label: "Variance", path: "/project-management/reports/cost-variance", type: "outline" },
+          { label: "Cost Control", path: "/project-management/cost-control", type: "primary" }
+        ],
+        description: "Approved budget ceilings vs actual direct costs, variance surplus/deficit, and EVM performance",
+        icon: "📉",
+      },
+      {
+        title: "Milestone Delivery & Phase-Gate Health",
+        path: "/project-management/reports/milestone-roadmap",
+        actions: [
+          { label: "Roadmap", path: "/project-management/reports/milestone-roadmap", type: "primary" },
+          { label: "Register", path: "/project-management/milestones", type: "outline" }
+        ],
+        description: "Chronological phase-gate verification, milestone health status, delays, and critical sign-offs",
+        icon: "🎯",
       },
       {
         title: "Project Direct Expenses",
@@ -495,6 +574,15 @@ export const projectManagementSections = [
         icon: "📉",
       },
       {
+        title: "Task Delay & Bottleneck Analysis",
+        path: "/project-management/reports/task-execution",
+        actions: [
+          { label: "View", path: "/project-management/reports/task-execution", type: "outline" }
+        ],
+        description: "Audit trail of delayed tasks, overdue causes, team workload friction, and resolution tracking",
+        icon: "⏱️",
+      },
+      {
         title: "Budget & Cost Variance Report",
         path: "/project-management/reports/cost-variance",
         actions: [
@@ -529,6 +617,15 @@ export const projectManagementSections = [
         ],
         description: "Payment vouchers linked to projects",
         icon: "💳",
+      },
+      {
+        title: "Project P&L and Margin Report",
+        path: "/project-management/reports/project-expense-income",
+        actions: [
+          { label: "View", path: "/project-management/reports/project-expense-income", type: "outline" }
+        ],
+        description: "Comparative project revenue, invoiced claims, direct costs, and net margin performance",
+        icon: "⚖️",
       },
     ],
   },
@@ -636,16 +733,7 @@ function ProjectManagementLanding() {
       moduleKey="project-management"
       useSectionNavigation={true}
       hideOtherPages={true}
-      headerActions={[
-        {
-          label: "Dashboard",
-          path: "/project-management/dashboard",
-          actions: [
-            { label: "View", path: "/project-management/dashboard", type: "outline" },
-          ],
-          icon: "📊",
-        },
-      ]}
+      headerActions={[]}
       sections={projectManagementSections}
       features={projectManagementFeatures}
     />
@@ -927,6 +1015,61 @@ export default function ProjectManagementHome() {
 }
 
 export const projectManagementFeatures = [
+  {
+    module_key: "project-management",
+    label: "Executive Project Dashboard",
+    path: "/project-management/dashboard",
+    actions: [{ label: "View", path: "/project-management/dashboard", type: "outline" }],
+    type: "dashboard",
+  },
+  {
+    module_key: "project-management",
+    label: "Project Milestones & Phase Gates",
+    path: "/project-management/milestones",
+    actions: [
+      { label: "Register", path: "/project-management/milestones", type: "outline" },
+      { label: "Roadmap", path: "/project-management/reports/milestone-roadmap", type: "primary" }
+    ],
+    type: "feature",
+  },
+  {
+    module_key: "project-management",
+    label: "Milestone Roadmap Report",
+    path: "/project-management/reports/milestone-roadmap",
+    actions: [{ label: "View", path: "/project-management/reports/milestone-roadmap", type: "outline" }],
+    type: "feature",
+  },
+  {
+    module_key: "project-management",
+    label: "Work Plan & WBS Report",
+    path: "/project-management/reports/workplan-wbs",
+    actions: [{ label: "View", path: "/project-management/reports/workplan-wbs", type: "outline" }],
+    type: "feature",
+  },
+  {
+    module_key: "project-management",
+    label: "Bill of Quantities (BOQ)",
+    path: "/project-management/boqs",
+    actions: [
+      { label: "View", path: "/project-management/boqs", type: "outline" },
+      { label: "Cost Sheets", path: "/project-management/costing", type: "primary" }
+    ],
+    type: "feature",
+  },
+  {
+    module_key: "project-management",
+    label: "Temporal Warehouse Stock Report",
+    path: "/project-management/reports/temporal-warehouses",
+    actions: [{ label: "View", path: "/project-management/reports/temporal-warehouses", type: "outline" }],
+    type: "feature",
+  },
+  {
+    module_key: "project-management",
+    label: "Budget & Cost Variance Report",
+    path: "/project-management/reports/cost-variance",
+    actions: [{ label: "View", path: "/project-management/reports/cost-variance", type: "outline" }],
+    type: "feature",
+  },
   {
     module_key: "project-management",
     label: "Projects",

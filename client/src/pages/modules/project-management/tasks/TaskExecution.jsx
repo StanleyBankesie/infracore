@@ -903,28 +903,104 @@ export default function TaskExecution() {
 
     const linkedIds = linkedM && Array.isArray(linkedM.linked_tasks) ? linkedM.linked_tasks.map((lt) => lt.task_id || lt.id) : [];
 
-    // Resolve the full WBS name (e.g. "Substructure & Foundation", NOT just code "1.3")
-    const fullWbsName =
-      task.scope_name ||
-      (task.project_id && task.wbs_code && wbsNameMap[`${task.project_id}_${task.wbs_code}`]) ||
-      task.wbs_name ||
-      task.work_package_name ||
-      task.package_name ||
-      task.work_plan_element ||
-      (task.wbs_code ? `WBS: ${task.wbs_code}` : "");
+    // Helper to check if string is only a code / prefix (e.g. "Work Plan/WBS: 1.3", "1.3", "WBS: 1.3")
+    const isCodeOnly = (str) => {
+      if (!str) return true;
+      const stripped = String(str)
+        .replace(/^(work\s*plan\s*\/?\s*wbs\s*[:.-]?\s*|wbs\s*[:.-]?\s*)/i, "")
+        .trim();
+      return /^[\d.]+$/.test(stripped) || stripped.length === 0;
+    };
+
+    let resolvedScope = "";
+    const directCandidates = [
+      task.scope_name,
+      task.project_id && task.wbs_code ? wbsNameMap[`${task.project_id}_${task.wbs_code}`] : null,
+      task.wbs_name,
+      task.work_package_name,
+      task.package_name,
+      task.work_plan_element,
+    ];
+    for (const c of directCandidates) {
+      if (c && !isCodeOnly(c)) {
+        resolvedScope = String(c).trim();
+        break;
+      }
+    }
+
+    // Dynamic resolution from project scopes and work packages if not already found
+    if (!resolvedScope && task.project_id) {
+      try {
+        const pRes = await api.get(`/projects/projects/${task.project_id}`);
+        const proj = pRes.data?.item || pRes.data?.project || pRes.data;
+        let pScopes = proj?.project_scopes || proj?.scopes;
+        if (typeof pScopes === "string") {
+          try { pScopes = JSON.parse(pScopes); } catch { pScopes = []; }
+        }
+        const targetCode = String(task.wbs_code || "").trim();
+        const targetMajor = targetCode.split(".")[0];
+
+        if (Array.isArray(pScopes)) {
+          for (const s of pScopes) {
+            const sCode = String(s.wbs || s.wbs_code || s.code || "").trim();
+            if (sCode && sCode === targetCode) {
+              const name = s.name || s.title || s.scope_name || s.package_name;
+              if (name && !isCodeOnly(name)) { resolvedScope = name; break; }
+            }
+            if (Array.isArray(s.wbs_list)) {
+              const matched = s.wbs_list.find((w) => String(w.wbs || w.wbs_code || "").trim() === targetCode);
+              if (matched) {
+                const name = matched.name || matched.title || matched.wbs_name || matched.package_name;
+                if (name && !isCodeOnly(name)) { resolvedScope = name; break; }
+              }
+            }
+          }
+          if (!resolvedScope && targetMajor) {
+            for (const s of pScopes) {
+              const sCode = String(s.wbs || s.wbs_code || s.code || "").trim();
+              const sMajor = sCode.split(".")[0];
+              if (sMajor && sMajor === targetMajor) {
+                const name = s.name || s.title || s.scope_name || s.package_name;
+                if (name && !isCodeOnly(name)) { resolvedScope = name; break; }
+              }
+            }
+          }
+        }
+
+        if (!resolvedScope) {
+          try {
+            const wpRes = await api.get(`/construction/work-packages?project_id=${task.project_id}`);
+            const wps = wpRes.data?.items || [];
+            const wp = wps.find((w) => {
+              const wCode = String(w.wbs_code || w.code || "").trim();
+              return (targetCode && wCode === targetCode) || (task.work_package_id && w.id === task.work_package_id);
+            });
+            if (wp && (wp.package_name || wp.name)) {
+              resolvedScope = wp.package_name || wp.name;
+            }
+          } catch {}
+        }
+      } catch (err) {
+        console.warn("Could not dynamically resolve project scope:", err);
+      }
+    }
+
+    if (!resolvedScope || isCodeOnly(resolvedScope)) {
+      resolvedScope = task.scope_name || `${taskTitle} Scope`;
+    }
 
     setActiveMilestoneId(milestoneId);
     setMilestoneForm({
-      title,
+      title, // Always "${taskTitle} sign-off"
       description: desc,
-      milestone_type: mType,
+      milestone_type: mType, // Always "TASK_COMPLETION"
       target_date: targetCompletionDate,
       system_start_date: formatDisplayDate(sysStartRaw),
       system_end_date: formatDisplayDate(sysEndRaw),
       actual_start_date: actualStart,
       actual_end_date: actualEnd,
       status: "ACHIEVED",
-      work_plan_element: fullWbsName,
+      work_plan_element: resolvedScope,
       responsible_owner_id: String(task.assigned_to_id || task.assigned_to || ""),
       responsible_owner_name: task.assigned_to_name || task.assigned_user_name || "",
       requires_inspection: requiresInspection,
@@ -2274,7 +2350,7 @@ export default function TaskExecution() {
 
             <div>
               <label className="text-[11px] font-medium text-slate-600 dark:text-slate-300 block mb-1">
-                Associated Work Plan Scope (Task WBS)
+                Associated Work Plan Scope
               </label>
               <input
                 type="text"

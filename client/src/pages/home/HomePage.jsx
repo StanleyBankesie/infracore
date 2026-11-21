@@ -971,9 +971,18 @@ export default function HomePage() {
         else if (card.key === "prod-active-orders") val = overview?.activeProductionOrders || 0;
         else if (card.key === "prod-completed-orders") val = overview?.completedOrders || 0;
         else if (card.key === "prod-yield") val = overview?.productionYield || "98%";
-        else if (card.key === "pm-active-projects") val = overview?.activeProjects || 0;
-        else if (card.key === "pm-overdue-tasks") val = overview?.overdueTasks || 0;
-        else if (card.key === "pm-total-milestones") val = overview?.totalMilestones || 0;
+        else if (card.key === "pm-total-projects" || card.key === "total-projects") val = overview?.totalProjects || 0;
+        else if (card.key === "pm-active-projects" || card.key === "active-projects") val = overview?.activeProjects || 0;
+        else if (card.key === "pm-open-tasks" || card.key === "open-tasks" || card.key === "active-tasks") val = overview?.openTasks || 0;
+        else if (card.key === "pm-overdue-tasks" || card.key === "overdue-tasks") val = overview?.overdueTasks || 0;
+        else if (card.key === "pm-total-milestones" || card.key === "total-milestones") val = overview?.totalMilestones || 0;
+        else if (card.key === "pm-achieved-milestones" || card.key === "achieved-milestones") val = overview?.achievedMilestones || 0;
+        else if (card.key === "pm-total-budget" || card.key === "total-budget" || card.key === "project-budget") val = overview?.totalProjectBudget || 0;
+        else if (card.key === "pm-logged-hours" || card.key === "logged-hours" || card.key === "total-hours") val = overview?.totalLoggedHours || 0;
+        else if (card.key === "pm-pending-requisitions" || card.key === "pm-material-requisitions") val = overview?.pendingRequisitions || 0;
+        else if (card.key === "pm-open-claims" || card.key === "open-claims" || card.key === "pending-claims") val = overview?.openClaims || 0;
+        else if (card.key === "pm-active-variations" || card.key === "active-variations" || card.key === "change-orders") val = overview?.activeVariations || 0;
+        else if (card.key === "pm-open-snags" || card.key === "open-snags" || card.key === "snags" || card.key === "defects") val = overview?.openSnags || 0;
         else if (card.key === "exec-gross-profit") val = overview?.grossProfit || overview?.monthlyRevenue || 0;
         else if (card.key === "exec-net-income") val = overview?.netIncome || 0;
         else if (card.key === "exec-total-expenses") val = overview?.totalExpenses || 0;
@@ -1007,9 +1016,41 @@ export default function HomePage() {
           "exec-gross-profit",
           "exec-net-income",
           "exec-total-expenses",
-          "sm-total-revenue"
+          "sm-total-revenue",
+          "pm-total-budget",
+          "total-budget",
+          "project-budget"
         ].includes(card.key);
         const finalValue = isMonetary ? fmtCurrency(val) : String(val);
+
+        const pmCardIcons = {
+          "pm-total-projects": "📁",
+          "pm-active-projects": "🚀",
+          "pm-open-tasks": "📋",
+          "pm-overdue-tasks": "⚠️",
+          "pm-total-milestones": "🚩",
+          "pm-achieved-milestones": "🎯",
+          "pm-total-budget": "💰",
+          "pm-logged-hours": "⏱️",
+          "pm-pending-requisitions": "📦",
+          "pm-open-claims": "🧾",
+          "pm-active-variations": "🔄",
+          "pm-open-snags": "🔍"
+        };
+        const pmCardPaths = {
+          "pm-total-projects": "/project-management/projects",
+          "pm-active-projects": "/project-management/projects",
+          "pm-open-tasks": "/project-management/tasks",
+          "pm-overdue-tasks": "/project-management/tasks",
+          "pm-total-milestones": "/project-management/planning-and-scheduling",
+          "pm-achieved-milestones": "/project-management/planning-and-scheduling",
+          "pm-total-budget": "/project-management/cost-control",
+          "pm-logged-hours": "/project-management/tasks",
+          "pm-pending-requisitions": "/project-management/material-requisitions",
+          "pm-open-claims": "/project-management/invoices",
+          "pm-active-variations": "/project-management/cost-control",
+          "pm-open-snags": "/project-management/defects"
+        };
 
         metrics.push({
           key: card.key,
@@ -1017,8 +1058,8 @@ export default function HomePage() {
           label: card.label,
           value: finalValue,
           badge: overview?.badges?.[card.key]?.text || (card.key.includes("avg-sales") ? overview?.badges?.["sales-avg-sales-this-month"]?.text : "") || "",
-          icon: defaultIcons[rawModKey] || "📊",
-          path: defaultPaths[rawModKey] || "/"
+          icon: pmCardIcons[card.key] || defaultIcons[rawModKey] || "📊",
+          path: pmCardPaths[card.key] || defaultPaths[rawModKey] || "/"
         });
       });
     });

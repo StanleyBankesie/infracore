@@ -370,14 +370,22 @@ export default function ProjectMilestonesTimeline() {
       ? (targetTask.assigned_to_name || targetTask.assigned_user_name || "")
       : "";
 
-    // 2. Associated work plan scope should display the full WBS name
+    // 2. Associated work plan scope should display the full WBS name (not code-only)
+    const isCodeOnly = (str) => {
+      if (!str) return true;
+      const stripped = String(str)
+        .replace(/^(work\s*plan\s*\/?\s*wbs\s*[:.-]?\s*|wbs\s*[:.-]?\s*)/i, "")
+        .trim();
+      return /^[\d.]+$/.test(stripped) || stripped.length === 0;
+    };
+
     const wbsScope =
-      targetTask?.scope_name ||
-      targetTask?.wbs_name ||
-      targetTask?.work_package_name ||
-      targetTask?.package_name ||
-      targetTask?.work_plan_element ||
-      (targetTask?.wbs_code ? `WBS: ${targetTask.wbs_code}` : "");
+      (targetTask?.scope_name && !isCodeOnly(targetTask.scope_name) ? targetTask.scope_name : null) ||
+      (targetTask?.wbs_name && !isCodeOnly(targetTask.wbs_name) ? targetTask.wbs_name : null) ||
+      (targetTask?.work_package_name && !isCodeOnly(targetTask.work_package_name) ? targetTask.work_package_name : null) ||
+      (targetTask?.package_name && !isCodeOnly(targetTask.package_name) ? targetTask.package_name : null) ||
+      (targetTask?.work_plan_element && !isCodeOnly(targetTask.work_plan_element) ? targetTask.work_plan_element : null) ||
+      (taskTitle ? `${taskTitle} Scope` : "Project Scope");
 
     const checklist = parseTaskChecklist(targetTask);
     setActiveTaskChecklist(checklist);
@@ -416,7 +424,12 @@ export default function ProjectMilestonesTimeline() {
       ? String(m.responsible_owner_id)
       : (targetTask ? String(targetTask.assigned_to_id || targetTask.assigned_to || "") : "");
     const ownerName = m.responsible_owner_name || m.owner_name || targetTask?.assigned_to_name || "";
-    const wbsScope = m.work_plan_element || (targetTask?.wbs_code ? `Work Plan/WBS: ${targetTask.wbs_code}` : "");
+    const wbsScope =
+      (m.work_plan_element && !isCodeOnly(m.work_plan_element) ? m.work_plan_element : null) ||
+      (targetTask?.scope_name && !isCodeOnly(targetTask.scope_name) ? targetTask.scope_name : null) ||
+      (targetTask?.wbs_name && !isCodeOnly(targetTask.wbs_name) ? targetTask.wbs_name : null) ||
+      (targetTask?.work_package_name && !isCodeOnly(targetTask.work_package_name) ? targetTask.work_package_name : null) ||
+      "Project Scope";
 
     const checklist = parseTaskChecklist(targetTask);
     setActiveTaskChecklist(checklist);
@@ -1390,7 +1403,7 @@ export default function ProjectMilestonesTimeline() {
               </label>
               <input
                 type="text"
-                placeholder="e.g. Work Plan/WBS: 1.3"
+                placeholder="e.g. Substructure & Foundation"
                 value={milestoneForm.work_plan_element || ""}
                 onChange={(e) => setMilestoneForm((prev) => ({ ...prev, work_plan_element: e.target.value }))}
                 className="w-full text-xs px-3 py-2 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 font-normal text-slate-700 dark:text-slate-200"

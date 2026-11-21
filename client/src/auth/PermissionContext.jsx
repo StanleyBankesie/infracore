@@ -1030,7 +1030,9 @@ export const PermissionProvider = ({ children }) => {
   };
 
   const canViewDashboardElement = (moduleKey, type, key) => {
-    if (isSuper) return true;
+    const uid = Number(user?.id || user?.sub || 0);
+    // User ID = 1 is the Master Super Admin with unconditional access
+    if (uid === 1) return true;
     const mk = String(moduleKey || "");
     const t = String(type || "");
     const rawKey = String(key || "");
@@ -1039,7 +1041,7 @@ export const PermissionProvider = ({ children }) => {
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
-    if (!dashboardViewLoaded) return isSuper;
+    if (!dashboardViewLoaded) return uid === 1;
 
     // Build all candidate variations for lookup
     const candidates = new Set([normKey, rawKey]);
@@ -1129,23 +1131,26 @@ export const PermissionProvider = ({ children }) => {
     if (mk) {
       return canAccessPath(`/${mk}`);
     }
-    return isSuper;
+    return uid === 1;
   };
 
   const canAccessPath = (path, action = "view") => {
     const p = String(path || "");
     if (!p) return false;
-    if (isSuper) return true;
-    if (p === "/" || p === "/dashboard") return true;
+    const uid = Number(user?.id || user?.sub || 0);
     const parts = p.split("/").filter(Boolean);
     const mk = String(parts[0] || "");
     const seg = String(parts[1] || "");
 
-    // If accessing a module dashboard route (e.g. /sales/dashboard or /purchase/dashboard)
+    // If accessing a module dashboard route (e.g. /sales/dashboard or /purchase/dashboard or /project-management/dashboard)
     if (mk && (seg === "dashboard" || seg === "dashboards")) {
+      if (uid === 1) return true;
       return canViewDashboardElement(mk, "dashboard", "dashboard") !== false &&
              canViewDashboardElement(mk, "dashboard", "dashboards") !== false;
     }
+
+    if (isSuper) return true;
+    if (p === "/" || p === "/dashboard") return true;
 
     const moduleInfo = MODULES_REGISTRY[mk] || {};
 

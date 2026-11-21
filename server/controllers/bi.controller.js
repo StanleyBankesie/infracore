@@ -878,8 +878,31 @@ export const getHomeOverview = async (req, res, next) => {
           (SELECT COUNT(*) FROM prod_production_orders WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('COMPLETED','CANCELLED')) as activeProductionOrders,
           (SELECT COUNT(*) FROM prod_production_orders WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'COMPLETED') as completedOrders`, p, [{ activeProductionOrders: 0, completedOrders: 0 }]),
       safeQuery(`SELECT 
-          (SELECT COUNT(*) FROM pm_projects WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'ACTIVE') as activeProjects,
-          (SELECT COUNT(*) FROM pm_tasks WHERE (company_id = :companyId OR company_id IS NULL) AND status != 'DONE' AND due_date < CURDATE()) as overdueTasks`, p, [{ activeProjects: 0, overdueTasks: 0 }]),
+          (SELECT COUNT(*) FROM pm_projects WHERE (company_id = :companyId OR company_id IS NULL)) as totalProjects,
+          (SELECT COUNT(*) FROM pm_projects WHERE (company_id = :companyId OR company_id IS NULL) AND project_status IN ('ACTIVE', 'IN_PROGRESS', 'EXECUTION')) as activeProjects,
+          (SELECT COUNT(*) FROM pm_tasks WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('DONE', 'COMPLETED')) as openTasks,
+          (SELECT COUNT(*) FROM pm_tasks WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('DONE', 'COMPLETED') AND end_date < CURDATE()) as overdueTasks,
+          (SELECT COUNT(*) FROM pm_milestones WHERE (company_id = :companyId OR company_id IS NULL)) as totalMilestones,
+          (SELECT COUNT(*) FROM pm_milestones WHERE (company_id = :companyId OR company_id IS NULL) AND status IN ('ACHIEVED', 'COMPLETED')) as achievedMilestones,
+          (SELECT COALESCE(SUM(budget), 0) FROM pm_projects WHERE (company_id = :companyId OR company_id IS NULL)) as totalProjectBudget,
+          (SELECT COALESCE(SUM(hours), 0) FROM pm_timesheets WHERE (company_id = :companyId OR company_id IS NULL)) as totalLoggedHours,
+          (SELECT COUNT(*) FROM pm_material_requisitions WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'PENDING') as pendingRequisitions,
+          (SELECT COUNT(*) FROM pm_payment_claims WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('PAID', 'APPROVED', 'REJECTED')) as openClaims,
+          (SELECT COUNT(*) FROM pm_variations WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('APPROVED', 'REJECTED')) as activeVariations,
+          (SELECT COUNT(*) FROM pm_snag_list WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('RESOLVED', 'CLOSED')) as openSnags`, p, [{
+            totalProjects: 0,
+            activeProjects: 0,
+            openTasks: 0,
+            overdueTasks: 0,
+            totalMilestones: 0,
+            achievedMilestones: 0,
+            totalProjectBudget: 0,
+            totalLoggedHours: 0,
+            pendingRequisitions: 0,
+            openClaims: 0,
+            activeVariations: 0,
+            openSnags: 0
+          }]),
       safeQuery(`SELECT 
           (SELECT COUNT(*) FROM trans_vehicles WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'ACTIVE') as totalVehicles,
           (SELECT COUNT(*) FROM trans_trips WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'IN_PROGRESS') as activeTrips`, p, [{ totalVehicles: 0, activeTrips: 0 }]),
@@ -911,8 +934,18 @@ export const getHomeOverview = async (req, res, next) => {
     const totalAssets = Number(maintData?.totalAssets || 0);
     const activeProductionOrders = Number(prodData?.activeProductionOrders || 0);
     const completedOrders = Number(prodData?.completedOrders || 0);
+    const totalProjects = Number(projData?.totalProjects || 0);
     const activeProjects = Number(projData?.activeProjects || 0);
+    const openTasks = Number(projData?.openTasks || 0);
     const overdueTasks = Number(projData?.overdueTasks || 0);
+    const totalMilestones = Number(projData?.totalMilestones || 0);
+    const achievedMilestones = Number(projData?.achievedMilestones || 0);
+    const totalProjectBudget = Number(projData?.totalProjectBudget || 0);
+    const totalLoggedHours = Number(projData?.totalLoggedHours || 0);
+    const pendingRequisitions = Number(projData?.pendingRequisitions || 0);
+    const openClaims = Number(projData?.openClaims || 0);
+    const activeVariations = Number(projData?.activeVariations || 0);
+    const openSnags = Number(projData?.openSnags || 0);
     const totalVehicles = Number(transData?.totalVehicles || 0);
     const activeTrips = Number(transData?.activeTrips || 0);
     const arOutstanding = Number(finData?.arOutstanding || 0);
@@ -977,8 +1010,18 @@ export const getHomeOverview = async (req, res, next) => {
       totalAssets,
       activeProductionOrders,
       completedOrders,
+      totalProjects,
       activeProjects,
+      openTasks,
       overdueTasks,
+      totalMilestones,
+      achievedMilestones,
+      totalProjectBudget,
+      totalLoggedHours,
+      pendingRequisitions,
+      openClaims,
+      activeVariations,
+      openSnags,
       totalVehicles,
       activeTrips,
       arOutstanding,
@@ -1091,7 +1134,7 @@ export const getModuleAnalytics = async (req, res, next) => {
       safeQuery(`SELECT COUNT(*) as v FROM inv_warehouses WHERE (company_id = :companyId OR company_id IS NULL) AND is_active = 1`, p, [{ v: 0 }]),
       safeQuery(`SELECT COUNT(*) as v FROM maint_work_orders WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('COMPLETED','CANCELLED')`, p, [{ v: 0 }]),
       safeQuery(`SELECT COUNT(*) as v FROM prod_production_orders WHERE (company_id = :companyId OR company_id IS NULL) AND status NOT IN ('COMPLETED','CANCELLED')`, p, [{ v: 0 }]),
-      safeQuery(`SELECT COUNT(*) as v FROM pm_projects WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'ACTIVE'`, p, [{ v: 0 }]),
+      safeQuery(`SELECT COUNT(*) as v FROM pm_projects WHERE (company_id = :companyId OR company_id IS NULL) AND project_status IN ('ACTIVE', 'IN_PROGRESS', 'EXECUTION')`, p, [{ v: 0 }]),
       safeQuery(`SELECT COUNT(*) as v FROM trans_vehicles WHERE (company_id = :companyId OR company_id IS NULL) AND status = 'ACTIVE'`, p, [{ v: 0 }]),
       safeQuery(`SELECT COUNT(*) as v FROM adm_users WHERE (company_id = :companyId OR company_id IS NULL) AND is_active = 1`, p, [{ v: 0 }]),
     ]);

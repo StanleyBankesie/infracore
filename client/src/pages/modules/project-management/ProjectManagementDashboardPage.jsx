@@ -41,6 +41,8 @@ import {
   ArrowDownRight,
 } from "lucide-react";
 import { api } from "../../../api/client.js";
+import { useAuth } from "../../../auth/AuthContext.jsx";
+import { usePermission } from "../../../auth/PermissionContext.jsx";
 import {
   DashboardPageShell,
   MetricCard,
@@ -919,6 +921,17 @@ function EarnedValueMatrix({ totalBudget = 0, totalSpent = 0, avgCompletion = 0 
 // MAIN DASHBOARD COMPONENT
 // ─────────────────────────────────────────────────────────────
 export default function ProjectManagementDashboardPage() {
+  const { user } = useAuth();
+  const { canViewDashboardElement, canAccessPath } = usePermission();
+
+  const isAllowed = useMemo(() => {
+    if (Number(user?.id) === 1) return true;
+    return (
+      canViewDashboardElement("project-management", "dashboard", "dashboard") !== false &&
+      (canAccessPath ? canAccessPath("/project-management/dashboard") : true)
+    );
+  }, [user, canViewDashboardElement, canAccessPath]);
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("ALL");
@@ -976,8 +989,12 @@ export default function ProjectManagementDashboardPage() {
   };
 
   useEffect(() => {
-    loadData();
-  }, []);
+    if (isAllowed) {
+      loadData();
+    } else {
+      setLoading(false);
+    }
+  }, [isAllowed]);
 
   // Filtered views based on selectedProject
   const filteredData = useMemo(() => {
@@ -1024,6 +1041,34 @@ export default function ProjectManagementDashboardPage() {
       costSeries,
     };
   }, [data, selectedProjectId]);
+
+  if (!isAllowed) {
+    return (
+      <DashboardPageShell
+        title="Project Management Dashboard"
+        subtitle="Portfolio performance, budget control, and project health."
+        backTo="/project-management"
+      >
+        <div className="flex flex-col items-center justify-center min-h-[50vh] p-8 text-center bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm">
+          <div className="w-16 h-16 mb-4 rounded-full bg-amber-50 dark:bg-amber-950/40 flex items-center justify-center text-amber-600 dark:text-amber-400">
+            <ShieldAlert className="w-8 h-8" />
+          </div>
+          <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">
+            Dashboard Access Restricted
+          </h2>
+          <p className="text-sm text-slate-500 dark:text-slate-400 max-w-md mb-6">
+            You do not have permission to view the Project Management Dashboard. Please contact your system administrator to grant dashboard access in Dashboard Permissions.
+          </p>
+          <Link
+            to="/project-management"
+            className="px-4 py-2 bg-brand-900 hover:bg-brand-800 text-white rounded-lg text-sm font-medium transition-colors"
+          >
+            Return to Project Management Home
+          </Link>
+        </div>
+      </DashboardPageShell>
+    );
+  }
 
   return (
     <DashboardPageShell

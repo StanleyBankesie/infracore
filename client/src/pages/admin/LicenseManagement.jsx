@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import { api } from "../../api/client.js";
 import { toast } from "react-toastify";
 import { usePermission } from "../../auth/PermissionContext.jsx";
@@ -28,6 +28,7 @@ export default function LicenseManagement() {
   const [receiptTemplate, setReceiptTemplate] = useState("");
   const [savingReceiptTemplate, setSavingReceiptTemplate] = useState(false);
   const [previewReceiptMode, setPreviewReceiptMode] = useState(false);
+  const [cardSearch, setCardSearch] = useState("");
 
   const [packages, setPackages] = useState([]);
   const { refreshPermissions } = usePermission();
@@ -241,6 +242,7 @@ export default function LicenseManagement() {
   };
 
   const showModulePagesSweetAlert = (moduleKey) => {
+    if (!moduleKey || String(moduleKey).startsWith("card:")) return;
     const mod = MODULES_REGISTRY[moduleKey];
     const moduleName = mod?.name || moduleKey.toUpperCase();
     const sections = getModuleSections(moduleKey, mod);
@@ -474,13 +476,82 @@ export default function LicenseManagement() {
     }
   };
 
+  const toggleCard = (cardKey) => {
+    const token = `card:${cardKey}`;
+    setSelectedModules(prev =>
+      prev.includes(token)
+        ? prev.filter(m => m !== token)
+        : [...prev, token]
+    );
+  };
+
   const toggleModule = (code) => {
+    if (String(code).startsWith("card:")) {
+      toggleCard(String(code).slice(5));
+      return;
+    }
     if (selectedModules.includes(code)) {
       setSelectedModules(selectedModules.filter(m => m !== code && !m.startsWith(`page:${code}:`)));
     } else {
       showModulePagesSweetAlert(code);
     }
   };
+
+  const handleSelectAllCardsForGroup = (cards) => {
+    setSelectedModules(prev => {
+      const next = new Set(prev);
+      (cards || []).forEach(c => next.add(`card:${c.key}`));
+      return Array.from(next);
+    });
+  };
+
+  const handleDeselectAllCardsForGroup = (cards) => {
+    const keysToRemove = new Set((cards || []).map(c => `card:${c.key}`));
+    setSelectedModules(prev => prev.filter(m => !keysToRemove.has(m)));
+  };
+
+  const handleSelectAllCards = () => {
+    setSelectedModules(prev => {
+      const next = new Set(prev);
+      Object.values(DASHBOARD_CARDS).forEach(cards => {
+        (cards || []).forEach(c => next.add(`card:${c.key}`));
+      });
+      return Array.from(next);
+    });
+  };
+
+  const handleDeselectAllCards = () => {
+    const allCardTokens = new Set(
+      Object.values(DASHBOARD_CARDS).flatMap(cards => (cards || []).map(c => `card:${c.key}`))
+    );
+    setSelectedModules(prev => prev.filter(m => !allCardTokens.has(m)));
+  };
+
+  const filteredDashboardCards = useMemo(() => {
+    const query = String(cardSearch || "").toLowerCase().trim();
+    if (!query) return DASHBOARD_CARDS;
+    const result = {};
+    Object.entries(DASHBOARD_CARDS).forEach(([modKey, cards]) => {
+      const matching = (cards || []).filter(c =>
+        String(c.label || "").toLowerCase().includes(query) ||
+        String(c.key || "").toLowerCase().includes(query) ||
+        String(modKey || "").toLowerCase().includes(query) ||
+        (Array.isArray(c.aliases) && c.aliases.some(a => String(a).toLowerCase().includes(query)))
+      );
+      if (matching.length > 0) {
+        result[modKey] = matching;
+      }
+    });
+    return result;
+  }, [cardSearch]);
+
+  const totalCardsCount = useMemo(() => {
+    return Object.values(DASHBOARD_CARDS).reduce((acc, l) => acc + (l?.length || 0), 0);
+  }, []);
+
+  const selectedCardsCount = useMemo(() => {
+    return selectedModules.filter(m => m.startsWith("card:")).length;
+  }, [selectedModules]);
 
   // If user is not the designated super admin, deny access
   // This must be placed after ALL hooks to avoid React errors!
@@ -751,26 +822,108 @@ export default function LicenseManagement() {
                 </div>
 
                 <div>
-                  <h3 className="text-lg font-bold border-b pb-2 mb-4">Home Dashboard Cards</h3>
-                  <div className="space-y-4 max-h-[600px] overflow-y-auto pr-2">
-                    {Object.entries(DASHBOARD_CARDS).map(([modKey, cards]) => (
-                      <div key={modKey} className="border-b pb-2 last:border-0 dark:border-slate-700">
-                        <h4 className="font-semibold text-sm text-slate-500 uppercase tracking-wider mb-2">{modKey}</h4>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                          {cards.map(c => (
-                            <label key={c.key} className="flex items-center space-x-2">
-                              <input 
-                                type="checkbox"
-                                checked={selectedModules.includes(`card:${c.key}`)}
-                                onChange={() => toggleModule(`card:${c.key}`)}
-                                className="rounded text-blue-600"
-                              />
-                              <span className="text-xs">{c.label}</span>
-                            </label>
-                          ))}
-                        </div>
+                  <div className="flex items-center justify-between border-b pb-2 mb-3">
+                    <div>
+                      <h3 className="text-lg font-bold">Home Dashboard Cards</h3>
+                      <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                        ({selectedCardsCount}/{totalCardsCount} licensed)
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={handleSelectAllCards}
+                        className="px-2.5 py-1 text-xs font-medium rounded border border-blue-200 bg-blue-50 text-blue-700 hover:bg-blue-100 dark:bg-blue-900/40 dark:text-blue-300 dark:border-blue-700 transition"
+                      >
+                        Select All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleDeselectAllCards}
+                        className="px-2.5 py-1 text-xs font-medium rounded border border-slate-200 bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-300 dark:border-slate-600 transition"
+                      >
+                        Deselect All
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="mb-3">
+                    <input
+                      type="text"
+                      placeholder="🔍 Search cards (e.g. overdue, budget, active)..."
+                      value={cardSearch}
+                      onChange={(e) => setCardSearch(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white dark:bg-slate-700 border-slate-300 dark:border-slate-600 text-slate-900 dark:text-white"
+                    />
+                  </div>
+
+                  <div className="space-y-4 max-h-[560px] overflow-y-auto pr-2">
+                    {Object.keys(filteredDashboardCards).length === 0 ? (
+                      <div className="p-4 text-center text-xs text-slate-500">
+                        No dashboard cards match "{cardSearch}"
                       </div>
-                    ))}
+                    ) : (
+                      Object.entries(filteredDashboardCards).map(([modKey, cards]) => {
+                        const groupCheckedCount = cards.filter(c => selectedModules.includes(`card:${c.key}`)).length;
+
+                        return (
+                          <div key={modKey} className="border-b pb-3 last:border-0 dark:border-slate-700">
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-semibold text-xs text-slate-500 uppercase tracking-wider">
+                                  {modKey}
+                                </h4>
+                                <span className="text-[11px] font-mono text-slate-400">
+                                  ({groupCheckedCount}/{cards.length})
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-1.5 text-[11px]">
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectAllCardsForGroup(cards)}
+                                  className="text-blue-600 hover:text-blue-800 dark:text-blue-400 font-medium"
+                                >
+                                  Select All
+                                </button>
+                                <span className="text-slate-300 dark:text-slate-600">|</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleDeselectAllCardsForGroup(cards)}
+                                  className="text-slate-500 hover:text-slate-700 dark:text-slate-400 font-medium"
+                                >
+                                  Deselect All
+                                </button>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                              {cards.map(c => {
+                                const isCardChecked = selectedModules.includes(`card:${c.key}`);
+                                return (
+                                  <label
+                                    key={c.key}
+                                    className={`flex items-center space-x-2 p-1.5 rounded-md border transition cursor-pointer ${
+                                      isCardChecked
+                                        ? "bg-blue-50/60 border-blue-200 dark:bg-blue-900/20 dark:border-blue-800"
+                                        : "border-transparent hover:bg-slate-50 dark:hover:bg-slate-800/40"
+                                    }`}
+                                  >
+                                    <input 
+                                      type="checkbox"
+                                      checked={isCardChecked}
+                                      onChange={() => toggleCard(c.key)}
+                                      className="rounded text-blue-600 focus:ring-blue-500 w-4 h-4 cursor-pointer"
+                                    />
+                                    <span className="text-xs text-slate-800 dark:text-slate-200 select-none">
+                                      {c.label}
+                                    </span>
+                                  </label>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
               </div>

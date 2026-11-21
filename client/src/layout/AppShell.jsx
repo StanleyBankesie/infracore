@@ -168,6 +168,24 @@ import {
   WifiOff,
   ChevronDown,
   ChevronRight,
+  LayoutDashboard,
+  Rocket,
+  Compass,
+  PlayCircle,
+  Gauge,
+  CheckCircle2,
+  FileText,
+  BarChart3,
+  Receipt,
+  Package,
+  Layers,
+  Folder,
+  Calendar,
+  Clock,
+  CreditCard,
+  Tag,
+  ClipboardList,
+  GitBranch,
 } from "lucide-react";
 import FloatingChat from "../components/chat/FloatingChat.jsx";
 import BanksAiFloating from "../components/ai/BanksAiFloating.jsx";
@@ -279,7 +297,7 @@ const modules = [
   },
   {
     key: "administration",
-    label: "System Admin",
+    label: "System Administration",
     shortLabel: "Admin",
     path: "/administration",
     icon: <Settings />,
@@ -471,6 +489,36 @@ function scheduleDeferredTask(task, delayMs = 200) {
   };
 }
 
+function getSectionIcon(secKey, secTitle) {
+  const k = String(secKey || "").toLowerCase();
+  const t = String(secTitle || "").toLowerCase();
+
+  if (k.includes("dashboard") || t.includes("dashboard")) return <LayoutDashboard className="w-3.5 h-3.5" />;
+  if (k.includes("initiation") || t.includes("initiation") || t.includes("start")) return <Rocket className="w-3.5 h-3.5" />;
+  if (k.includes("planning") || t.includes("planning") || t.includes("plan")) return <Compass className="w-3.5 h-3.5" />;
+  if (k.includes("execution") || t.includes("execution") || t.includes("shop floor")) return <PlayCircle className="w-3.5 h-3.5" />;
+  if (k.includes("monitoring") || t.includes("monitoring") || k.includes("control") || t.includes("control")) return <Gauge className="w-3.5 h-3.5" />;
+  if (k.includes("closure") || t.includes("closure") || t.includes("handover")) return <CheckCircle2 className="w-3.5 h-3.5" />;
+  if (k.includes("voucher") || t.includes("voucher") || k.includes("document") || t.includes("document")) return <FileText className="w-3.5 h-3.5" />;
+  if (k.includes("transaction") || t.includes("transaction") || k.includes("invoice") || t.includes("invoice") || k.includes("billing") || t.includes("billing")) return <Receipt className="w-3.5 h-3.5" />;
+  if (k.includes("report") || t.includes("report") || k.includes("analytic") || t.includes("analytic")) return <BarChart3 className="w-3.5 h-3.5" />;
+  if (k.includes("setup") || t.includes("setup") || k.includes("setting") || t.includes("setting") || k.includes("config") || t.includes("config")) return <Settings className="w-3.5 h-3.5" />;
+  if (k.includes("customer") || t.includes("customer") || k.includes("user") || t.includes("user") || k.includes("employee") || t.includes("employee") || k.includes("resource") || t.includes("resource")) return <Users className="w-3.5 h-3.5" />;
+  if (k.includes("price") || t.includes("pricing") || k.includes("discount") || t.includes("discount")) return <Tag className="w-3.5 h-3.5" />;
+  if (k.includes("stock") || t.includes("stock") || k.includes("item") || t.includes("inventory") || k.includes("receipt") || t.includes("receipt")) return <Package className="w-3.5 h-3.5" />;
+  if (k.includes("procurement") || t.includes("procurement") || k.includes("purchase") || t.includes("purchase") || k.includes("order") || t.includes("order")) return <ShoppingCart className="w-3.5 h-3.5" />;
+  if (k.includes("bank") || t.includes("banking") || k.includes("finance") || t.includes("finance") || k.includes("depreciation")) return <Landmark className="w-3.5 h-3.5" />;
+  if (k.includes("time") || t.includes("time") || k.includes("attendance") || t.includes("attendance")) return <Clock className="w-3.5 h-3.5" />;
+  if (k.includes("leave") || t.includes("leave") || k.includes("calendar") || t.includes("calendar") || k.includes("timeline")) return <Calendar className="w-3.5 h-3.5" />;
+  if (k.includes("payroll") || t.includes("payroll") || k.includes("benefit") || t.includes("benefit") || k.includes("pos")) return <CreditCard className="w-3.5 h-3.5" />;
+  if (k.includes("equipment") || t.includes("equipment") || k.includes("asset") || t.includes("maintenance")) return <Wrench className="w-3.5 h-3.5" />;
+  if (k.includes("safety") || t.includes("safety") || k.includes("incident") || t.includes("hazard") || k.includes("compliance")) return <ShieldAlert className="w-3.5 h-3.5" />;
+  if (k.includes("workflow") || t.includes("workflow")) return <GitBranch className="w-3.5 h-3.5" />;
+  if (k.includes("log") || t.includes("log") || k.includes("audit") || t.includes("audit") || k.includes("task") || t.includes("task")) return <ClipboardList className="w-3.5 h-3.5" />;
+  if (k.includes("operation") || t.includes("operation")) return <Layers className="w-3.5 h-3.5" />;
+  return <Folder className="w-3.5 h-3.5" />;
+}
+
 /**
  * AppShell component
  * Acts as the primary shell around all authenticated routes.
@@ -490,6 +538,7 @@ export default function AppShell() {
     basePathFrom,
     canAccessFeatureKey,
     canAccessPath,
+    canViewDashboardElement,
     appBackground,
     roleFeatures,
     permissions,
@@ -589,6 +638,8 @@ export default function AppShell() {
   const [queueOpen, setQueueOpen] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
   const [savedToast, setSavedToast] = useState(false);
+  const [expandedModules, setExpandedModules] = useState({});
+  const moduleIconMap = useMemo(() => new Map(modules.map((m) => [m.key, m.icon])), []);
   const isUserId1 = Number(user?.sub || user?.id) === 1;
   const lastChatToneAtRef = useRef(0);
   const listPageContentRef = useRef(null);
@@ -2564,27 +2615,52 @@ export default function AppShell() {
                   return canViewModule(m.key);
                 })
                 .map((m) => (
-                  <NavLink
-                    key={m.key}
-                    to={m.path}
-                    onClick={() => {
-                      if (window.innerWidth < 768) setSidebarOpen(false);
-                    }}
-                    className={({ isActive }) =>
-                      `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ` +
-                      (isActive
-                        ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
-                        : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
-                    }
-                  >
-                    <span
-                      className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity"
-                      aria-hidden="true"
+                  <React.Fragment key={m.key}>
+                    <NavLink
+                      key={m.key}
+                      to={m.path}
+                      onClick={() => {
+                        if (window.innerWidth < 768) setSidebarOpen(false);
+                      }}
+                      className={({ isActive }) =>
+                        `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ` +
+                        (isActive
+                          ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
+                          : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
+                      }
                     >
-                      {m.icon}
-                    </span>
-                    <span>{m.label}</span>
-                  </NavLink>
+                      <span
+                        className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity"
+                        aria-hidden="true"
+                      >
+                        {m.icon}
+                      </span>
+                      <span>{m.label}</span>
+                    </NavLink>
+                    {m.key === "project-management" && (
+                      <NavLink
+                        key="project-management-dashboard"
+                        to="/project-management/dashboard"
+                        onClick={() => {
+                          if (window.innerWidth < 768) setSidebarOpen(false);
+                        }}
+                        className={({ isActive }) =>
+                          `flex items-center gap-2.5 pl-9 pr-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 group border-l-4 ` +
+                          (isActive
+                            ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
+                            : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
+                        }
+                      >
+                        <span
+                          className="w-4 h-4 flex items-center justify-center shrink-0 [&>svg]:w-[14px] [&>svg]:h-[14px] opacity-80 group-hover:opacity-100 transition-opacity"
+                          aria-hidden="true"
+                        >
+                          <LayoutDashboard />
+                        </span>
+                        <span>Project Dashboard</span>
+                      </NavLink>
+                    )}
+                  </React.Fragment>
                 ))
             ) : (
               // Replaced with sections / sub-modules where pages are grouped in module homes
@@ -2597,10 +2673,40 @@ export default function AppShell() {
                 }).map((mod) => {
                   const accessibleSections = (mod.sections || [])
                     .map((sec) => {
+                      const isSecDashboard =
+                        (sec.path && (sec.path.endsWith("/dashboard") || sec.path.endsWith("/dashboards"))) ||
+                        (sec.key && sec.key.toLowerCase().includes("dashboard"));
+
+                      if (isSecDashboard) {
+                        const isUid1 = Number(user?.id) === 1;
+                        const hasDbPerm =
+                          isUid1 ||
+                          canViewDashboardElement(mod.moduleKey, "dashboard", "dashboard") ||
+                          canViewDashboardElement(mod.moduleKey, "dashboard", sec.key) ||
+                          (canAccessPath && canAccessPath(sec.path));
+                        if (!hasDbPerm) {
+                          return { ...sec, visibleItems: [] };
+                        }
+                      }
+
                       const visibleItems = (sec.items || []).filter((item) => {
-                        if (isSuper) return true;
+                        if (Number(user?.id) === 1) return true;
+
+                        const isItemDashboard =
+                          (item.path && (item.path.endsWith("/dashboard") || item.path.endsWith("/dashboards"))) ||
+                          item.feature_key === "dashboard";
+
+                        if (isItemDashboard) {
+                          const hasItemDbPerm =
+                            canViewDashboardElement(mod.moduleKey, "dashboard", "dashboard") ||
+                            canViewDashboardElement(mod.moduleKey, "dashboard", item.feature_key) ||
+                            (canAccessPath && canAccessPath(item.path));
+                          if (!hasItemDbPerm) return false;
+                        }
+
                         if (
                           item.feature_key &&
+                          item.feature_key !== "dashboard" &&
                           !canAccessFeatureKey(mod.moduleKey, item.feature_key)
                         ) {
                           return false;
@@ -2614,85 +2720,141 @@ export default function AppShell() {
                     })
                     .filter(
                       (sec) =>
-                        sec.visibleItems.length > 0 || (sec.items || []).length === 0
+                        sec.visibleItems.length > 0 ||
+                        ((sec.items || []).length === 0 && (!sec.path || (canAccessPath && canAccessPath(sec.path))))
                     );
 
                   if (accessibleSections.length === 0) return null;
 
+                  const isCurrentModule =
+                    location.pathname === mod.modulePath ||
+                    location.pathname.startsWith(`${mod.modulePath}/`);
+
+                  const isExpanded =
+                    expandedModules[mod.moduleKey] !== undefined
+                      ? !!expandedModules[mod.moduleKey]
+                      : isCurrentModule;
+
+                  const isModuleActive =
+                    location.pathname === mod.modulePath;
+
                   return (
                     <div key={mod.moduleKey} className="space-y-1">
-                      {/* Module group context heading */}
-                      <div className="px-3 pt-2.5 pb-1 text-[11px] font-bold uppercase tracking-wider text-slate-400/80 dark:text-slate-500 border-t border-slate-800/60 first:border-t-0 flex items-center justify-between">
+                      {/* Module Main Navigation Row with White Icon, Label & Collapsible Chevron */}
+                      <div className="flex items-center justify-between rounded-xl transition-all duration-150 group">
                         <Link
                           to={mod.modulePath}
                           onClick={() => {
+                            setExpandedModules((prev) => ({ ...prev, [mod.moduleKey]: true }));
                             if (window.innerWidth < 768) setSidebarOpen(false);
                           }}
-                          className="hover:text-white transition-colors truncate"
+                          className={`flex-1 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 border-l-4 ${
+                            isModuleActive
+                              ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
+                              : isCurrentModule
+                              ? "text-white font-semibold hover:bg-white/10 border-transparent"
+                              : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent"
+                          }`}
                           title={`Go to ${mod.moduleLabel} Home`}
                         >
-                          {mod.moduleLabel}
+                          <span
+                            className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity text-slate-300 dark:text-slate-400 group-hover:text-white"
+                            aria-hidden="true"
+                          >
+                            {moduleIconMap.get(mod.moduleKey) || <Blocks />}
+                          </span>
+                          <span className="truncate">{mod.moduleLabel}</span>
                         </Link>
+
+                        {accessibleSections.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              setExpandedModules((prev) => ({
+                                ...prev,
+                                [mod.moduleKey]: !isExpanded,
+                              }));
+                            }}
+                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors mr-1 shrink-0"
+                            aria-label={isExpanded ? `Collapse ${mod.moduleLabel}` : `Expand ${mod.moduleLabel}`}
+                            title={isExpanded ? "Collapse sections" : "Expand sections"}
+                          >
+                            <ChevronDown
+                              className={`w-4 h-4 transition-transform duration-200 ${
+                                isExpanded ? "rotate-180 text-white" : "rotate-0 text-slate-400"
+                              }`}
+                            />
+                          </button>
+                        )}
                       </div>
 
-                      {/* Sections replacing module names */}
-                      {accessibleSections.map((sec) => {
-                        const secKey = `${mod.moduleKey}-${sec.key}`;
-                        const sectionTargetUrl = `${mod.modulePath}?section=${encodeURIComponent(
-                          sec.title
-                        )}`;
+                      {/* Collapsible Sections Container (Hidden when collapsed) */}
+                      {isExpanded && accessibleSections.length > 0 && (
+                        <div className="pl-3.5 pr-1 py-0.5 space-y-1 border-l-2 border-slate-700/60 ml-5 mt-0.5">
+                          {accessibleSections.map((sec) => {
+                            const secKey = `${mod.moduleKey}-${sec.key}`;
+                            const sectionTargetUrl = sec.path || `${mod.modulePath}?section=${encodeURIComponent(
+                              sec.title
+                            )}`;
 
-                        const isChildActive = sec.visibleItems.some(
-                          (item) =>
-                            item.path &&
-                            (location.pathname === item.path ||
-                              location.pathname.startsWith(`${item.path}/`))
-                        );
-
-                        const isSectionHomeActive = (() => {
-                          if (location.pathname === mod.modulePath) {
-                            const searchParams = new URLSearchParams(
-                              location.search || ""
+                            const isChildActive = (sec.items || []).some(
+                              (item) =>
+                                item.path &&
+                                (location.pathname === item.path ||
+                                  location.pathname.startsWith(`${item.path}/`))
                             );
-                            const secParam = searchParams.get("section");
-                            if (secParam) {
-                              return (
-                                secParam.toLowerCase() ===
-                                  sec.title.toLowerCase() ||
-                                secParam.toLowerCase() === sec.key.toLowerCase()
-                              );
-                            }
-                          }
-                          return false;
-                        })();
 
-                        const isSectionActive =
-                          isChildActive || isSectionHomeActive;
+                            const isSectionHomeActive = (() => {
+                              if (sec.path && (location.pathname === sec.path || location.pathname.startsWith(`${sec.path}/`))) {
+                                return true;
+                              }
+                              if (location.pathname === mod.modulePath) {
+                                const searchParams = new URLSearchParams(
+                                  location.search || ""
+                                );
+                                const secParam = searchParams.get("section");
+                                if (secParam) {
+                                  return (
+                                    secParam.toLowerCase() ===
+                                      sec.title.toLowerCase() ||
+                                    secParam.toLowerCase() === sec.key.toLowerCase()
+                                  );
+                                }
+                              }
+                              return false;
+                            })();
 
-                        return (
-                          <Link
-                            key={secKey}
-                            to={sectionTargetUrl}
-                            onClick={() => {
-                              if (window.innerWidth < 768) setSidebarOpen(false);
-                            }}
-                            className={`flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ${
-                              isSectionActive
-                                ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
-                                : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent"
-                            }`}
-                            title={sec.title}
-                          >
-                            <span
-                              className="w-5 h-5 flex items-center justify-center shrink-0 text-base opacity-80 group-hover:opacity-100 transition-opacity"
-                              aria-hidden="true"
-                            >
-                              {sec.icon || "📁"}
-                            </span>
-                            <span className="truncate">{sec.title}</span>
-                          </Link>
-                        );
-                      })}
+                            const isSectionActive =
+                              isChildActive || isSectionHomeActive;
+
+                            return (
+                              <Link
+                                key={secKey}
+                                to={sectionTargetUrl}
+                                onClick={() => {
+                                  if (window.innerWidth < 768) setSidebarOpen(false);
+                                }}
+                                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 group border-l-2 ${
+                                  isSectionActive
+                                    ? "bg-brand-900/80 text-white border-[#FBBE23]"
+                                    : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent"
+                                }`}
+                                title={sec.title}
+                              >
+                                <span
+                                  className="w-4 h-4 flex items-center justify-center shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5 opacity-80 group-hover:opacity-100 transition-opacity text-slate-300 dark:text-slate-300 group-hover:text-white"
+                                  aria-hidden="true"
+                                >
+                                  {getSectionIcon(sec.key, sec.title)}
+                                </span>
+                                <span className="truncate">{sec.title}</span>
+                              </Link>
+                            );
+                          })}
+                        </div>
+                      )}
                     </div>
                   );
                 })}

@@ -2775,11 +2775,13 @@ router.get("/user-permissions", requireAuth, async (req, res, next) => {
     await ensureRolePermissionsTable();
     await ensureRoleFeaturesTable();
 
-    const userId = Number(req.user?.sub || req.user?.id);
+    const requesterId = Number(req.user?.sub || req.user?.id);
+    const queryUserId = req.query?.user_id ? Number(req.query.user_id) : null;
+    const userId = queryUserId && Number.isFinite(queryUserId) && queryUserId > 0 ? queryUserId : requesterId;
 
     // Allow invalid user IDs to proceed but return empty permissions
     if (userId === null || userId === undefined || !Number.isFinite(userId)) {
-      return res.json({ modules: [], permissions: [] });
+      return res.json({ modules: [], permissions: [], role_features: [], licensed_modules: [] });
     }
 
     // Get user's role and company
@@ -2833,30 +2835,35 @@ router.get("/user-permissions", requireAuth, async (req, res, next) => {
       ).catch(() => []);
       roleId = Number(mappedRoles?.[0]?.role_id || 0) || 0;
     }
-    if (!roleId) return res.json({ modules: [], permissions: [] });
 
-    // Get user's modules
-    const modules = await query(
-      `SELECT module_key
-         FROM adm_role_modules
-        WHERE role_id = :roleId`,
-      { roleId },
-    );
+    let modules = [];
+    let permissions = [];
+    let roleFeatures = [];
 
-    // Get user's permissions
-    const permissions = await query(
-      `SELECT module_key, feature_key, can_view, can_create, can_edit, can_delete
-         FROM adm_role_permissions
-        WHERE role_id = :roleId`,
-      { roleId },
-    );
+    if (roleId) {
+      // Get user's modules
+      modules = await query(
+        `SELECT module_key
+           FROM adm_role_modules
+          WHERE role_id = :roleId`,
+        { roleId },
+      );
 
-    const roleFeatures = await query(
-      `SELECT feature_key
-         FROM adm_role_features
-        WHERE role_id = :roleId`,
-      { roleId },
-    );
+      // Get user's permissions
+      permissions = await query(
+        `SELECT module_key, feature_key, can_view, can_create, can_edit, can_delete
+           FROM adm_role_permissions
+          WHERE role_id = :roleId`,
+        { roleId },
+      );
+
+      roleFeatures = await query(
+        `SELECT feature_key
+           FROM adm_role_features
+          WHERE role_id = :roleId`,
+        { roleId },
+      );
+    }
 
     const normalizedPermissions = permissions.map((row) => {
       const moduleKey = normalizeModuleKey(row.module_key);
