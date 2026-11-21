@@ -143,6 +143,7 @@ export default function SubcontractorManager() {
     cumulative_work_done: "",
     previous_certified: "",
     remarks: "",
+    mark_work_completed: false,
     auto_raise_bill: true,
     auto_pay: false,
     payment_account_id: "",
@@ -570,36 +571,44 @@ export default function SubcontractorManager() {
     }
 
     try {
-
       await api.post("/construction/subcontracts", {
-
         ...contractForm,
-
         project_id: projId,
-
+        scope_id: selectedScopeId || undefined,
+        wbs_code: selectedWbsCode || undefined,
         contract_sum: contractForm.contract_sum !== "" ? Number(contractForm.contract_sum) : 0,
-
         retention_percent: contractForm.retention_percent !== "" ? Number(contractForm.retention_percent) : 0,
-
         advance_recovery_percent: contractForm.advance_recovery_percent !== "" ? Number(contractForm.advance_recovery_percent) : 0,
-
       });
 
-      toast.success("Subcontract agreement registered");
-
+      toast.success("Subcontract registered & linked tasks set to In Progress");
       setShowContractModal(false);
-
       fetchSubcontracts();
-
     } catch (e) {
-
       toast.error(e?.response?.data?.error || "Failed to register subcontract");
-
     }
-
   };
 
+  const handleToggleSubcontractStatus = async (sc, newStatus) => {
+    const isCompleting = newStatus === "COMPLETED";
+    const confirmMsg = isCompleting
+      ? `Mark subcontract "${sc.subcontract_number || sc.contract_no}" as COMPLETED?\n\nThis will automatically update the linked Scope, WBS, and Gantt schedule tasks to 100% COMPLETED.`
+      : `Reopen subcontract "${sc.subcontract_number || sc.contract_no}" to ACTIVE?`;
 
+    if (!window.confirm(confirmMsg)) return;
+
+    try {
+      await api.put(`/construction/subcontracts/${sc.id}/status`, { status: newStatus });
+      toast.success(
+        isCompleting
+          ? "Subcontract completed and linked Gantt schedule tasks updated to 100%!"
+          : "Subcontract status updated to ACTIVE"
+      );
+      fetchSubcontracts();
+    } catch (e) {
+      toast.error(e?.response?.data?.error || "Failed to update subcontract status");
+    }
+  };
 
   const openValuationModal = (sc) => {
     setSelectedContract(sc);
@@ -618,6 +627,7 @@ export default function SubcontractorManager() {
       cumulative_work_done: lastCertified > 0 ? lastCertified : "",
       previous_certified: lastCertified > 0 ? lastCertified : "",
       remarks: "",
+      mark_work_completed: false,
       auto_raise_bill: true,
       auto_pay: false,
       payment_account_id: "",
@@ -657,6 +667,7 @@ export default function SubcontractorManager() {
     try {
       const res = await api.post("/construction/subcontract-valuations", {
         ...valuationForm,
+        mark_work_completed: Boolean(valuationForm.mark_work_completed),
         cumulative_work_done:
           valuationForm.cumulative_work_done !== ""
             ? Number(valuationForm.cumulative_work_done)
@@ -670,7 +681,11 @@ export default function SubcontractorManager() {
         payment_reference: valuationForm.payment_reference || valuationForm.cheque_number || valuationForm.valuation_number,
       });
 
-      if (res.data?.voucher_no && res.data?.bill_no) {
+      if (valuationForm.mark_work_completed) {
+        toast.success(
+          "IPC certified, Subcontract marked Completed & Gantt schedule tasks updated to 100%!"
+        );
+      } else if (res.data?.voucher_no && res.data?.bill_no) {
         toast.success(
           `IPC certified, Service Bill ${res.data.bill_no} raised, and Payment Voucher ${res.data.voucher_no} issued!`
         );
@@ -1251,29 +1266,45 @@ export default function SubcontractorManager() {
                     <td className="text-center font-mono">{sc.advance_recovery_percent ?? sc.advance_percent ?? 0}%</td>
 
                     <td className="text-center">
-
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800">
-
+                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold ${
+                        sc.status === "COMPLETED"
+                          ? "bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800"
+                          : sc.status === "ACTIVE"
+                          ? "bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800"
+                          : "bg-slate-100 text-slate-700 border border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700"
+                      }`}>
+                        {sc.status === "COMPLETED" && <CheckCircle size={11} />}
                         {sc.status || "ACTIVE"}
-
                       </span>
-
                     </td>
 
                     <td className="text-center">
-
-                      <button
-
-                        onClick={() => openValuationModal(sc)}
-
-                        className="btn btn-secondary btn-sm inline-flex items-center gap-1.5"
-
-                      >
-
-                        <FileCheck size={14} className="text-brand-900 dark:text-brand-400" /> Certify Valuation
-
-                      </button>
-
+                      <div className="inline-flex items-center gap-1.5 justify-center">
+                        <button
+                          onClick={() => openValuationModal(sc)}
+                          className="btn btn-secondary btn-xs inline-flex items-center gap-1"
+                          title="Certify Interim Valuation / IPC"
+                        >
+                          <FileCheck size={12} className="text-brand-900 dark:text-brand-400" /> Certify Valuation
+                        </button>
+                        {sc.status !== "COMPLETED" ? (
+                          <button
+                            onClick={() => handleToggleSubcontractStatus(sc, "COMPLETED")}
+                            className="btn btn-outline btn-xs text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 inline-flex items-center gap-1 border-emerald-300 dark:border-emerald-800 cursor-pointer"
+                            title="Complete Subcontract & update linked Scope, WBS, and Gantt tasks to 100% Completed"
+                          >
+                            <CheckCircle size={12} /> Complete
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleToggleSubcontractStatus(sc, "ACTIVE")}
+                            className="btn btn-ghost btn-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 text-[11px] cursor-pointer"
+                            title="Reopen Subcontract to Active"
+                          >
+                            Reopen
+                          </button>
+                        )}
+                      </div>
                     </td>
 
                   </tr>
@@ -1598,6 +1629,9 @@ export default function SubcontractorManager() {
                 ))}
               </select>
             </div>
+            <p className="text-[11px] text-blue-600 dark:text-blue-400 flex items-center gap-1 pt-1">
+              <CheckCircle2 size={12} /> Assigning this subcontract automatically updates the linked Scope, WBS, and Gantt schedule tasks to "In Progress".
+            </p>
           </div>
         )}
 
@@ -2096,6 +2130,26 @@ export default function SubcontractorManager() {
               </div>
             </div>
           )}
+
+          {/* Subcontract Completion Automation */}
+          <label className="flex items-start gap-2.5 p-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/60 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition">
+            <input
+              type="checkbox"
+              className="checkbox checkbox-sm checkbox-primary mt-0.5"
+              checked={valuationForm.mark_work_completed || false}
+              onChange={(e) =>
+                setValuationForm({ ...valuationForm, mark_work_completed: e.target.checked })
+              }
+            />
+            <div>
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                Final Certificate / Subcontract Work Completed
+              </span>
+              <span className="text-[11px] text-slate-500 dark:text-slate-400 block">
+                Marks this subcontract as Completed and automatically updates the linked Scope, WBS, and Gantt tasks to 100% Completed.
+              </span>
+            </div>
+          </label>
         </div>
       </ProjectModal>
 

@@ -3404,6 +3404,223 @@ export const reverseDailyReport = async (req, res, next) => {
 // 6. SUBCONTRACTS & VALUATIONS (IPCs)
 // ==========================================
 
+/**
+ * Synchronize subcontract progress with Project Scope, WBS, and pm_tasks for the Gantt Schedule.
+ * - targetStatus === "IN_PROGRESS" (when assigned to subcontractor):
+ *   Sets linked tasks & scopes to IN_PROGRESS (minimum 10% progress, actual_start_date set).
+ * - targetStatus === "COMPLETED" (when subcontractor completes work / final IPC certified):
+ *   Sets linked tasks & scopes to COMPLETED (100% completion_percent, actual_end_date set).
+ */
+export async function syncSubcontractProgress(subcontract, targetStatus = "IN_PROGRESS") {
+  try {
+    if (!subcontract) return;
+    const projId = toNumber(subcontract.project_id || subcontract.proj_id);
+    if (!projId) return;
+
+    let scopeId = toNumber(subcontract.scope_id) || null;
+    let wbsCode = subcontract.wbs_code ? String(subcontract.wbs_code).trim() : null;
+    let taskId = toNumber(subcontract.task_id) || null;
+    const scopeOfWork = String(subcontract.scope_of_work || "");
+    const trade = String(subcontract.trade_category || subcontract.trade || "").trim();
+
+    // Regex parse WBS code if missing (e.g. "[WBS 1.2]: Concrete Works")
+    if (!wbsCode) {
+      const wMatch = scopeOfWork.match(/\[WBS\s+([^\]]+)\]/i);
+      if (wMatch && wMatch[1]) {
+        wbsCode = wMatch[1].trim();
+      }
+    }
+
+    // Regex parse Scope name if missing (e.g. "[Scope: Substructure Works]")
+    if (!scopeId) {
+      const sMatch = scopeOfWork.match(/\[Scope:\s*([^\]]+)\]/i);
+      if (sMatch && sMatch[1]) {
+        try {
+          const scRows = await query(
+            `SELECT id FROM pm_project_scopes WHERE project_id = :projId AND scope_name LIKE :name LIMIT 1`,
+            { projId, name: `%${sMatch[1].trim()}%` }
+          );
+          if (scRows.length) scopeId = scRows[0].id;
+        } catch (_) {}
+      }
+    }
+
+    if (targetStatus === "IN_PROGRESS") {
+      // 1. Update matching tasks in pm_tasks
+      let taskSql = `
+        UPDATE pm_tasks 
+        SET status = 'IN_PROGRESS',
+            actual_start_date = COALESCE(actual_start_date, CURDATE()),
+            completion_percent = GREATEST(COALESCE(completion_percent, 0), 10.00)
+        WHERE project_id = :projId
+          AND (is_active = 'Y' OR is_active IS NULL)
+          AND status IN ('PENDING', 'NOT_STARTED', 'DRAFT')
+      `;
+      const taskParams = { projId };
+
+      if (taskId) {
+        taskSql += ` AND id = :taskId`;
+        taskParams.taskId = taskId;
+      } else if (wbsCode) {
+        taskSql += ` AND (wbs_code = :wbsCode OR wbs_code LIKE CONCAT(:wbsCode, '.%'))`;
+        taskParams.wbsCode = wbsCode;
+      } else if (scopeId) {
+        taskSql += ` AND scope_id = :scopeId`;
+        taskParams.scopeId = scopeId;
+      } else if (trade) {
+        taskSql += ` AND (task_title LIKE CONCAT('%', :trade, '%') OR scope_name LIKE CONCAT('%', :trade, '%'))`;
+        taskParams.trade = trade;
+      }
+
+      await query(taskSql, taskParams);
+
+      // 2. Update matching pm_project_scopes
+      if (scopeId || wbsCode) {
+        let scSql = `
+          UPDATE pm_project_scopes
+          SET status = 'IN_PROGRESS'
+          WHERE project_id = :projId
+            AND status IN ('PENDING', 'NOT_STARTED', 'DRAFT')
+        `;
+        const scParams = { projId };
+        if (scopeId && wbsCode) {
+          scSql += ` AND (id = :scopeId OR wbs_code = :wbsCode)`;
+          scParams.scopeId = scopeId;
+          scParams.wbsCode = wbsCode;
+        } else if (scopeId) {
+          scSql += ` AND id = :scopeId`;
+          scParams.scopeId = scopeId;
+        } else if (wbsCode) {
+          scSql += ` AND wbs_code = :wbsCode`;
+          scParams.wbsCode = wbsCode;
+        }
+        await query(scSql, scParams);
+      }
+
+      // 3. Update project_scopes JSON on pm_projects
+      await updateProjectScopesJson(projId, { scopeId, wbsCode, status: "IN_PROGRESS", progress: 10 });
+
+    } else if (targetStatus === "COMPLETED") {
+      // 1. Update matching tasks in pm_tasks to 100% and COMPLETED
+      let taskSql = `
+        UPDATE pm_tasks 
+        SET status = 'COMPLETED',
+            completion_percent = 100.00,
+            actual_end_date = COALESCE(actual_end_date, CURDATE())
+        WHERE project_id = :projId
+          AND (is_active = 'Y' OR is_active IS NULL)
+      `;
+      const taskParams = { projId };
+
+      if (taskId) {
+        taskSql += ` AND id = :taskId`;
+        taskParams.taskId = taskId;
+      } else if (wbsCode) {
+        taskSql += ` AND (wbs_code = :wbsCode OR wbs_code LIKE CONCAT(:wbsCode, '.%'))`;
+        taskParams.wbsCode = wbsCode;
+      } else if (scopeId) {
+        taskSql += ` AND scope_id = :scopeId`;
+        taskParams.scopeId = scopeId;
+      } else if (trade) {
+        taskSql += ` AND (task_title LIKE CONCAT('%', :trade, '%') OR scope_name LIKE CONCAT('%', :trade, '%'))`;
+        taskParams.trade = trade;
+      }
+
+      await query(taskSql, taskParams);
+
+      // 2. Update matching pm_project_scopes
+      if (scopeId || wbsCode) {
+        let scSql = `
+          UPDATE pm_project_scopes
+          SET status = 'COMPLETED'
+          WHERE project_id = :projId
+        `;
+        const scParams = { projId };
+        if (scopeId && wbsCode) {
+          scSql += ` AND (id = :scopeId OR wbs_code = :wbsCode)`;
+          scParams.scopeId = scopeId;
+          scParams.wbsCode = wbsCode;
+        } else if (scopeId) {
+          scSql += ` AND id = :scopeId`;
+          scParams.scopeId = scopeId;
+        } else if (wbsCode) {
+          scSql += ` AND wbs_code = :wbsCode`;
+          scParams.wbsCode = wbsCode;
+        }
+        await query(scSql, scParams);
+      }
+
+      // 3. Update project_scopes JSON on pm_projects
+      await updateProjectScopesJson(projId, { scopeId, wbsCode, status: "COMPLETED", progress: 100 });
+    }
+  } catch (err) {
+    console.error("Error synchronizing subcontract progress with schedule:", err);
+  }
+}
+
+async function updateProjectScopesJson(projectId, { scopeId, wbsCode, status, progress }) {
+  try {
+    const projRows = await query(
+      `SELECT id, project_scopes FROM pm_projects WHERE id = :id LIMIT 1`,
+      { id: projectId }
+    );
+    if (!projRows.length || !projRows[0].project_scopes) return;
+
+    let scopes = projRows[0].project_scopes;
+    if (typeof scopes === "string") {
+      try {
+        scopes = JSON.parse(scopes);
+      } catch {
+        return;
+      }
+    }
+    if (!Array.isArray(scopes)) return;
+
+    let modified = false;
+    for (const sc of scopes) {
+      const matchScope =
+        (scopeId && String(sc.id) === String(scopeId)) ||
+        (wbsCode && String(sc.wbs_code || sc.wbs) === String(wbsCode));
+
+      if (matchScope) {
+        sc.status = status;
+        if (progress !== undefined) sc.progress = progress;
+        modified = true;
+      }
+
+      if (Array.isArray(sc.wbs_list)) {
+        for (const w of sc.wbs_list) {
+          const matchWbs =
+            wbsCode && String(w.wbs || w.wbs_code) === String(wbsCode);
+          if (matchWbs || matchScope) {
+            w.status = status;
+            if (progress !== undefined) w.progress = progress;
+            modified = true;
+          }
+          if (Array.isArray(w.tasks)) {
+            for (const t of w.tasks) {
+              if (matchWbs || matchScope) {
+                t.status = status;
+                if (progress !== undefined) t.completion_percent = progress;
+                modified = true;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (modified) {
+      await query(
+        `UPDATE pm_projects SET project_scopes = :scopes WHERE id = :id`,
+        { id: projectId, scopes: JSON.stringify(scopes) }
+      );
+    }
+  } catch (e) {
+    console.error("Failed to update project_scopes JSON:", e);
+  }
+}
+
 export const listSubcontracts = async (req, res, next) => {
   try {
     const { companyId } = req.scope || {};
@@ -3417,7 +3634,6 @@ export const listSubcontracts = async (req, res, next) => {
                       sc.advance_percent AS advance_recovery_percent,
                       sc.advance_paid AS advance_payment,
                       p.project_name,
-                      p.project_code,
                       p.project_code
                FROM pm_subcontracts sc
                LEFT JOIN pm_projects p ON p.id = sc.project_id
@@ -3431,6 +3647,46 @@ export const listSubcontracts = async (req, res, next) => {
     sql += ` ORDER BY sc.id DESC`;
     const items = await query(sql, params);
     res.json({ items });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const updateSubcontractStatus = async (req, res, next) => {
+  try {
+    const { companyId } = req.scope || {};
+    const id = toNumber(req.params.id);
+    const { status } = req.body || {};
+
+    if (!id || !status) {
+      throw httpError(400, "VALIDATION_ERROR", "Subcontract ID and status required");
+    }
+
+    const scRows = await query(
+      `SELECT * FROM pm_subcontracts WHERE id = :id AND (company_id = :companyId OR :companyId IS NULL) LIMIT 1`,
+      { id, companyId: companyId || null }
+    );
+    if (!scRows.length) {
+      throw httpError(404, "NOT_FOUND", "Subcontract not found");
+    }
+    const sc = scRows[0];
+
+    await query(
+      `UPDATE pm_subcontracts SET status = :status, updated_at = NOW() WHERE id = :id`,
+      { id, status }
+    );
+
+    if (status === "COMPLETED") {
+      await syncSubcontractProgress(sc, "COMPLETED");
+    } else if (status === "ACTIVE") {
+      await syncSubcontractProgress(sc, "IN_PROGRESS");
+    }
+
+    res.json({
+      id,
+      status,
+      message: `Subcontract status updated to ${status}${status === "COMPLETED" ? " and linked Scope/WBS/Tasks updated to 100% COMPLETED in Gantt schedule" : ""}`,
+    });
   } catch (err) {
     next(err);
   }
@@ -3485,20 +3741,45 @@ export const createSubcontract = async (req, res, next) => {
       suppName = suppRows[0]?.supplier_name || "Specialist Contractor";
     }
 
+    let scopeId = toNumber(b.scope_id) || null;
+    let wbsCode = b.wbs_code ? String(b.wbs_code).trim() : null;
+    let taskId = toNumber(b.task_id) || null;
+    const scopeOfWork = b.scope_of_work || b.scope_description || "";
+
+    if (!wbsCode) {
+      const wMatch = String(scopeOfWork).match(/\[WBS\s+([^\]]+)\]/i);
+      if (wMatch && wMatch[1]) wbsCode = wMatch[1].trim();
+    }
+    if (!scopeId) {
+      const sMatch = String(scopeOfWork).match(/\[Scope:\s*([^\]]+)\]/i);
+      if (sMatch && sMatch[1]) {
+        try {
+          const scRows = await query(
+            `SELECT id FROM pm_project_scopes WHERE project_id = :projId AND scope_name LIKE :name LIMIT 1`,
+            { projId: toNumber(b.project_id), name: `%${sMatch[1].trim()}%` }
+          );
+          if (scRows.length) scopeId = scRows[0].id;
+        } catch (_) {}
+      }
+    }
+
     const result = await query(
       `INSERT INTO pm_subcontracts 
-        (company_id, branch_id, project_id, contract_no, supplier_id, subcontractor_name, trade_category, scope_of_work, contract_value, retention_percent, retention_cap, advance_percent, advance_paid, advance_recovered, start_date, completion_date, status, terms_and_conditions, created_by)
+        (company_id, branch_id, project_id, scope_id, wbs_code, task_id, contract_no, supplier_id, subcontractor_name, trade_category, scope_of_work, contract_value, retention_percent, retention_cap, advance_percent, advance_paid, advance_recovered, start_date, completion_date, status, terms_and_conditions, created_by)
        VALUES 
-        (:companyId, :branchId, :project_id, :contract_no, :supplier_id, :subcontractor_name, :trade_category, :scope_of_work, :contract_value, :retention_percent, :retention_cap, :advance_percent, :advance_paid, :advance_recovered, :start_date, :completion_date, :status, :terms_and_conditions, :created_by)`,
+        (:companyId, :branchId, :project_id, :scope_id, :wbs_code, :task_id, :contract_no, :supplier_id, :subcontractor_name, :trade_category, :scope_of_work, :contract_value, :retention_percent, :retention_cap, :advance_percent, :advance_paid, :advance_recovered, :start_date, :completion_date, :status, :terms_and_conditions, :created_by)`,
       {
         companyId: targetCompId,
         branchId: targetBranchId,
         project_id: toNumber(b.project_id),
+        scope_id: scopeId,
+        wbs_code: wbsCode,
+        task_id: taskId,
         contract_no: contractNo,
         supplier_id: suppId,
         subcontractor_name: suppName,
         trade_category: b.trade || b.trade_category || "GENERAL",
-        scope_of_work: b.scope_of_work || b.scope_description || "",
+        scope_of_work: scopeOfWork,
         contract_value: Number(b.contract_sum || b.contract_value || 0),
         retention_percent: Number(b.retention_percent ?? 5.0),
         retention_cap: Number(b.retention_cap || 0),
@@ -3514,12 +3795,25 @@ export const createSubcontract = async (req, res, next) => {
         created_by: req.user?.id || null,
       },
     );
+
+    // Automatically synchronize linked Scope, WBS, and Tasks to "IN_PROGRESS" on assignment
+    await syncSubcontractProgress({
+      project_id: toNumber(b.project_id),
+      scope_id: scopeId,
+      wbs_code: wbsCode,
+      task_id: taskId,
+      scope_of_work: scopeOfWork,
+      trade: b.trade || b.trade_category || "GENERAL",
+      subcontractor_name: suppName,
+      start_date: b.start_date || null,
+    }, "IN_PROGRESS");
+
     res
       .status(201)
       .json({
         id: result.insertId,
         contract_no: contractNo,
-        message: "Subcontract registered successfully",
+        message: "Subcontract registered successfully and linked tasks set to IN_PROGRESS",
       });
   } catch (err) {
     next(err);
@@ -4008,6 +4302,15 @@ export const createSubcontractValuation = async (req, res, next) => {
         companyId: targetCompId,
         branchId: targetBranchId,
       });
+    }
+
+    // If marked as final valuation or work completed, synchronize status to COMPLETED
+    if (b.mark_work_completed || b.is_final_valuation) {
+      await query(
+        `UPDATE pm_subcontracts SET status = 'COMPLETED', updated_at = NOW() WHERE id = :id`,
+        { id: sc.id }
+      );
+      await syncSubcontractProgress(sc, "COMPLETED");
     }
 
     res.status(201).json({

@@ -92,6 +92,15 @@ const Plus = ({ size = 14, className = "" }) => (
   </svg>
 );
 
+const METHODOLOGY_DISPLAY_MAP = {
+  HYBRID: "Hybrid (CPM + Agile)",
+  WATERFALL: "Waterfall / Stage-Gate",
+  AGILE: "Agile (Sprints / Scrum)",
+  PHASED: "Phased / Fast-Track",
+  ITERATIVE: "Iterative / Design-Build",
+  TURNKEY: "Turnkey EPC",
+};
+
 export function formatPlanDate(val, fallback = "TBD") {
   if (!val) return fallback;
   if (typeof val === "string") {
@@ -852,7 +861,7 @@ export default function ProjectPlanPage() {
             <div className="min-w-0">
               <span className="text-[10px] uppercase font-bold text-slate-400 block leading-tight">Delivery Methodology</span>
               <span className="font-semibold text-slate-800 dark:text-slate-200 truncate block text-[11px]">
-                {planDetail?.delivery_methodology || "Waterfall / Stage-Gate"}
+                {METHODOLOGY_DISPLAY_MAP[planDetail?.methodology] || planDetail?.methodology || planDetail?.delivery_methodology || "Waterfall / Stage-Gate"}
               </span>
             </div>
           </div>

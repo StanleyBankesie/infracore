@@ -117,6 +117,7 @@ router.post("/daily-reports/:id/reverse", cc.reverseDailyReport);
 // 6. Subcontracts & Valuations (IPCs)
 router.get("/subcontracts", cc.listSubcontracts);
 router.post("/subcontracts", cc.createSubcontract);
+router.put("/subcontracts/:id/status", cc.updateSubcontractStatus);
 router.get("/subcontract-valuations", cc.listSubcontractValuations);
 router.post("/subcontract-valuations", cc.createSubcontractValuation);
 router.post("/subcontract-valuations/:id/pay", cc.paySubcontractValuation);

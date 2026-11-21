@@ -729,6 +729,25 @@ export async function ensureConstructionTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    try {
+      const colRows = await query(`SHOW COLUMNS FROM pm_subcontracts LIKE 'scope_id'`);
+      if (!colRows || !colRows.length) {
+        await query(`ALTER TABLE pm_subcontracts ADD COLUMN scope_id INT NULL AFTER project_id`);
+      }
+    } catch (_) {}
+    try {
+      const colRows = await query(`SHOW COLUMNS FROM pm_subcontracts LIKE 'wbs_code'`);
+      if (!colRows || !colRows.length) {
+        await query(`ALTER TABLE pm_subcontracts ADD COLUMN wbs_code VARCHAR(100) NULL AFTER scope_id`);
+      }
+    } catch (_) {}
+    try {
+      const colRows = await query(`SHOW COLUMNS FROM pm_subcontracts LIKE 'task_id'`);
+      if (!colRows || !colRows.length) {
+        await query(`ALTER TABLE pm_subcontracts ADD COLUMN task_id INT NULL AFTER wbs_code`);
+      }
+    } catch (_) {}
+
     await query(`
       CREATE TABLE IF NOT EXISTS pm_subcontract_valuations (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
