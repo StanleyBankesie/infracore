@@ -261,7 +261,7 @@ export const projectManagementSections = [
         icon: "📋",
       },
       {
-        title: "Work Plan & WBS Execution",
+        title: "Task Execution",
         path: "/project-management/tasks/execution",
         actions: [
           { label: "View", path: "/project-management/tasks/execution", type: "outline" },
@@ -269,6 +269,16 @@ export const projectManagementSections = [
         ],
         description: "Work log, progress updates, task timer, and checklists/deliverables",
         icon: "⏱️",
+      },
+      {
+        title: "Work Plan & WBS Execution",
+        path: "/project-management/reports/workplan-wbs",
+        actions: [
+          { label: "WBS Report", path: "/project-management/reports/workplan-wbs", type: "outline" },
+          { label: "Assign Tasks", path: "/project-management/tasks/assignment", type: "primary" }
+        ],
+        description: "Execution status by Work Breakdown Structure, active work packages, and deliverables",
+        icon: "🏗️",
       },
       {
         title: "Material Requisitions",
@@ -1098,7 +1108,7 @@ export const projectManagementFeatures = [
   },
   {
     module_key: "project-management",
-    label: "Work Plan & WBS Execution",
+    label: "Task Execution",
     path: "/project-management/tasks/execution",
         actions: [
           { label: "View", path: "/project-management/tasks/execution", type: "outline" },

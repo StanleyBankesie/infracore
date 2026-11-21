@@ -570,7 +570,7 @@ export const MODULE_SECTIONS = {
       icon: "🏗️",
       features: [
         { key: "task-assignment", label: "Task Assignments & Kanban", path: "/project-management/tasks/assignment" },
-        { key: "tasks", label: "Work Plan & WBS Execution", path: "/project-management/tasks/execution" },
+        { key: "tasks", label: "Task Execution", path: "/project-management/tasks/execution" },
         { key: "material-requisitions", label: "Material Requisitions", path: "/project-management/material-requisitions" },
         { key: "material-receipts", label: "Material Receipts", path: "/project-management/material-receipts" },
         { key: "material-utilizations", label: "Material Utilization", path: "/project-management/material-utilizations" },

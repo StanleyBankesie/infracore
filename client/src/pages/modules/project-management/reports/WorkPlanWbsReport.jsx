@@ -214,7 +214,7 @@ export default function WorkPlanWbsReport() {
               <h1 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white leading-tight">
                 Work Plan &amp; WBS Breakdown Report
               </h1>
-              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-bold uppercase bg-brand-50 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200">
+              <span className="hidden sm:inline-flex px-2 py-0.5 rounded-full text-[10px] font-normal uppercase bg-brand-50 text-brand-800 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200">
                 Official Report
               </span>
             </div>
@@ -278,27 +278,27 @@ export default function WorkPlanWbsReport() {
           {/* ── Project Metadata Banner ── */}
           <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/90 dark:border-slate-800 p-4 shadow-smoky grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Project Code & Name</span>
-              <span className="font-bold text-slate-800 dark:text-slate-200 truncate block mt-0.5">
+              <span className="text-[10px] uppercase font-medium text-slate-400 block">Project Code & Name</span>
+              <span className="font-normal text-slate-700 dark:text-slate-300 truncate block mt-0.5">
                 {selectedProject?.project_code || "PRJ-00"} • {selectedProject?.project_name || "Active Project"}
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Project Manager</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block mt-0.5">
+              <span className="text-[10px] uppercase font-medium text-slate-400 block">Project Manager</span>
+              <span className="font-normal text-slate-700 dark:text-slate-300 truncate block mt-0.5">
                 {selectedProject?.manager_name || "Unassigned"}
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Work Scopes Count</span>
-              <span className="font-semibold text-slate-700 dark:text-slate-300 truncate block mt-0.5">
+              <span className="text-[10px] uppercase font-medium text-slate-400 block">Work Scopes Count</span>
+              <span className="font-normal text-slate-700 dark:text-slate-300 truncate block mt-0.5">
                 {kpis.totalScopes} active scope packages
               </span>
             </div>
             <div>
-              <span className="text-[10px] uppercase font-bold text-slate-400 block">Overall Execution Progress</span>
+              <span className="text-[10px] uppercase font-medium text-slate-400 block">Overall Execution Progress</span>
               <div className="flex items-center gap-2 mt-0.5">
-                <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="font-mono font-medium text-emerald-600 dark:text-emerald-400">
                   {kpis.completed} / {kpis.total} ({kpis.completionPct}%)
                 </span>
                 <div className="flex-1 bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">

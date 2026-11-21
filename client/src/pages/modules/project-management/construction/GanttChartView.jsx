@@ -167,41 +167,67 @@ export default function GanttChartView() {
   const location = useLocation();
   const [searchParams, setSearchParams] = useSearchParams();
 
+  // Remember initial origin so it is never lost by query param mutations
+  const initialFromRef = useRef(
+    location.state?.from || searchParams.get("from") || null
+  );
+
   const handleBack = () => {
-    if (location.state?.from) {
-      navigate(location.state.from);
-      return;
-    }
-    const fromParam = searchParams.get("from");
-    if (fromParam) {
-      if (fromParam.startsWith("/")) {
-        navigate(fromParam);
+    // 1. Check origin captured from location state or initial query param
+    const fromDestination =
+      location.state?.from || initialFromRef.current || searchParams.get("from");
+
+    if (fromDestination) {
+      if (typeof fromDestination === "string" && fromDestination.startsWith("/")) {
+        navigate(fromDestination);
         return;
       }
-      if (fromParam === "plan") {
-        const pId = searchParams.get("projectId") || searchParams.get("project_id") || selectedProjectId;
+      const pId =
+        searchParams.get("projectId") ||
+        searchParams.get("project_id") ||
+        selectedProjectId;
+
+      if (fromDestination === "plan") {
         navigate(pId ? `/project-management/plan?projectId=${pId}` : "/project-management/plan");
         return;
       }
-      if (fromParam === "milestones") {
-        const pId = searchParams.get("projectId") || searchParams.get("project_id") || selectedProjectId;
-        navigate(pId ? `/project-management/milestones?project_id=${pId}` : "/project-management/milestones");
+      if (fromDestination === "milestones") {
+        navigate(
+          pId
+            ? `/project-management/milestones?project_id=${pId}`
+            : "/project-management/milestones"
+        );
         return;
       }
-      if (fromParam === "tasks") {
-        const pId = searchParams.get("projectId") || searchParams.get("project_id") || selectedProjectId;
-        navigate(pId ? `/project-management/tasks?project_id=${pId}` : "/project-management/tasks");
+      if (fromDestination === "tasks") {
+        navigate(
+          pId
+            ? `/project-management/tasks?project_id=${pId}`
+            : "/project-management/tasks"
+        );
         return;
       }
-      if (fromParam === "reports") {
+      if (fromDestination === "reports") {
         navigate("/project-management/reports");
         return;
       }
+      if (fromDestination === "subcontracts") {
+        navigate(
+          pId
+            ? `/project-management/subcontracts?projectId=${pId}`
+            : "/project-management/subcontracts"
+        );
+        return;
+      }
     }
+
+    // 2. Check if browser has valid internal navigation history
     if (window.history.state && window.history.state.idx > 0) {
       navigate(-1);
       return;
     }
+
+    // 3. Check if referrer is within the same app host
     if (document.referrer && document.referrer.includes(window.location.host)) {
       try {
         const refUrl = new URL(document.referrer);
@@ -211,10 +237,8 @@ export default function GanttChartView() {
         }
       } catch {}
     }
-    if (window.history.length > 1) {
-      navigate(-1);
-      return;
-    }
+
+    // 4. Safe fallback to Project Management home
     navigate("/project-management");
   };
 
@@ -444,7 +468,16 @@ export default function GanttChartView() {
 
   useEffect(() => {
     if (selectedProjectId) {
-      setSearchParams({ projectId: selectedProjectId });
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          if (next.get("projectId") !== selectedProjectId) {
+            next.set("projectId", selectedProjectId);
+          }
+          return next;
+        },
+        { replace: true }
+      );
       loadSchedule();
     } else {
       setScheduleData({ project: null, cpm: null, scopes: [] });
@@ -452,7 +485,14 @@ export default function GanttChartView() {
       setMilestones([]);
       setDependencyItems([]);
       setDependencyCounts({ total: 0, confirmed: 0, suggested: 0, rejected: 0, auto_detected: 0, manual: 0 });
-      setSearchParams({});
+      setSearchParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete("projectId");
+          return next;
+        },
+        { replace: true }
+      );
     }
   }, [selectedProjectId, loadSchedule]);
 

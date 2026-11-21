@@ -1467,9 +1467,9 @@ export default function ProjectMindmapPage() {
             <Link
               to="/project-management/tasks/execution"
               className="btn btn-secondary inline-flex items-center gap-1.5 h-9 text-xs px-3 rounded-xl shadow-sm shrink-0 whitespace-nowrap"
-              title="Go to Work Plan & WBS Execution"
+              title="Go to Task Execution"
             >
-              <ListTodo size={14} /> Work Plan & WBS Execution
+              <ListTodo size={14} /> Task Execution
             </Link>
           </div>
         </div>

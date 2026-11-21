@@ -556,7 +556,7 @@ export const MODULE_PRIMARY_PAGES = {
       description: "Visual task assignment and team Work Plan/WBS allocation",
     },
     {
-      title: "Work Plan & WBS Execution",
+      title: "Task Execution",
       path: "/project-management/tasks/execution",
       feature_key: "tasks",
       icon: "⏱️",
