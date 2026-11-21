@@ -230,12 +230,30 @@ export default function SupplierForm() {
     fetchCountries();
   }, []);
 
-  // Set purchase account as default when expense accounts are loaded
+  // Set default expense/purchase account when expense accounts are loaded
   useEffect(() => {
     if (formData.expense_account_id || !expenseAccounts.length)
       return;
 
-    // Find purchase account - look for accounts with "purchase" in the name, or fallback to first expense account
+    // Subcontractors default to "Service Account"
+    if (formData.service_contractor) {
+      const serviceAccount =
+        expenseAccounts.find(
+          (a) =>
+            String(a.name || "").toLowerCase() === "service account" ||
+            String(a.account_name || "").toLowerCase() === "service account" ||
+            String(a.name || "").toLowerCase().includes("service account"),
+        );
+      if (serviceAccount?.id) {
+        setFormData((prev) => ({
+          ...prev,
+          expense_account_id: String(serviceAccount.id),
+        }));
+        return;
+      }
+    }
+
+    // Standard suppliers default to purchase account
     const purchaseAccount =
       expenseAccounts.find(
         (a) =>
@@ -255,10 +273,33 @@ export default function SupplierForm() {
         expense_account_id: prev.expense_account_id || String(purchaseAccount.id),
       }));
     }
-  }, [expenseAccounts, formData.expense_account_id]);
+  }, [expenseAccounts, formData.expense_account_id, formData.service_contractor]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
+    if (name === "service_contractor") {
+      const isContractor = checked;
+      setFormData((prev) => {
+        let newExpId = prev.expense_account_id;
+        if (isContractor) {
+          const sAcc = expenseAccounts.find((a) =>
+            String(a.name || "").toLowerCase().includes("service account")
+          );
+          if (sAcc?.id) newExpId = String(sAcc.id);
+        } else {
+          const pAcc = expenseAccounts.find((a) =>
+            String(a.name || "").toLowerCase().includes("purchase")
+          );
+          if (pAcc?.id) newExpId = String(pAcc.id);
+        }
+        return {
+          ...prev,
+          service_contractor: isContractor,
+          expense_account_id: newExpId,
+        };
+      });
+      return;
+    }
     setFormData((prev) => ({
       ...prev,
       [name]: type === "checkbox" ? checked : value,

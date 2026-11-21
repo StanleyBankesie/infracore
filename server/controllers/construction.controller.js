@@ -10,6 +10,7 @@ import { calculateCPM } from "../services/cpmEngine.js";
 import { ensureConstructionTables } from "../utils/constructionTables.js";
 import { sendPushToUser } from "../routes/push.routes.js";
 import { syncProjectStatusFromTasks } from "./projects.controller.js";
+import { ensureSupplierFinAccountIdTx } from "./finance.controller.js";
 
 function toNumber(v, fallback = null) {
   const n = Number(v);
@@ -3537,10 +3538,21 @@ export const listSubcontractValuations = async (req, res, next) => {
                       v.net_payable AS net_certified_amount,
                       sc.contract_no AS subcontract_number,
                       sc.trade_category AS trade,
-                      COALESCE(s.supplier_name, sc.subcontractor_name, 'Specialist Contractor') AS supplier_name
+                      sc.supplier_id AS subcontract_supplier_id,
+                      COALESCE(s.supplier_name, sc.subcontractor_name, 'Specialist Contractor') AS supplier_name,
+                      sb.id AS service_bill_id,
+                      sb.bill_no AS service_bill_no,
+                      sb.status AS service_bill_status,
+                      sb.payment AS bill_payment,
+                      sb.payment_status AS bill_payment_status,
+                      fv.id AS voucher_id,
+                      fv.voucher_no AS payment_voucher_no,
+                      fv.status AS voucher_status
                FROM pm_subcontract_valuations v
                JOIN pm_subcontracts sc ON sc.id = v.subcontract_id
                LEFT JOIN pur_suppliers s ON s.id = sc.supplier_id
+               LEFT JOIN pur_service_bills sb ON sb.id = v.service_bill_id
+               LEFT JOIN fin_vouchers fv ON fv.id = v.voucher_id
                WHERE (sc.company_id = :companyId OR :companyId IS NULL)`;
     const params = { companyId: companyId || null };
     if (subcontractId) {
@@ -3558,6 +3570,332 @@ export const listSubcontractValuations = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * Helper: Auto-raises a service bill (SVB) and/or generates a direct payment voucher (PAYV)
+ * for a certified subcontractor interim payment certificate.
+ */
+async function internalRaiseServiceBillAndPay({
+  valuationId,
+  subcontract,
+  valNo,
+  valuationDate,
+  currWork,
+  retentionDeducted,
+  advanceRecovered,
+  netPayable,
+  autoRaiseBill,
+  autoPay,
+  paymentAccountId,
+  paymentMethod,
+  paymentReference,
+  chequeNumber,
+  chequeDate,
+  paymentNarration,
+  debitAccountId: customDebitAccId,
+  user,
+  companyId,
+  branchId,
+}) {
+  let createdBillId = null;
+  let createdBillNo = null;
+  let createdVoucherId = null;
+  let createdVoucherNo = null;
+
+  const targetCompId = companyId || subcontract.company_id || 1;
+  const targetBranchId = branchId || subcontract.branch_id || 1;
+  const userId = user?.id || user?.sub || null;
+
+  // 1. Get supplier info
+  let supplier = null;
+  if (subcontract.supplier_id) {
+    const sRows = await query(
+      `SELECT * FROM pur_suppliers WHERE id = :id LIMIT 1`,
+      { id: subcontract.supplier_id }
+    );
+    if (sRows.length) supplier = sRows[0];
+  }
+  const clientName =
+    subcontract.subcontractor_name || supplier?.supplier_name || "Specialist Subcontractor";
+
+  // Check if valuation already has a service_bill_id or voucher_id
+  const valRows = await query(
+    `SELECT service_bill_id, voucher_id, payment_status FROM pm_subcontract_valuations WHERE id = :id`,
+    { id: valuationId }
+  );
+  const valRow = valRows[0] || {};
+  let billId = valRow?.service_bill_id || null;
+
+  // 2. Raise Service Bill if requested (or required for auto_pay) and not yet raised
+  if ((autoRaiseBill || autoPay) && netPayable > 0 && !billId) {
+    const billNoRows = await query(`
+      SELECT bill_no FROM pur_service_bills
+      WHERE bill_no REGEXP '^SVB-[0-9]{6}$'
+      ORDER BY CAST(SUBSTRING(bill_no, 5) AS UNSIGNED) DESC LIMIT 1
+    `);
+    let nextNum = 1;
+    if (billNoRows.length > 0) {
+      const prev = String(billNoRows[0].bill_no || "");
+      const n = parseInt(prev.slice(4), 10);
+      if (Number.isFinite(n)) nextNum = n + 1;
+    }
+    const billNo = `SVB-${String(nextNum).padStart(6, "0")}`;
+    const billDate = valuationDate || new Date().toISOString().split("T")[0];
+    const initialPaymentStatus = autoPay ? "PAID" : "UNPAID";
+    const initialAmountPaid = autoPay ? netPayable : 0;
+    const subNo = subcontract.subcontract_number || subcontract.contract_no || "SC";
+    const trade = subcontract.trade_category || subcontract.trade || "Specialist Works";
+
+    const billResult = await query(
+      `INSERT INTO pur_service_bills (
+        company_id, branch_id, supplier_id, project_id, bill_no, bill_date, due_date, service_date,
+        status, payment, payment_status, client_name, client_company, client_address, client_phone, client_email,
+        payment_method, payment_reference, notes, subtotal, total_amount, amount_paid, created_by, created_at
+      ) VALUES (
+        :companyId, :branchId, :supplierId, :projectId, :billNo, :billDate, :dueDate, :serviceDate,
+        :status, :payment, :paymentStatus, :clientName, :clientCompany, :clientAddress, :clientPhone, :clientEmail,
+        :paymentMethod, :paymentReference, :notes, :subtotal, :totalAmount, :amountPaid, :createdBy, NOW()
+      )`,
+      {
+        companyId: targetCompId,
+        branchId: targetBranchId,
+        supplierId: subcontract.supplier_id || null,
+        projectId: subcontract.project_id || null,
+        billNo,
+        billDate,
+        dueDate: billDate,
+        serviceDate: billDate,
+        status: "POSTED",
+        payment: initialPaymentStatus,
+        paymentStatus: initialPaymentStatus,
+        clientName,
+        clientCompany: supplier?.supplier_name || null,
+        clientAddress: supplier?.address || null,
+        clientPhone: supplier?.phone || null,
+        clientEmail: supplier?.email || null,
+        paymentMethod: paymentMethod || "Bank Transfer",
+        paymentReference: paymentReference || valNo,
+        notes: `Certified Subcontractor Interim Payment Certificate (IPC Ref: ${valNo}). Subcontract: ${subNo}. Trade: ${trade}. Gross: GHS ${Number(currWork || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}, Less Retention: GHS ${Number(retentionDeducted || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}, Less Advance: GHS ${Number(advanceRecovered || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}. Net Certified Payable: GHS ${Number(netPayable || 0).toLocaleString(undefined, { minimumFractionDigits: 2 })}.`,
+        subtotal: netPayable,
+        totalAmount: netPayable,
+        amountPaid: initialAmountPaid,
+        createdBy: userId,
+      }
+    );
+
+    billId = billResult.insertId;
+    createdBillId = billId;
+    createdBillNo = billNo;
+
+    // Insert detail item
+    await query(
+      `INSERT INTO pur_service_bill_details (
+        bill_id, description, category, qty, rate, amount, line_total, created_by
+      ) VALUES (
+        :billId, :description, :category, 1, :rate, :amount, :lineTotal, :createdBy
+      )`,
+      {
+        billId,
+        description: `Subcontract Trade Works (${trade}) - Certified ${valNo}`,
+        category: "SUBCONTRACT",
+        rate: netPayable,
+        amount: netPayable,
+        lineTotal: netPayable,
+        createdBy: userId,
+      }
+    );
+
+    // Link service bill to valuation
+    await query(
+      `UPDATE pm_subcontract_valuations SET service_bill_id = :billId WHERE id = :id`,
+      { billId, id: valuationId }
+    );
+  } else if (billId) {
+    const bRows = await query(
+      `SELECT bill_no FROM pur_service_bills WHERE id = :id`,
+      { id: billId }
+    );
+    createdBillId = billId;
+    createdBillNo = bRows[0]?.bill_no || null;
+  }
+
+  // 3. Process Direct Payment (Pay Subcontractor) if autoPay is true
+  if (autoPay && netPayable > 0 && !valRow?.voucher_id) {
+    if (!paymentAccountId) {
+      throw httpError(
+        400,
+        "VALIDATION_ERROR",
+        "Payment Account (Bank/Cash) is required for direct payment"
+      );
+    }
+
+    // Resolve Debit Account (Supplier AP Creditor account, matching Direct Purchase)
+    let debitAccountId = customDebitAccId || null;
+    if (!debitAccountId && subcontract.supplier_id) {
+      try {
+        debitAccountId = await ensureSupplierFinAccountIdTx(pool, {
+          companyId: targetCompId,
+          supplierId: subcontract.supplier_id,
+        });
+      } catch (err) {
+        console.warn("Could not ensure supplier fin account id:", err?.message);
+      }
+    }
+    if (!debitAccountId && supplier?.expense_account_id) {
+      debitAccountId = supplier.expense_account_id;
+    }
+    if (!debitAccountId) {
+      const apRows = await query(
+        `SELECT a.id FROM fin_accounts a
+         LEFT JOIN fin_account_groups g ON g.id = a.group_id
+         WHERE (a.company_id = :companyId OR a.company_id IS NULL)
+           AND (g.code IN ('LIA_AP', '2008', 'CREDITORS', '44') OR g.name LIKE '%Payable%' OR g.name LIKE '%Creditor%' OR a.name LIKE '%Accounts Payable%' OR a.name LIKE '%Trade Payable%')
+           AND a.is_active = 1
+         ORDER BY a.id ASC LIMIT 1`,
+        { companyId: targetCompId }
+      );
+      debitAccountId = apRows[0]?.id || 65;
+    }
+
+    // Get Payment Voucher Type
+    const vtRows = await query(
+      `SELECT id, code, prefix, next_number FROM fin_voucher_types
+       WHERE (company_id = :companyId OR company_id IS NULL) AND code IN ('PAYV', 'PV')
+       ORDER BY CASE WHEN code = 'PAYV' THEN 1 ELSE 2 END, id ASC LIMIT 1`,
+      { companyId: targetCompId }
+    );
+    let voucherTypeId = vtRows[0]?.id || null;
+    let voucherNo = "";
+    if (vtRows.length > 0) {
+      const vt = vtRows[0];
+      const prefix = vt.prefix || "PV";
+      const num = vt.next_number || 1;
+      voucherNo = `${prefix}${String(num).padStart(6, "0")}`;
+      await query(
+        `UPDATE fin_voucher_types SET next_number = next_number + 1 WHERE id = :id`,
+        { id: vt.id }
+      );
+    } else {
+      voucherNo = `PV-${Date.now()}`;
+    }
+
+    const payDate = chequeDate || valuationDate || new Date().toISOString().split("T")[0];
+
+    // Fiscal year lookup
+    const fyRows = await query(
+      `SELECT id FROM fin_fiscal_years
+       WHERE (company_id = :companyId OR company_id IS NULL)
+         AND is_open = 1
+         AND :date BETWEEN start_date AND end_date
+       LIMIT 1`,
+      { companyId: targetCompId, date: payDate }
+    );
+    const fiscalYearId = fyRows[0]?.id || null;
+
+    const voucherNarration =
+      paymentNarration ||
+      `Direct Subcontractor Payment - IPC Ref: ${valNo} | Payee: ${clientName} | Method: ${paymentMethod || "Bank Transfer"}${paymentReference ? ` | Ref: ${paymentReference}` : ""}`;
+
+    // Create fin_vouchers
+    const vResult = await query(
+      `INSERT INTO fin_vouchers (
+        company_id, branch_id, fiscal_year_id, voucher_type_id, voucher_no, voucher_date,
+        narration, total_debit, total_credit, balanced_amount, status, created_by, project_id, cost_center_id
+      ) VALUES (
+        :companyId, :branchId, :fiscalYearId, :voucherTypeId, :voucherNo, :voucherDate,
+        :narration, :amount, :amount, :amount, 'POSTED', :createdBy, :projectId, :costCenterId
+      )`,
+      {
+        companyId: targetCompId,
+        branchId: targetBranchId,
+        fiscalYearId,
+        voucherTypeId,
+        voucherNo,
+        voucherDate: payDate,
+        narration: voucherNarration,
+        amount: netPayable,
+        createdBy: userId,
+        projectId: subcontract.project_id || null,
+        costCenterId: subcontract.cost_center_id || null,
+      }
+    );
+
+    const voucherId = vResult.insertId;
+    createdVoucherId = voucherId;
+    createdVoucherNo = voucherNo;
+
+    // Line 1: Debit Account (Accounts Payable / Subcontract Works)
+    await query(
+      `INSERT INTO fin_voucher_lines (
+        company_id, voucher_id, line_no, account_id, description, debit, credit,
+        payment_method, reference_no, cheque_number, cheque_date, created_by
+      ) VALUES (
+        :companyId, :voucherId, 1, :accountId, :description, :debit, 0,
+        :paymentMethod, :referenceNo, :chequeNumber, :chequeDate, :createdBy
+      )`,
+      {
+        companyId: targetCompId,
+        voucherId,
+        accountId: debitAccountId,
+        description: `Subcontract Settlement - IPC ${valNo} (${subcontract.contract_no || "SC"})`,
+        debit: netPayable,
+        paymentMethod: paymentMethod || "Bank Transfer",
+        referenceNo: paymentReference || valNo,
+        chequeNumber: chequeNumber || null,
+        chequeDate: chequeDate || null,
+        createdBy: userId,
+      }
+    );
+
+    // Line 2: Credit Account (Payment Account - Bank / Cash)
+    await query(
+      `INSERT INTO fin_voucher_lines (
+        company_id, voucher_id, line_no, account_id, description, debit, credit,
+        payment_method, reference_no, cheque_number, cheque_date, created_by
+      ) VALUES (
+        :companyId, :voucherId, 2, :accountId, :description, 0, :credit,
+        :paymentMethod, :referenceNo, :chequeNumber, :chequeDate, :createdBy
+      )`,
+      {
+        companyId: targetCompId,
+        voucherId,
+        accountId: paymentAccountId,
+        description: `Direct Payment via ${paymentMethod || "Bank/Cash"} - IPC ${valNo}`,
+        credit: netPayable,
+        paymentMethod: paymentMethod || "Bank Transfer",
+        referenceNo: paymentReference || valNo,
+        chequeNumber: chequeNumber || null,
+        chequeDate: chequeDate || null,
+        createdBy: userId,
+      }
+    );
+
+    // Mark valuation as paid
+    await query(
+      `UPDATE pm_subcontract_valuations
+       SET voucher_id = :voucherId, payment_status = 'PAID'
+       WHERE id = :id`,
+      { voucherId, id: valuationId }
+    );
+
+    // Mark service bill as paid if one exists
+    if (billId) {
+      await query(
+        `UPDATE pur_service_bills
+         SET amount_paid = total_amount, payment = 'PAID', payment_status = 'PAID'
+         WHERE id = :billId`,
+        { billId }
+      );
+    }
+  }
+
+  return {
+    billId: createdBillId,
+    billNo: createdBillNo,
+    voucherId: createdVoucherId,
+    voucherNo: createdVoucherNo,
+  };
+}
 
 export const createSubcontractValuation = async (req, res, next) => {
   try {
@@ -3601,6 +3939,19 @@ export const createSubcontractValuation = async (req, res, next) => {
     const targetCompId = companyId || sc.company_id || 1;
     const targetBranchId = branchId || sc.branch_id || 1;
 
+    // Validate payment account if auto_pay is requested
+    const autoPay = Boolean(b.auto_pay);
+    const autoRaiseBill = Boolean(b.auto_raise_bill || autoPay);
+    if (autoPay && netPayable > 0 && !b.payment_account_id) {
+      throw httpError(
+        400,
+        "VALIDATION_ERROR",
+        "Payment Account (Bank/Cash) is required for direct payment"
+      );
+    }
+
+    const valDate = b.valuation_date || b.period_to || new Date().toISOString().split("T")[0];
+
     const result = await query(
       `INSERT INTO pm_subcontract_valuations 
         (company_id, branch_id, subcontract_id, project_id, valuation_no, valuation_date, period_from, period_to, gross_claimed, gross_certified, previous_certified, current_certified, retention_deducted, advance_recovered, other_deductions, net_payable, status, remarks, certified_by, certified_at)
@@ -3612,8 +3963,7 @@ export const createSubcontractValuation = async (req, res, next) => {
         subcontract_id: sc.id,
         project_id: sc.project_id,
         valuation_no: valNo,
-        valuation_date:
-          b.valuation_date || new Date().toISOString().split("T")[0],
+        valuation_date: valDate,
         period_from: b.period_from || null,
         period_to: b.period_to || null,
         gross_claimed: cumWorkDone,
@@ -3633,13 +3983,114 @@ export const createSubcontractValuation = async (req, res, next) => {
 
     const valuationId = result.insertId;
 
-    res
-      .status(201)
-      .json({
-        id: valuationId,
-        net_payable: netPayable,
-        message: "Subcontract valuation recorded",
+    // Trigger auto raise bill and direct payment if requested
+    let billAndPayResult = { billId: null, billNo: null, voucherId: null, voucherNo: null };
+    if (autoRaiseBill || autoPay) {
+      billAndPayResult = await internalRaiseServiceBillAndPay({
+        valuationId,
+        subcontract: sc,
+        valNo,
+        valuationDate: valDate,
+        currWork,
+        retentionDeducted,
+        advanceRecovered,
+        netPayable,
+        autoRaiseBill,
+        autoPay,
+        paymentAccountId: b.payment_account_id,
+        paymentMethod: b.payment_method,
+        paymentReference: b.payment_reference || valNo,
+        chequeNumber: b.cheque_number,
+        chequeDate: b.cheque_date || valDate,
+        paymentNarration: b.payment_narration,
+        debitAccountId: b.debit_account_id,
+        user: req.user,
+        companyId: targetCompId,
+        branchId: targetBranchId,
       });
+    }
+
+    res.status(201).json({
+      id: valuationId,
+      valuation_no: valNo,
+      net_payable: netPayable,
+      service_bill_id: billAndPayResult.billId,
+      bill_no: billAndPayResult.billNo,
+      voucher_id: billAndPayResult.voucherId,
+      voucher_no: billAndPayResult.voucherNo,
+      message: autoPay
+        ? `Valuation certified, bill ${billAndPayResult.billNo || ""} raised, and direct payment ${billAndPayResult.voucherNo || ""} issued`
+        : autoRaiseBill
+          ? `Valuation certified and bill ${billAndPayResult.billNo || ""} raised`
+          : "Subcontract valuation recorded",
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
+export const paySubcontractValuation = async (req, res, next) => {
+  try {
+    const { companyId, branchId } = req.scope || {};
+    const valId = toNumber(req.params.id);
+    const b = req.body || {};
+
+    const valRows = await query(
+      `SELECT v.*, sc.contract_no, sc.subcontract_number, sc.trade_category, sc.trade,
+              sc.supplier_id, sc.subcontractor_name, sc.project_id AS sc_project_id,
+              sc.company_id AS sc_company_id, sc.branch_id AS sc_branch_id
+       FROM pm_subcontract_valuations v
+       JOIN pm_subcontracts sc ON sc.id = v.subcontract_id
+       WHERE v.id = :id LIMIT 1`,
+      { id: valId }
+    );
+    if (!valRows.length) throw httpError(404, "NOT_FOUND", "Valuation not found");
+    const val = valRows[0];
+
+    if (val.payment_status === "PAID" || val.voucher_id) {
+      throw httpError(400, "ALREADY_PAID", "This valuation has already been paid");
+    }
+
+    const netPayable = Number(val.net_payable ?? val.net_certified_amount ?? 0);
+    if (!(netPayable > 0)) {
+      throw httpError(400, "INVALID_AMOUNT", "Net certified payable amount is zero");
+    }
+
+    if (!b.payment_account_id) {
+      throw httpError(400, "VALIDATION_ERROR", "Payment Account (Bank/Cash) is required");
+    }
+
+    const targetCompId = companyId || val.sc_company_id || val.company_id || 1;
+    const targetBranchId = branchId || val.sc_branch_id || val.branch_id || 1;
+
+    const payResult = await internalRaiseServiceBillAndPay({
+      valuationId: val.id,
+      subcontract: val,
+      valNo: val.valuation_no || val.valuation_number,
+      valuationDate: val.valuation_date,
+      currWork: Number(val.current_certified || 0),
+      retentionDeducted: Number(val.retention_deducted || 0),
+      advanceRecovered: Number(val.advance_recovered || 0),
+      netPayable,
+      autoRaiseBill: true,
+      autoPay: true,
+      paymentAccountId: b.payment_account_id,
+      paymentMethod: b.payment_method || "Bank Transfer",
+      paymentReference: b.payment_reference || val.valuation_no,
+      chequeNumber: b.cheque_number,
+      chequeDate: b.cheque_date || b.payment_date,
+      paymentNarration: b.payment_narration,
+      debitAccountId: b.debit_account_id,
+      user: req.user,
+      companyId: targetCompId,
+      branchId: targetBranchId,
+    });
+
+    res.json({
+      success: true,
+      ...payResult,
+      message: `Payment voucher ${payResult.voucherNo} issued and service bill ${payResult.billNo} marked paid`,
+    });
   } catch (err) {
     next(err);
   }

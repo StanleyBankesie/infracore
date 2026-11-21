@@ -1898,11 +1898,17 @@ export const getAccountBalance = async (req, res, next) => {
     if (!id) return next(httpError(400, "VALIDATION_ERROR", "Invalid ID"));
 
     const rows = await query(
-      "SELECT id, code, name, opening_balance, opening_balance_date, is_debit_positive FROM fin_accounts WHERE id = :id AND company_id = :companyId LIMIT 1",
+      "SELECT id, code, name, balance_type FROM fin_accounts WHERE id = :id AND (company_id = :companyId OR company_id IS NULL) LIMIT 1",
       { id, companyId },
     );
     const account = rows?.[0];
     if (!account) return next(httpError(404, "NOT_FOUND", "Account not found"));
+
+    // Check fin_account_balances or general ledger
+    const balRows = await query(
+      "SELECT balance_amount FROM fin_account_balances WHERE account_id = :id AND (company_id = :companyId OR company_id IS NULL) LIMIT 1",
+      { id, companyId }
+    ).catch(() => []);
 
     // Calculate current balance from general ledger (voucher lines)
     const ledgerResult = await query(
@@ -1911,19 +1917,19 @@ export const getAccountBalance = async (req, res, next) => {
        FROM fin_voucher_lines vl
        INNER JOIN fin_vouchers v ON v.id = vl.voucher_id
        WHERE vl.account_id = :id 
-         AND v.company_id = :companyId 
+         AND (v.company_id = :companyId OR :companyId IS NULL)
          AND v.status IN ('POSTED', 'APPROVED')`,
       { id, companyId },
-    );
+    ).catch(() => [{ ledger_balance: 0 }]);
 
-    const openingBalance = Number(account.opening_balance || 0);
     const ledgerBalance = Number(ledgerResult?.[0]?.ledger_balance || 0);
-    const currentBalance = openingBalance + ledgerBalance;
+    const cachedBalance = balRows?.[0]?.balance_amount != null ? Number(balRows[0].balance_amount) : null;
+    const currentBalance = cachedBalance != null ? cachedBalance : ledgerBalance;
 
     res.json({
       ...account,
       balance: currentBalance,
-      opening_balance: openingBalance,
+      opening_balance: cachedBalance != null ? cachedBalance - ledgerBalance : 0,
       ledger_movement: ledgerBalance,
     });
   } catch (e) {

@@ -440,6 +440,38 @@ export default function ServiceBillForm() {
     });
   }, [bill.currency_id, finCurrencies]);
 
+  // Pre-fill from navigation state (e.g. from Subcontractor IPC)
+  useEffect(() => {
+    if (isEdit || !location.state) return;
+    const s = location.state;
+    if (s.supplier_id) {
+      setBill((p) => ({
+        ...p,
+        supplier_id: String(s.supplier_id),
+        notes: s.notes || p.notes,
+        payment_reference: s.payment_reference || p.payment_reference,
+      }));
+    }
+    if (s.net_payable && Number(s.net_payable) > 0) {
+      setLines((existing) => {
+        if (existing.length > 0) return existing;
+        return [
+          {
+            id: Date.now(),
+            desc: s.description || `Subcontract Works - ${s.payment_reference || "IPC"}`,
+            item_name: s.description || `Subcontract Works - ${s.payment_reference || "IPC"}`,
+            qty: 1,
+            rate: Number(s.net_payable),
+            amount: Number(s.net_payable),
+            line_total: Number(s.net_payable),
+            tax_amount: 0,
+            discount_percent: 0,
+          },
+        ];
+      });
+    }
+  }, [location.state, isEdit]);
+
   // Load Existing
   useEffect(() => {
     let mounted = true;

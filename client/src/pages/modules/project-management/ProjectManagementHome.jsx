@@ -74,6 +74,8 @@ import ProjectClosurePage from "./closure/ProjectClosurePage.jsx";
 import FinalAccountPage from "./closure/FinalAccountPage.jsx";
 import PaymentClaimsPage from "./claims/PaymentClaimsPage.jsx";
 import RiskManagementPage from "./risk/RiskManagementPage.jsx";
+import ServiceBillsList from "./service-bills/ServiceBillsList.jsx";
+import ServiceBillForm from "./service-bills/ServiceBillForm.jsx";
 
 export const projectManagementSections = [
   {
@@ -184,16 +186,6 @@ export const projectManagementSections = [
         icon: "📊",
       },
       {
-        title: "Critical Path & Schedule Monitoring",
-        path: "/project-management/gantt?showCritical=1",
-        actions: [
-          { label: "Critical Path", path: "/project-management/gantt?showCritical=1", type: "primary" },
-          { label: "Gantt", path: "/project-management/gantt", type: "outline" }
-        ],
-        description: "Zero-float critical path identification, schedule slippage monitoring, and baseline variance",
-        icon: "⚡",
-      },
-      {
         title: "Task Calendar",
         path: "/project-management/calendar",
         actions: [
@@ -269,7 +261,7 @@ export const projectManagementSections = [
         icon: "📋",
       },
       {
-        title: "Task Execution Dashboard",
+        title: "Work Plan & WBS Execution",
         path: "/project-management/tasks/execution",
         actions: [
           { label: "View", path: "/project-management/tasks/execution", type: "outline" },
@@ -277,16 +269,6 @@ export const projectManagementSections = [
         ],
         description: "Work log, progress updates, task timer, and checklists/deliverables",
         icon: "⏱️",
-      },
-      {
-        title: "Work Plan & WBS Execution",
-        path: "/project-management/reports/workplan-wbs",
-        actions: [
-          { label: "WBS Report", path: "/project-management/reports/workplan-wbs", type: "outline" },
-          { label: "Assign Tasks", path: "/project-management/tasks/assignment", type: "primary" }
-        ],
-        description: "Execution status by Work Breakdown Structure, active work packages, and deliverables",
-        icon: "🏗️",
       },
       {
         title: "Material Requisitions",
@@ -348,13 +330,23 @@ export const projectManagementSections = [
         icon: "🚜",
       },
       {
-        title: "Subcontractors & Trade Works",
+        title: "Subcontractor Agreements & IPCs",
         path: "/project-management/subcontracts",
         actions: [
           { label: "View", path: "/project-management/subcontracts", type: "outline" },
         ],
-        description: "Trade agreements, specialist trade execution, and subcontractor coordination",
+        description: "Subcontract agreements, specialist trade execution, and certified Interim Payment Certificates (IPCs)",
         icon: "🤝",
+      },
+      {
+        title: "Subcontractor Bills & Claims",
+        path: "/project-management/service-bills",
+        actions: [
+          { label: "View", path: "/project-management/service-bills", type: "outline" },
+          { label: "Raise Bill", path: "/project-management/service-bills/new", type: "primary" },
+        ],
+        description: "Subcontractor payment bills, certified IPC settlements, accounts payable tracking, and payment status",
+        icon: "💳",
       },
     ],
   },
@@ -983,6 +975,10 @@ export default function ProjectManagementHome() {
         <Route path="/daily-reports/new" element={<DailySiteReportForm />} />
         <Route path="/daily-reports/:id" element={<DailySiteReportForm />} />
         <Route path="/subcontracts" element={<SubcontractorManager />} />
+        <Route path="/service-bills" element={<ServiceBillsList />} />
+        <Route path="/service-bills/new" element={<ServiceBillForm />} />
+        <Route path="/service-bills/:id" element={<ServiceBillForm />} />
+        <Route path="/service-bills/:id/edit" element={<ServiceBillForm />} />
         <Route path="/client-valuations" element={<PaymentClaimsPage />} />
         <Route path="/client-progress-assessments" element={<PaymentClaimsPage />} />
         <Route path="/payment-claims" element={<PaymentClaimsPage />} />
@@ -1102,7 +1098,7 @@ export const projectManagementFeatures = [
   },
   {
     module_key: "project-management",
-    label: "Task Execution",
+    label: "Work Plan & WBS Execution",
     path: "/project-management/tasks/execution",
         actions: [
           { label: "View", path: "/project-management/tasks/execution", type: "outline" },
@@ -1351,9 +1347,19 @@ export const projectManagementFeatures = [
   },
   {
     module_key: "project-management",
-    label: "Subcontractors & IPCs",
+    label: "Subcontractor Agreements & IPCs",
     path: "/project-management/subcontracts",
     actions: [{ label: "View", path: "/project-management/subcontracts", type: "outline" }],
+    type: "feature",
+  },
+  {
+    module_key: "project-management",
+    label: "Subcontractor Bills & Claims",
+    path: "/project-management/service-bills",
+    actions: [
+      { label: "View", path: "/project-management/service-bills", type: "outline" },
+      { label: "Raise Bill", path: "/project-management/service-bills/new", type: "primary" },
+    ],
     type: "feature",
   },
   {

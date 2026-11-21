@@ -119,6 +119,7 @@ router.get("/subcontracts", cc.listSubcontracts);
 router.post("/subcontracts", cc.createSubcontract);
 router.get("/subcontract-valuations", cc.listSubcontractValuations);
 router.post("/subcontract-valuations", cc.createSubcontractValuation);
+router.post("/subcontract-valuations/:id/pay", cc.paySubcontractValuation);
 
 // 7. Client Valuations
 router.get("/client-valuations", cc.listClientValuations);

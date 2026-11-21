@@ -1256,7 +1256,7 @@ export default function TaskExecution() {
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
                   <h1 className="text-base sm:text-lg font-bold tracking-tight text-slate-900 dark:text-white leading-none whitespace-nowrap">
-                    Task Execution
+                    Work Plan & WBS Execution
                   </h1>
                 </div>
               </div>

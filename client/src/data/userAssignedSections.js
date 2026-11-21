@@ -570,13 +570,14 @@ export const MODULE_SECTIONS = {
       icon: "🏗️",
       features: [
         { key: "task-assignment", label: "Task Assignments & Kanban", path: "/project-management/tasks/assignment" },
-        { key: "tasks", label: "Task Execution Dashboard", path: "/project-management/tasks/execution" },
+        { key: "tasks", label: "Work Plan & WBS Execution", path: "/project-management/tasks/execution" },
         { key: "material-requisitions", label: "Material Requisitions", path: "/project-management/material-requisitions" },
         { key: "material-receipts", label: "Material Receipts", path: "/project-management/material-receipts" },
         { key: "material-utilizations", label: "Material Utilization", path: "/project-management/material-utilizations" },
         { key: "daily-reports", label: "Daily Project Report", path: "/project-management/daily-reports" },
         { key: "equipment-logs", label: "Plant & Equipment Logs", path: "/project-management/equipment-logs" },
-        { key: "subcontracts", label: "Subcontractors & Trade Works", path: "/project-management/subcontracts" },
+        { key: "subcontracts", label: "Subcontractor Agreements & IPCs", path: "/project-management/subcontracts" },
+        { key: "pm-service-bills", label: "Subcontractor Bills & Claims", path: "/project-management/service-bills" },
       ],
     },
     {

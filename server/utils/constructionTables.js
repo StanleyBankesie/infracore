@@ -763,6 +763,19 @@ export async function ensureConstructionTables() {
       ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
     `);
 
+    try {
+      const colRows = await query(`SHOW COLUMNS FROM pm_subcontract_valuations LIKE 'service_bill_id'`);
+      if (!colRows || !colRows.length) {
+        await query(`ALTER TABLE pm_subcontract_valuations ADD COLUMN service_bill_id BIGINT UNSIGNED NULL AFTER voucher_id`);
+      }
+    } catch (_) {}
+    try {
+      const colRows2 = await query(`SHOW COLUMNS FROM pm_subcontract_valuations LIKE 'payment_status'`);
+      if (!colRows2 || !colRows2.length) {
+        await query(`ALTER TABLE pm_subcontract_valuations ADD COLUMN payment_status VARCHAR(30) NOT NULL DEFAULT 'UNPAID' AFTER status`);
+      }
+    } catch (_) {}
+
     await query(`
       CREATE TABLE IF NOT EXISTS pm_subcontract_valuation_lines (
         id BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,

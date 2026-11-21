@@ -1780,6 +1780,11 @@ async function ensureServiceBillTables() {
       "ALTER TABLE pur_service_bills ADD COLUMN order_id BIGINT UNSIGNED NULL AFTER supplier_id",
     );
   }
+  if (!(await hasColumn("pur_service_bills", "project_id"))) {
+    await pool.query(
+      "ALTER TABLE pur_service_bills ADD COLUMN project_id INT NULL AFTER supplier_id",
+    );
+  }
   try {
     await pool.query(`
       UPDATE pur_service_bills sb
@@ -2268,13 +2273,15 @@ export const listServiceBills = async (req, res, next) => {
     const payment = String(req.query.payment || "")
       .trim()
       .toUpperCase();
-    const supplierId = toNumber(req.query.supplierId);
+    const supplierId = toNumber(req.query.supplierId || req.query.supplier_id);
+    const projectId = toNumber(req.query.projectId || req.query.project_id);
     let sql = `
       SELECT b.id, b.bill_no, b.bill_date, b.status, b.payment_status, b.total_amount, b.amount_paid,
-             b.client_name, b.supplier_id, s.supplier_name,
+             b.client_name, b.supplier_id, s.supplier_name, b.project_id, p.project_name, p.project_code,
              b.created_by, (SELECT username FROM adm_users WHERE id = b.created_by) AS created_by_username, b.created_at
       FROM pur_service_bills b
       LEFT JOIN pur_suppliers s ON s.id = b.supplier_id AND s.company_id = b.company_id
+      LEFT JOIN pm_projects p ON p.id = b.project_id
       WHERE b.company_id = :companyId
     `;
     const params = { companyId };
@@ -2285,6 +2292,10 @@ export const listServiceBills = async (req, res, next) => {
     } else if (branchId) {
       sql += " AND b.branch_id = :branchId";
       params.branchId = branchId;
+    }
+    if (projectId) {
+      sql += " AND b.project_id = :projectId";
+      params.projectId = projectId;
     }
     if (status) {
       sql += " AND b.status = :status";
@@ -2340,11 +2351,13 @@ export const getServiceBillById = async (req, res, next) => {
     if (!id) throw httpError(400, "VALIDATION_ERROR", "Invalid id");
     const rows = await query(
       `
-      SELECT *,
-          created_at,
-          (SELECT username FROM adm_users WHERE id = created_by) AS created_by_name
-         FROM pur_service_bills
-         WHERE id = :id AND company_id = :companyId AND (:branchIdsStr = '' OR FIND_IN_SET(branch_id, :branchIdsStr))
+      SELECT b.*,
+          b.created_at,
+          p.project_name, p.project_code,
+          (SELECT username FROM adm_users WHERE id = b.created_by) AS created_by_name
+         FROM pur_service_bills b
+         LEFT JOIN pm_projects p ON p.id = b.project_id
+         WHERE b.id = :id AND b.company_id = :companyId AND (:branchIdsStr = '' OR FIND_IN_SET(b.branch_id, :branchIdsStr))
       LIMIT 1
       `,
       { id, companyId, branchId, branchIdsStr },
@@ -2466,14 +2479,14 @@ export const createServiceBill = async (req, res, next) => {
     const [hdr] = await conn.execute(
       `
       INSERT INTO pur_service_bills (
-        company_id, branch_id, supplier_id, order_id, bill_no, bill_date, due_date, service_date, status, payment_status,
+        company_id, branch_id, supplier_id, project_id, order_id, bill_no, bill_date, due_date, service_date, status, payment_status,
         client_name, client_company, client_address, client_phone, client_email,
         payment_method, payment_reference, payment_terms, notes,
         discount_percent, tax_percent, subtotal, discount_amount, tax_amount, total_amount,
         currency_id, exchange_rate, freight_charges, other_charges,
         created_by, cost_center_id
       ) VALUES (
-        :companyId, :branchId, :supplierId, :orderId, :billNo, :billDate, :dueDate, :serviceDate, :status, :paymentStatus,
+        :companyId, :branchId, :supplierId, :projectId, :orderId, :billNo, :billDate, :dueDate, :serviceDate, :status, :paymentStatus,
         :clientName, :clientCompany, :clientAddress, :clientPhone, :clientEmail,
         :paymentMethod, :paymentReference, :paymentTerms, :notes,
         :discountPercent, :taxPercent, :subtotal, :discountAmount, :taxAmount, :totalAmount,
@@ -2485,6 +2498,7 @@ export const createServiceBill = async (req, res, next) => {
         companyId,
         branchId, branchIdsStr,
         supplierId,
+        projectId: body.project_id ? Number(body.project_id) : null,
         orderId: body.order_id ? Number(body.order_id) : null,
         billNo,
         billDate,
@@ -2770,6 +2784,7 @@ export const updateServiceBill = async (req, res, next) => {
              due_date = :dueDate,
              service_date = :serviceDate,
              supplier_id = :supplierId,
+             project_id = :projectId,
              order_id = :orderId,
              status = :status,
              payment_status = :paymentStatus,
@@ -2804,6 +2819,7 @@ export const updateServiceBill = async (req, res, next) => {
         dueDate,
         serviceDate,
         supplierId,
+        projectId: body.project_id ? Number(body.project_id) : null,
         orderId: body.order_id ? Number(body.order_id) : null,
         status: sStatus,
         paymentStatus,

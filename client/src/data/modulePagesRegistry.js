@@ -556,7 +556,7 @@ export const MODULE_PRIMARY_PAGES = {
       description: "Visual task assignment and team Work Plan/WBS allocation",
     },
     {
-      title: "Task Execution & Deliverables",
+      title: "Work Plan & WBS Execution",
       path: "/project-management/tasks/execution",
       feature_key: "tasks",
       icon: "⏱️",
@@ -605,11 +605,18 @@ export const MODULE_PRIMARY_PAGES = {
       description: "Machine operating hours, downtime, and fuel costing",
     },
     {
-      title: "Subcontractors & Trade Works",
+      title: "Subcontractor Agreements & IPCs",
       path: "/project-management/subcontracts",
       feature_key: "subcontracts",
       icon: "🤝",
-      description: "Trade agreements, specialist trade execution, and coordination",
+      description: "Subcontract agreements, specialist trade execution, and certified Interim Payment Certificates (IPCs)",
+    },
+    {
+      title: "Subcontractor Bills & Claims",
+      path: "/project-management/service-bills",
+      feature_key: "pm-service-bills",
+      icon: "💳",
+      description: "Subcontractor payment bills, certified IPC settlements, and accounts payable",
     },
     {
       title: "Project Cost Control & Budget",

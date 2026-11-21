@@ -170,12 +170,92 @@ async function ensureSupplierLocationColumns() {
   }
 }
 
+export async function ensureServiceAccountTx(conn, { companyId = 1 } = {}) {
+  const compId = companyId || 1;
+  const [existing] = await conn.execute(
+    `SELECT id, name FROM fin_accounts 
+     WHERE (company_id = :companyId OR company_id IS NULL)
+       AND is_active = 1
+       AND (LOWER(TRIM(name)) = 'service account' OR LOWER(TRIM(name)) = 'services account')
+     LIMIT 1`,
+    { companyId: compId }
+  );
+  if (existing?.length && existing[0]?.id) {
+    return Number(existing[0].id);
+  }
+
+  // Find Cost of Goods Sold or Direct Expense group (Group 14: Cost of Goods Sold)
+  const [grpRows] = await conn.execute(
+    `SELECT id FROM fin_account_groups
+     WHERE (company_id = :companyId OR company_id IS NULL)
+       AND (code = '5001' OR LOWER(name) LIKE '%cost of goods sold%' OR nature = 'EXPENSE')
+     ORDER BY CASE WHEN code = '5001' THEN 1 WHEN LOWER(name) LIKE '%cost of goods sold%' THEN 2 ELSE 3 END, id ASC
+     LIMIT 1`,
+    { companyId: compId }
+  );
+  const groupId = grpRows?.[0]?.id || 14;
+
+  // Find base currency
+  const [curRows] = await conn.execute(
+    `SELECT id FROM fin_currencies WHERE (company_id = :companyId OR company_id IS NULL) AND is_base = 1 LIMIT 1`,
+    { companyId: compId }
+  );
+  const currencyId = Number(curRows?.[0]?.id || 1) || 1;
+
+  // Determine next code in 50xx series
+  const [mxRows] = await conn.execute(
+    `SELECT MAX(CAST(code AS UNSIGNED)) AS maxcode FROM fin_accounts 
+     WHERE (company_id = :companyId OR company_id IS NULL) AND code REGEXP '^5[0-9]{3}$'`,
+    { companyId: compId }
+  );
+  const maxCode = Number(mxRows?.[0]?.maxcode || 5038);
+  const nextCode = String(Math.max(5014, maxCode + 1));
+
+  // Insert "Service Account"
+  const [res] = await conn.execute(
+    `INSERT INTO fin_accounts (
+       company_id, group_id, code, name, currency_id, is_control_account, is_postable, is_active
+     ) VALUES (
+       :companyId, :groupId, :code, 'Service Account', :currencyId, 0, 1, 1
+     )`,
+    {
+      companyId: compId,
+      groupId,
+      code: nextCode,
+      currencyId,
+    }
+  );
+
+  return Number(res.insertId);
+}
+
 async function ensureSupplierExpenseAccountColumn() {
   if (!(await hasColumn("pur_suppliers", "expense_account_id"))) {
     await pool.query(
       "ALTER TABLE pur_suppliers ADD COLUMN expense_account_id BIGINT UNSIGNED NULL",
     );
   }
+  // Auto-create Service Account if missing and link any unassigned subcontractors
+  try {
+    const conn = await pool.getConnection();
+    try {
+      await conn.beginTransaction();
+      const serviceAccId = await ensureServiceAccountTx(conn, { companyId: 1 });
+      if (serviceAccId) {
+        await conn.execute(
+          `UPDATE pur_suppliers 
+           SET expense_account_id = :serviceAccId 
+           WHERE service_contractor = 'Y' AND (expense_account_id IS NULL OR expense_account_id = 0)`,
+          { serviceAccId }
+        );
+      }
+      await conn.commit();
+    } catch (e) {
+      await conn.rollback();
+    } finally {
+      conn.release();
+    }
+  } catch (_) {}
 }
 
 // Add triggers and columns for managing purchase bills payment status
@@ -6508,6 +6588,23 @@ router.post(
       const cols = `company_id, ${hasBranchCol ? "branch_id, " : ""}supplier_code, supplier_name, contact_person, email, phone, address, city, state, country, payment_terms, supplier_type, currency_id, service_contractor, is_active, expense_account_id`;
       const vals = `:companyId, ${hasBranchCol ? ":branchId, " : ""}:supplierCode, :supplierName, :contactPerson, :email, :phone, :address, :city, :state, :country, :paymentTerms, :supplierType, :currencyId, :serviceContractor, :isActive, :expenseAccountId`;
 
+      const isServiceContractor =
+        String(body.service_contractor || "").toUpperCase() === "Y" ||
+        String(body.industry || "").toLowerCase().includes("contractor") ||
+        String(body.supplier_type || "").toUpperCase() === "CONTRACTOR";
+
+      let targetExpenseAccountId =
+        body.expense_account_id === undefined ||
+        body.expense_account_id === null ||
+        body.expense_account_id === ""
+          ? null
+          : Number(body.expense_account_id || 0) || null;
+
+      // When a subcontractor is created, auto-set associated account to "Service Account" if not specified
+      if (isServiceContractor && !targetExpenseAccountId) {
+        targetExpenseAccountId = await ensureServiceAccountTx(conn, { companyId });
+      }
+
       const [resHeader] = await conn.execute(
         `INSERT INTO pur_suppliers (${cols})
          VALUES (${vals})`,
@@ -6529,17 +6626,10 @@ router.post(
             body.currency_id === undefined || body.currency_id === null
               ? null
               : Number(body.currency_id || 0) || null,
-          serviceContractor:
-            String(body.service_contractor || "").toUpperCase() === "Y"
-              ? "Y"
-              : "N",
+          serviceContractor: isServiceContractor ? "Y" : "N",
           isActive:
             body.is_active !== undefined ? Boolean(body.is_active) : true,
-          expenseAccountId:
-            body.expense_account_id === undefined ||
-            body.expense_account_id === null
-              ? null
-              : Number(body.expense_account_id || 0) || null,
+          expenseAccountId: targetExpenseAccountId,
         },
       );
       const supId = resHeader.insertId;
