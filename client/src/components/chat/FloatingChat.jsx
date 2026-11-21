@@ -158,10 +158,8 @@ export default function FloatingChat() {
       <div
         ref={containerRef}
         data-floating-widget="true"
-        className="fixed z-[9999] pointer-events-auto print:hidden"
+        className="fixed bottom-[74px] right-3.5 sm:right-4 lg:bottom-4 lg:right-4 z-[9999] pointer-events-auto print:hidden"
         style={{
-          right: 16,
-          bottom: "calc(env(safe-area-inset-bottom, 0px) + 16px)",
           transform: `translate3d(0, -${shiftY}px, 0)`,
           transition: "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)",
           willChange: "transform",

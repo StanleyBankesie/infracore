@@ -94,9 +94,16 @@ export default function ResetPasswordPage() {
         <div 
           className="w-full md:w-1/2 p-4 sm:p-5 md:p-6 flex flex-col justify-between relative bg-white dark:bg-slate-900 overflow-y-auto [scrollbar-width:thin]"
         >
-          {/* Background image with configurable opacity */}
+          {/* Background image: on small devices (< md), use loginHeroImageUrl from admin settings; on desktop, loginBackgroundUrl */}
           <div
-            className="absolute inset-0 pointer-events-none transition-opacity duration-300 z-0 bg-cover bg-center"
+            className="block md:hidden absolute inset-0 pointer-events-none z-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${loginHeroImageUrl || backgroundImage})`,
+              opacity: 0.15,
+            }}
+          />
+          <div
+            className="hidden md:block absolute inset-0 pointer-events-none transition-opacity duration-300 z-0 bg-cover bg-center"
             style={{
               backgroundImage: `url(${loginBackgroundUrl || backgroundImage})`,
               opacity: Math.max(0, Math.min(100, Number(loginBackgroundOpacity ?? 20))) / 100,
@@ -107,8 +114,8 @@ export default function ResetPasswordPage() {
             {/* Logo on top for all devices */}
             <div className="flex justify-center mb-12">
               <div className="bg-white/80 backdrop-blur px-5 py-2.5 rounded-full shadow-md flex items-center gap-3 border border-slate-100">
-                <img src="/OMNISUITE_ICON_CLEAR.png" alt="Omnisuite ERP" className="h-7 w-auto" />
-                <span className="font-bold text-slate-800 text-lg tracking-tight">Omnisuite ERP</span>
+                <img src="/OMNISUITE_ICON_CLEAR.png" alt="Omnisuite PMP" className="h-7 w-auto" />
+                <span className="font-bold text-slate-800 text-lg tracking-tight">Omnisuite PMP</span>
               </div>
             </div>
 

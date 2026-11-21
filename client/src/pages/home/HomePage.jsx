@@ -927,7 +927,10 @@ export default function HomePage() {
       
       cards.forEach(card => {
         // Check if card is forbidden in its parent module
-        if (canViewDashboardElement(rawModKey, "card", card.key) === false) {
+        if (
+          canViewDashboardElement(canonicalMod, "card", card.key) === false ||
+          canViewDashboardElement(rawModKey, "card", card.key) === false
+        ) {
           return;
         }
         // Check if card is permitted on Home
@@ -1473,13 +1476,13 @@ export default function HomePage() {
         {!isBasicMode ? (
           <div className="space-y-4">
             {/* 2-Grid Section: Left Column (Tasks & Calendar) | Right Column (Company Notice Board) */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 items-start">
+            <div className="flex flex-col lg:grid lg:grid-cols-2 gap-4 items-stretch lg:items-start">
               {/* Left Column: Project Calendar & Tasks Assigned to You + Action Center */}
-              <div className="flex flex-col gap-4 min-w-0">
+              <div className="contents lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
                 <HomeUserTasksAndCalendar />
 
                 {/* Action Center - Document Approvals Workbench */}
-                <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-smoky p-6 border border-slate-200/90 dark:border-slate-800 flex flex-col">
+                <div className="w-full order-last lg:order-none bg-white dark:bg-slate-900 rounded-2xl shadow-smoky p-6 border border-slate-200/90 dark:border-slate-800 flex flex-col">
                   {/* Header */}
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-4 border-b border-slate-100 dark:border-slate-800/80 mb-3.5">
                     <div className="flex items-center gap-2.5">
@@ -1768,7 +1771,7 @@ export default function HomePage() {
               </div>
 
               {/* Right Column: Company Notice Board */}
-              <div className="flex flex-col gap-4 min-w-0">
+              <div className="contents lg:flex lg:flex-col lg:gap-4 lg:min-w-0">
                 {/* Company Notice Board */}
                 <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-smoky p-6 border border-slate-200/90 dark:border-slate-800 flex flex-col relative">
                 {/* Header */}

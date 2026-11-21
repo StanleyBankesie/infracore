@@ -11,6 +11,31 @@ import { api } from "../api/client.js";
 import { MODULES_REGISTRY } from "../data/modulesRegistry.js";
 import { DASHBOARD_CARDS, getCardModule, getAllCardAliases } from "../data/dashboardCards.js";
 
+const MODULE_CANONICAL_MAP = {
+  projects: "project-management",
+  "project-management": "projects",
+  hr: "human-resources",
+  "human-resources": "hr",
+  bi: "business-intelligence",
+  "business-intelligence": "bi",
+  service: "service-management",
+  "service-management": "service",
+  admin: "administration",
+  administration: "admin",
+  executive: "executive-overview",
+  "executive-overview": "executive",
+  system: "system-configuration",
+  "system-configuration": "system",
+};
+
+function getModuleKeyVariants(modKey) {
+  const k = String(modKey || "").toLowerCase().trim();
+  const set = new Set([k]);
+  const alias = MODULE_CANONICAL_MAP[k];
+  if (alias) set.add(alias);
+  return Array.from(set);
+}
+
 /**
  * PermissionContext - Centralized permission management
  *
@@ -612,28 +637,31 @@ export const PermissionProvider = ({ children }) => {
           .replace(/[^a-z0-9-]/g, "");
         const canView = Number(it.can_view) === 1;
 
-        m.set(`${mk}|${type}|${rawKey}`, canView);
-        m.set(`${mk}|${type}|${normKey}`, canView);
-        if (normKey.startsWith(`${mk}-`)) {
-          m.set(`${mk}|${type}|${normKey.slice(mk.length + 1)}`, canView);
-        } else {
-          m.set(`${mk}|${type}|${mk}-${normKey}`, canView);
-        }
-
-        // Also index known aliases
-        const aliases = getAllCardAliases(rawKey);
-        for (const alias of aliases) {
-          m.set(`${mk}|${type}|${alias}`, canView);
-          if (alias.startsWith(`${mk}-`)) {
-            m.set(`${mk}|${type}|${alias.slice(mk.length + 1)}`, canView);
+        const mkVariants = getModuleKeyVariants(mk);
+        for (const modVar of mkVariants) {
+          m.set(`${modVar}|${type}|${rawKey}`, canView);
+          m.set(`${modVar}|${type}|${normKey}`, canView);
+          if (normKey.startsWith(`${modVar}-`)) {
+            m.set(`${modVar}|${type}|${normKey.slice(modVar.length + 1)}`, canView);
           } else {
-            m.set(`${mk}|${type}|${mk}-${alias}`, canView);
+            m.set(`${modVar}|${type}|${modVar}-${normKey}`, canView);
           }
-        }
 
-        const set = byModule.get(mk) || new Set();
-        set.add(type);
-        byModule.set(mk, set);
+          // Also index known aliases
+          const aliases = getAllCardAliases(rawKey);
+          for (const alias of aliases) {
+            m.set(`${modVar}|${type}|${alias}`, canView);
+            if (alias.startsWith(`${modVar}-`)) {
+              m.set(`${modVar}|${type}|${alias.slice(modVar.length + 1)}`, canView);
+            } else {
+              m.set(`${modVar}|${type}|${modVar}-${alias}`, canView);
+            }
+          }
+
+          const set = byModule.get(modVar) || new Set();
+          set.add(type);
+          byModule.set(modVar, set);
+        }
       }
       setDashboardViewMap(m);
       setDashboardViewLoaded(true);
@@ -1043,18 +1071,24 @@ export const PermissionProvider = ({ children }) => {
       .replace(/[^a-z0-9-]/g, "");
     if (!dashboardViewLoaded) return uid === 1;
 
+    const mkVariants = getModuleKeyVariants(mk);
+
     // Build all candidate variations for lookup
     const candidates = new Set([normKey, rawKey]);
-    if (normKey.startsWith(`${mk}-`)) {
-      candidates.add(normKey.slice(mk.length + 1));
-    } else {
-      candidates.add(`${mk}-${normKey}`);
+    for (const modVar of mkVariants) {
+      if (normKey.startsWith(`${modVar}-`)) {
+        candidates.add(normKey.slice(modVar.length + 1));
+      } else {
+        candidates.add(`${modVar}-${normKey}`);
+      }
     }
     const aliases = getAllCardAliases(rawKey);
     aliases.forEach((a) => {
       candidates.add(a);
-      if (a.startsWith(`${mk}-`)) candidates.add(a.slice(mk.length + 1));
-      else candidates.add(`${mk}-${a}`);
+      for (const modVar of mkVariants) {
+        if (a.startsWith(`${modVar}-`)) candidates.add(a.slice(modVar.length + 1));
+        else candidates.add(`${modVar}-${a}`);
+      }
     });
 
     // Special handling for Home cards
@@ -1069,9 +1103,12 @@ export const PermissionProvider = ({ children }) => {
       // 2. If explicitly disabled in its parent module: strictly false
       const parentMod = getCardModule(normKey);
       if (parentMod) {
-        for (const c of candidates) {
-          if (dashboardViewMap.get(`${parentMod}|card|${c}`) === false) {
-            return false;
+        const parentVariants = getModuleKeyVariants(parentMod);
+        for (const pMod of parentVariants) {
+          for (const c of candidates) {
+            if (dashboardViewMap.get(`${pMod}|card|${c}`) === false) {
+              return false;
+            }
           }
         }
       }
@@ -1103,9 +1140,12 @@ export const PermissionProvider = ({ children }) => {
         const isDefault = defaultCards.some((dc) => candidates.has(dc));
         if (!isDefault) return false;
         if (parentMod) {
-          for (const c of candidates) {
-            if (dashboardViewMap.get(`${parentMod}|card|${c}`) === false) {
-              return false;
+          const parentVariants = getModuleKeyVariants(parentMod);
+          for (const pMod of parentVariants) {
+            for (const c of candidates) {
+              if (dashboardViewMap.get(`${pMod}|card|${c}`) === false) {
+                return false;
+              }
             }
           }
         }
@@ -1115,9 +1155,11 @@ export const PermissionProvider = ({ children }) => {
 
     // For module cards/dashboards (mk !== "home"):
     // 1. If any candidate entry exists in dashboardViewMap: respect it immediately
-    for (const c of candidates) {
-      if (dashboardViewMap.has(`${mk}|${t}|${c}`)) {
-        return dashboardViewMap.get(`${mk}|${t}|${c}`) === true;
+    for (const modVar of mkVariants) {
+      for (const c of candidates) {
+        if (dashboardViewMap.has(`${modVar}|${t}|${c}`)) {
+          return dashboardViewMap.get(`${modVar}|${t}|${c}`) === true;
+        }
       }
     }
 
@@ -1129,7 +1171,8 @@ export const PermissionProvider = ({ children }) => {
 
     // Fall back to module-level RBAC for other elements
     if (mk) {
-      return canAccessPath(`/${mk}`);
+      const canonicalPath = MODULE_CANONICAL_MAP[mk] || mk;
+      return canAccessPath(`/${canonicalPath}`);
     }
     return uid === 1;
   };

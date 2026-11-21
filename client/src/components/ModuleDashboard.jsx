@@ -605,34 +605,34 @@ const ModuleDashboard = ({
   }, [location.pathname, location.search, location.hash, navigate]);
 
   return (
-    <div className="space-y-6 animate-fade-in bg-transparent text-slate-900 dark:text-slate-100">
+    <div className="space-y-3 md:space-y-6 animate-fade-in bg-transparent text-slate-900 dark:text-slate-100">
       <div className="hidden md:block sticky top-0 z-40 bg-transparent transition-colors">
         <ModuleTopNavBar sections={allSections} headerActions={resolvedHeaderActions} moduleKey={moduleKey} />
       </div>
 
-      <div className="space-y-8">
+      <div className="space-y-4 md:space-y-8">
         {/* Apple Design Translucent Liquid Glass Module Title Banner */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/95 via-slate-50/90 to-slate-100/80 dark:from-slate-900/95 dark:via-slate-900/90 dark:to-slate-950/95 p-5 sm:p-7 border border-slate-200/80 dark:border-white/10 shadow-[0_4px_24px_-4px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-2xl transition-all mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative z-10">
+        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/95 via-slate-50/90 to-slate-100/80 dark:from-slate-900/95 dark:via-slate-900/90 dark:to-slate-950/95 p-3.5 sm:p-5 md:p-7 border border-slate-200/80 dark:border-white/10 shadow-[0_4px_24px_-4px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-2xl transition-all mb-3 md:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
             <div className="min-w-0">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-700/50 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
+              <div className="flex items-center gap-2.5 sm:gap-3">
+                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-700/50 flex items-center justify-center text-lg sm:text-xl md:text-2xl shadow-inner shrink-0">
                   {typeof icon === "string" ? icon : (typeof moduleInfo?.icon === "string" ? moduleInfo.icon : "📂")}
                 </div>
                 <div>
-                  <h1 className="text-3xl sm:text-4xl lg:text-5xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
                     {title}
                   </h1>
                 </div>
               </div>
               {description && (
-                <p className="hidden sm:block text-slate-500 dark:text-slate-400 text-sm sm:text-base mt-2 max-w-3xl leading-relaxed">
+                <p className="hidden md:block text-slate-500 dark:text-slate-400 text-xs sm:text-sm mt-1.5 sm:mt-2 max-w-3xl leading-relaxed line-clamp-2 sm:line-clamp-none">
                   {description}
                 </p>
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0">
+            <div className="flex items-center flex-wrap gap-2 shrink-0">
               {shouldShowSectionCardsFirst && !searchTerm && activeSection !== null && (
                 <button 
                   type="button"
@@ -715,8 +715,8 @@ const ModuleDashboard = ({
         if (s.rbac_key && canViewDashboardElement(mk, "card", s.rbac_key) === false) return false;
         return canViewDashboardElement(mk, "card", key);
       }).length > 0 && (
-        <div className="mb-8">
-          <h2 className="text-xl font-semibold text-brand-800 dark:text-brand-200 mb-4 flex items-center gap-2">
+        <div className="mb-4 md:mb-8">
+          <h2 className="hidden md:flex text-xl font-semibold text-brand-800 dark:text-brand-200 mb-4 items-center gap-2">
             <span>📈</span> Business Overview
           </h2>
           <MobileMovingCarousel data-module-carousel gridColsClass="md:grid-cols-2 lg:grid-cols-4" gapClass="gap-4 sm:gap-6"
@@ -1059,8 +1059,78 @@ const ModuleDashboard = ({
               </div>
             )}
 
+            {/* Mobile Sub-module Navigation Pills (< md) */}
+            {filteredSections.length > 1 && !searchTerm && (
+              <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1 mb-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveSection(null);
+                    const searchParams = new URLSearchParams(location.search || "");
+                    searchParams.delete("section");
+                    navigate(
+                      { pathname: location.pathname, search: searchParams.toString() },
+                      { replace: true }
+                    );
+                  }}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                    activeSection === null
+                      ? "bg-brand-600 text-white shadow-xs"
+                      : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                  }`}
+                >
+                  All ({totalVisiblePages})
+                </button>
+                {filteredSections.map((sec, idx) => {
+                  const rawSecItems = sec.items || sec.features || [];
+                  const secVisibleCount = rawSecItems.filter((item) => canShowItem(item)).length;
+                  if (secVisibleCount === 0) return null;
+                  const secTitle = sec.title || sec.category || `Section ${idx + 1}`;
+                  const isSelected = activeSection === idx;
+                  const secIcon = getSectionIcon(sec, idx);
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        const newIdx = isSelected ? null : idx;
+                        setActiveSection(newIdx);
+                        const searchParams = new URLSearchParams(location.search || "");
+                        if (newIdx !== null) {
+                          searchParams.set("section", String(newIdx));
+                        } else {
+                          searchParams.delete("section");
+                        }
+                        navigate(
+                          { pathname: location.pathname, search: searchParams.toString() },
+                          { replace: true }
+                        );
+                      }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
+                        isSelected
+                          ? "bg-brand-600 text-white shadow-xs"
+                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
+                      }`}
+                    >
+                      <span className="text-xs">{safeRenderIcon(secIcon, "w-3.5 h-3.5")}</span>
+                      <span>{secTitle}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          isSelected
+                            ? "bg-white/20 text-white"
+                            : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
+                        }`}
+                      >
+                        {secVisibleCount}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
             {filteredSections.map((section, sectionIndex) => {
-              if (shouldShowSectionCardsFirst && !searchTerm && activeSection !== null && activeSection !== sectionIndex) {
+              if (!searchTerm && activeSection !== null && activeSection !== sectionIndex) {
                 return null;
               }
 
@@ -1077,7 +1147,8 @@ const ModuleDashboard = ({
                   data-section-title={String(sectionTitle || "")}
                   className="space-y-4"
                 >
-                  <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 pb-3">
+                  {/* Desktop Section Header (>= md) */}
+                  <div className="hidden md:flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 pb-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white text-lg flex items-center justify-center shadow-xs shrink-0">
                         {safeRenderIcon(sectionIcon, "w-5 h-5")}
@@ -1103,6 +1174,22 @@ const ModuleDashboard = ({
                     <span className="text-xs font-semibold text-slate-400 dark:text-slate-500 shrink-0">
                       {visibleSectionItems.length} {visibleSectionItems.length === 1 ? "page" : "pages"}
                     </span>
+                  </div>
+
+                  {/* Mobile Section Header (< md): Sleek compact divider */}
+                  <div className="md:hidden flex items-center gap-2.5 pt-3 pb-1">
+                    <div className="flex items-center gap-2 min-w-0 shrink-0">
+                      <div className="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 flex items-center justify-center text-sm font-semibold shrink-0 border border-brand-200/60 dark:border-brand-800/60">
+                        {safeRenderIcon(sectionIcon, "w-3.5 h-3.5")}
+                      </div>
+                      <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate">
+                        {sectionTitle}
+                      </h2>
+                      <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200/60 dark:border-slate-700/60 shrink-0">
+                        {visibleSectionItems.length}
+                      </span>
+                    </div>
+                    <div className="h-px bg-slate-200/90 dark:bg-slate-800/90 flex-1 min-w-[20px]" />
                   </div>
 
                   {/* Individual Page Cards Grid */}

@@ -1937,30 +1937,30 @@ export default function AppShell() {
         data-rbac-exempt="true"
         className="h-14 flex justify-between items-center px-4 sm:px-6 border-b border-slate-200/80 dark:border-slate-800/80 bg-white/95 dark:bg-slate-950/95 backdrop-blur-md shadow-apple-xs z-50 sticky top-0"
       >
-        <div className="flex items-center gap-3 flex-nowrap">
+        <div className="flex items-center gap-2 sm:gap-3 flex-nowrap shrink-0">
           <button
             type="button"
             aria-label="Toggle navigation menu"
             data-rbac-exempt="true"
             onClick={() => setSidebarOpen((v) => !v)}
-            className="hidden md:inline-flex items-center justify-center w-10 h-10 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors active:scale-95"
+            className="hidden md:inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors active:scale-95 shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
 
           <Link
             to="/"
-            className="inline-flex items-center"
+            className="inline-flex items-center shrink-0"
             aria-label="Go to Home"
           >
             <img
               src={theme === "dark" ? logoDark : logoLight}
               alt="OmniSuite"
-              className="h-8 w-auto"
+              className="h-7 sm:h-8 w-auto object-contain"
             />
           </Link>
         </div>
-        <div className="flex items-center gap-3 flex-nowrap">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 flex-nowrap shrink-0">
           {/* <div className="badge bg-brand-100 dark:bg-brand-900/50 text-brand-800 dark:text-brand-200 border border-brand-300 dark:border-brand-700">
             Role-based + Branch-based
           </div> */}
@@ -2005,8 +2005,8 @@ export default function AppShell() {
                 )}
               </div>
 
-              {/* Username */}
-              <span className="text-sm font-semibold truncate max-w-[120px] sm:max-w-[160px]">
+              {/* Username: hide text on narrow mobile screens (< 640px) to prevent header overflow */}
+              <span className="hidden sm:inline text-sm font-semibold truncate max-w-[120px] sm:max-w-[160px]">
                 {user?.full_name || profile.username}
               </span>
 
@@ -2019,7 +2019,7 @@ export default function AppShell() {
             </button>
 
             {profileOpen && (
-              <div className="absolute right-0 mt-2 w-80 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-erp-lg overflow-hidden z-50">
+              <div className="absolute right-0 mt-2 w-[calc(100vw-24px)] sm:w-80 max-w-sm rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-erp-lg overflow-hidden z-50">
                 <div className="p-4 border-b border-slate-200 dark:border-slate-700">
                   <div className="text-sm font-semibold text-slate-900 dark:text-slate-100">
                     {profile.username}
@@ -2864,7 +2864,7 @@ export default function AppShell() {
         </aside>
 
         <main
-          className={`flex-1 overflow-x-hidden min-w-0 relative min-h-[calc(100vh-56px)] pb-20 md:pb-6 ${
+          className={`flex-1 overflow-x-hidden min-w-0 relative min-h-[calc(100vh-56px)] pb-24 lg:pb-6 ${
             resolvedBg.isSolid
               ? resolvedBg.isSolidDark
                 ? "bg-[#0b0f19]"
@@ -2878,7 +2878,7 @@ export default function AppShell() {
               aria-hidden="true"
               className="fixed top-[56px] bottom-0 right-0 pointer-events-none z-0 transition-colors duration-300 ease-in-out"
               style={{
-                left: sidebarOpen ? "280px" : "0px",
+                left: (sidebarOpen && typeof window !== "undefined" && window.innerWidth >= 768) ? "280px" : "0px",
                 backgroundColor: resolvedBg.color,
               }}
             />
@@ -2887,7 +2887,7 @@ export default function AppShell() {
               aria-hidden="true"
               className="fixed top-[56px] bottom-0 right-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat transition-all duration-300 ease-in-out"
               style={{
-                left: sidebarOpen ? "280px" : "0px",
+                left: (sidebarOpen && typeof window !== "undefined" && window.innerWidth >= 768) ? "280px" : "0px",
                 backgroundImage: `url(${resolvedBg.url})`,
                 opacity: Math.max(
                   0,

@@ -99,7 +99,7 @@ export default function BanksAiFloating() {
       <div
         ref={containerRef}
         data-floating-widget="true"
-        className="fixed bottom-6 right-24 md:right-[88px] z-50 pointer-events-auto print:hidden"
+        className="fixed bottom-[74px] right-18 sm:right-20 lg:bottom-4 lg:right-20 z-50 pointer-events-auto print:hidden"
         style={{
           transform: `translate3d(0, -${shiftY}px, 0)`,
           transition: "transform 0.4s cubic-bezier(0.22, 1, 0.36, 1)",

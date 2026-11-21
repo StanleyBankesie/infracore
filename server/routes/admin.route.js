@@ -1819,6 +1819,24 @@ router.get("/settings/login-bg-info", async (req, res) => {
 router.get("/settings/login-hero-bg-info", async (req, res) => {
   try {
     await ensureLoginBrandingTable().catch(() => {});
+    const bgDir = path.join(process.cwd(), "uploads", "backgrounds");
+    const candidates = [
+      path.join(bgDir, "login-hero.jpg"),
+      path.join(bgDir, "login-hero.jpeg"),
+      path.join(bgDir, "login-hero.png"),
+      path.join(bgDir, "login-hero.webp"),
+    ];
+    let diskFound = false;
+    let diskMtime = null;
+    for (const f of candidates) {
+      if (fs.existsSync(f)) {
+        diskFound = true;
+        try {
+          diskMtime = fs.statSync(f).mtime.toISOString();
+        } catch {}
+        break;
+      }
+    }
     const rows = await query(
       `SELECT hero_image IS NOT NULL AS has_background, updated_at
          FROM adm_login_branding
@@ -1826,9 +1844,10 @@ router.get("/settings/login-hero-bg-info", async (req, res) => {
         LIMIT 1`,
     ).catch(() => []);
     const row = rows[0] || {};
+    const hasBg = diskFound || Number(row.has_background || 0) === 1;
     res.json({
-      hasBackground: Number(row.has_background || 0) === 1,
-      updatedAt: row.updated_at || null,
+      hasBackground: hasBg,
+      updatedAt: row.updated_at || diskMtime || null,
     });
   } catch (err) {
     res.json({ hasBackground: false, updatedAt: null });

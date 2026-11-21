@@ -27,9 +27,9 @@ import Swal from "sweetalert2";
 import PaymentPackageModal from "../components/PaymentPackageModal.jsx";
 
 const CAROUSEL_MESSAGES = [
-  "Empowering Your Business Operations",
-  "Seamless Enterprise Resource Planning",
-  "Streamline Your Workflow Today",
+  "Empowering Your Project Operations",
+  "Seamless Project & Workflow Management",
+  "Streamline Your Delivery Today",
 ];
 
 /**
@@ -501,15 +501,43 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center bg-slate-100 dark:bg-slate-950 p-2 sm:p-3 md:p-4 overflow-y-auto">
-      <div className="w-full max-w-md sm:max-w-lg md:max-w-3xl lg:max-w-4xl bg-white dark:bg-slate-900 rounded-2xl sm:rounded-3xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[calc(100vh-1rem)] sm:max-h-[calc(100vh-1.5rem)] my-auto transition-all">
+    <div className="min-h-screen w-full flex items-center justify-center relative overflow-y-auto bg-slate-100 dark:bg-slate-950 p-0 sm:p-4 md:p-6">
+      {/* Small devices (< md): Background image is the Login Hero Image updated in System Administration Settings */}
+      <div
+        className="block md:hidden fixed inset-0 pointer-events-none z-0 bg-cover bg-center transition-all duration-300"
+        style={{
+          backgroundImage: `url(${loginHeroImageUrl || backgroundImage})`,
+        }}
+      />
+      {/* Mobile contrast & readability overlay */}
+      <div className="block md:hidden fixed inset-0 pointer-events-none z-0 bg-slate-950/30 backdrop-blur-[1px]" />
+
+      {/* Desktop (md+): Full-device background layer with configured portal background */}
+      <div
+        className="hidden md:block fixed inset-0 pointer-events-none z-0 bg-cover bg-center transition-opacity duration-300"
+        style={{
+          backgroundImage: `url(${loginBackgroundUrl || backgroundImage})`,
+          opacity: Math.max(0, Math.min(100, Number(loginBackgroundOpacity ?? 20))) / 100,
+        }}
+      />
+
+      <div className="w-full min-h-screen sm:min-h-0 max-w-md sm:max-w-lg md:max-w-3xl lg:max-w-4xl bg-white/90 sm:bg-white/95 md:bg-white dark:bg-slate-900/90 dark:sm:bg-slate-900/95 dark:md:bg-slate-900 backdrop-blur-xl md:backdrop-blur-none rounded-none sm:rounded-3xl shadow-none sm:shadow-2xl overflow-hidden flex flex-col md:flex-row sm:max-h-[calc(100vh-1.5rem)] my-auto transition-all relative z-10 border-0 sm:border border-slate-200/60 dark:border-slate-800/60">
         {/* Left Side: Form */}
         <div
-          className="w-full md:w-1/2 p-4 sm:p-5 md:p-6 flex flex-col justify-between relative bg-white dark:bg-slate-900 overflow-y-auto [scrollbar-width:thin]"
+          className="w-full md:w-1/2 p-5 sm:p-6 md:p-6 flex flex-col justify-between relative bg-transparent overflow-y-auto [scrollbar-width:thin] min-h-screen sm:min-h-0"
         >
-          {/* Background image with configurable opacity */}
+          {/* Inner background on small devices (< md): Login Hero Image */}
           <div
-            className="absolute inset-0 pointer-events-none transition-opacity duration-300 z-0 bg-cover bg-center"
+            className="block md:hidden absolute inset-0 pointer-events-none z-0 bg-cover bg-center"
+            style={{
+              backgroundImage: `url(${loginHeroImageUrl || backgroundImage})`,
+              opacity: 0.08,
+            }}
+          />
+
+          {/* Subtle inner background for desktop contrast */}
+          <div
+            className="hidden md:block absolute inset-0 pointer-events-none transition-opacity duration-300 z-0 bg-cover bg-center"
             style={{
               backgroundImage: `url(${loginBackgroundUrl || backgroundImage})`,
               opacity: Math.max(0, Math.min(100, Number(loginBackgroundOpacity ?? 20))) / 100,
@@ -525,18 +553,18 @@ export default function LoginPage() {
                   alt="Omnisuite PMP"
                   className="h-6 sm:h-7 w-auto object-contain"
                 />
-                <span className="font-normal text-slate-900 text-base sm:text-lg tracking-tight">
+                <span className="font-bold text-slate-900 text-base sm:text-lg tracking-tight">
                   Omnisuite PMP
                 </span>
               </div>
             </div>
 
             <div className="text-center mb-2.5 sm:mb-3.5">
-              <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight mb-1">
+              <h1 className="text-2xl sm:text-3xl font-normal text-slate-900 dark:text-white tracking-tight mb-1">
                 {savedProfiles.length > 0 ? "Welcome Back" : "Welcome"}
               </h1>
               <p className="text-xs sm:text-sm text-slate-700 dark:text-slate-300 font-medium">
-                Sign in to continue your enterprise journey.
+                Sign in to plan, track, and deliver your projects.
               </p>
             </div>
 
