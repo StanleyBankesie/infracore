@@ -883,47 +883,31 @@ export default function SubcontractorManager() {
 
 
 
-        <button
-
-          onClick={() => {
-
-            setContractForm({
-
-              project_id: "",
-
-              subcontract_number: "",
-
-              subcontractor_id: "",
-
-              trade: "",
-
-              scope_of_work: "",
-
-              contract_sum: "",
-
-              retention_percent: "",
-
-              advance_payment: "",
-
-              advance_recovery_percent: "",
-
-              start_date: "",
-
-              completion_date: "",
-
-            });
-
-            setShowContractModal(true);
-
-          }}
-
-          className="btn btn-primary inline-flex items-center gap-2"
-
-        >
-
-          <Plus size={16} /> New Subcontract
-
-        </button>
+        <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
+          <button
+            type="button"
+            onClick={() => {
+              setContractForm({
+                project_id: "",
+                subcontract_number: "",
+                subcontractor_id: "",
+                trade: "",
+                scope_of_work: "",
+                contract_sum: "",
+                retention_percent: "",
+                advance_payment: "",
+                advance_recovery_percent: "",
+                start_date: "",
+                completion_date: "",
+              });
+              setShowContractModal(true);
+            }}
+            className="inline-flex items-center justify-center gap-1.5 h-9 px-3.5 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl text-white bg-[#0E3646] hover:bg-[#154659] active:bg-[#092531] shadow-apple-xs hover:shadow-apple-sm transition-all duration-150 active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0 w-auto"
+          >
+            <Plus size={15} className="stroke-[2.5]" />
+            <span>New Subcontract</span>
+          </button>
+        </div>
 
       </div>
 
@@ -1106,20 +1090,21 @@ export default function SubcontractorManager() {
 
 
       {/* Section Navigation Tabs */}
-      <div className="flex border-b border-slate-200 dark:border-slate-800 gap-2 overflow-x-auto text-sm font-semibold mb-4">
+      <div className="w-full flex items-center border-b border-slate-200 dark:border-slate-800 text-xs sm:text-sm font-semibold mb-4 gap-1 sm:gap-2">
         <button
           type="button"
           onClick={() => setActiveSection("agreements")}
-          className={`flex items-center gap-2 pb-3 px-4 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-1 sm:gap-2 pb-2.5 sm:pb-3 px-2 sm:px-4 border-b-2 transition-all min-w-0 cursor-pointer ${
             activeSection === "agreements"
               ? "border-brand-600 text-brand-600 dark:text-brand-400 font-bold"
               : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
-          <Briefcase size={16} />
-          <span>Subcontract Agreements</span>
+          <Briefcase size={15} className="shrink-0" />
+          <span className="hidden sm:inline truncate">Subcontract Agreements</span>
+          <span className="sm:hidden truncate">Agreements</span>
           <span
-            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+            className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold shrink-0 ${
               activeSection === "agreements"
                 ? "bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800"
                 : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
@@ -1132,16 +1117,18 @@ export default function SubcontractorManager() {
         <button
           type="button"
           onClick={() => setActiveSection("ipcs")}
-          className={`flex items-center gap-2 pb-3 px-4 border-b-2 transition-all whitespace-nowrap cursor-pointer ${
+          className={`flex-1 sm:flex-initial flex items-center justify-center sm:justify-start gap-1 sm:gap-2 pb-2.5 sm:pb-3 px-2 sm:px-4 border-b-2 transition-all min-w-0 cursor-pointer ${
             activeSection === "ipcs"
               ? "border-brand-600 text-brand-600 dark:text-brand-400 font-bold"
               : "border-transparent text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
-          <FileCheck size={16} />
-          <span>Certified Interim Payment Certificates (IPCs)</span>
+          <FileCheck size={15} className="shrink-0" />
+          <span className="hidden md:inline truncate">Certified Interim Payment Certificates (IPCs)</span>
+          <span className="hidden sm:inline md:hidden truncate">Interim Certificates (IPCs)</span>
+          <span className="sm:hidden truncate">Interim IPCs</span>
           <span
-            className={`px-2 py-0.5 rounded-full text-xs font-semibold ${
+            className={`px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-semibold shrink-0 ${
               activeSection === "ipcs"
                 ? "bg-brand-50 text-brand-700 dark:bg-brand-950/60 dark:text-brand-300 border border-brand-200 dark:border-brand-800"
                 : "bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-400"
@@ -1154,13 +1141,15 @@ export default function SubcontractorManager() {
         <button
           type="button"
           onClick={() => setActiveSection("all")}
-          className={`flex items-center gap-1.5 pb-3 px-3 border-b-2 transition-all whitespace-nowrap text-xs cursor-pointer ${
+          className={`shrink-0 flex items-center gap-1 pb-2.5 sm:pb-3 px-2 sm:px-3 border-b-2 transition-all text-xs cursor-pointer ${
             activeSection === "all"
               ? "border-brand-600 text-brand-600 dark:text-brand-400 font-bold"
               : "border-transparent text-slate-400 hover:text-slate-600 dark:text-slate-500 dark:hover:text-slate-300"
           }`}
+          title="View Both Sections"
         >
-          <span>View Both</span>
+          <span className="hidden sm:inline">View Both</span>
+          <span className="sm:hidden text-[11px] font-semibold">Both</span>
         </button>
       </div>
 

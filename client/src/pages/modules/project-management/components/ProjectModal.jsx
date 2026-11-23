@@ -71,16 +71,16 @@ export default function ProjectModal({
                     <button
                       type="button"
                       onClick={onClose}
-                      className="btn btn-secondary px-4 py-2 text-sm font-medium"
+                      className="inline-flex items-center justify-center h-9 px-3.5 sm:px-4 text-xs sm:text-sm font-medium rounded-xl text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all duration-150 active:scale-[0.98] cursor-pointer whitespace-nowrap"
                     >
                       {cancelLabel}
                     </button>
                     <button
                       type="submit"
                       disabled={submitting}
-                      className="btn btn-primary px-5 py-2 text-sm font-medium inline-flex items-center gap-2"
+                      className="inline-flex items-center justify-center gap-2 h-9 px-4 sm:px-5 text-xs sm:text-sm font-semibold rounded-xl text-white bg-[#0E3646] hover:bg-[#154659] active:bg-[#092531] shadow-apple-xs transition-all duration-150 active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer whitespace-nowrap"
                     >
-                      {submitting ? <Loader2 size={16} className="animate-spin" /> : null}
+                      {submitting ? <Loader2 size={15} className="animate-spin" /> : null}
                       {submitLabel}
                     </button>
                   </>
@@ -99,7 +99,7 @@ export default function ProjectModal({
                   <button
                     type="button"
                     onClick={onClose}
-                    className="btn btn-secondary px-4 py-2 text-sm font-medium"
+                    className="inline-flex items-center justify-center h-9 px-4 text-xs sm:text-sm font-medium rounded-xl text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-all duration-150 active:scale-[0.98] cursor-pointer whitespace-nowrap"
                   >
                     Close
                   </button>

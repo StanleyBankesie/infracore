@@ -50,6 +50,8 @@ const defaultFallbackContext = {
   appMode: "STANDARD",
   isBasicMode: false,
   setAppMode: () => {},
+  sidebarDisplayMode: "MODULES",
+  setSidebarDisplayMode: () => {},
   moduleSectionViewEnabled: false,
   setModuleSectionViewEnabled: () => {},
   appBackground: {
@@ -271,6 +273,29 @@ export const PermissionProvider = ({ children }) => {
     return false;
   });
 
+  const [sidebarDisplayMode, setSidebarDisplayMode] = useState(() => {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const cached = localStorage.getItem("omnisuite.sidebar_display_mode");
+        if (cached && ["MODULES", "SECTIONS", "PAGES"].includes(cached.toUpperCase())) {
+          return cached.toUpperCase();
+        }
+      }
+    } catch {}
+    return "MODULES";
+  });
+
+  useEffect(() => {
+    const handleSidebarDisplayModeChange = (e) => {
+      const next = e.detail?.mode;
+      if (next && ["MODULES", "SECTIONS", "PAGES"].includes(String(next).toUpperCase())) {
+        setSidebarDisplayMode(String(next).toUpperCase());
+      }
+    };
+    window.addEventListener("sidebar-display-mode-changed", handleSidebarDisplayModeChange);
+    return () => window.removeEventListener("sidebar-display-mode-changed", handleSidebarDisplayModeChange);
+  }, []);
+
   useEffect(() => {
     const handleAppModeChange = (e) => {
       const nextMode = e.detail?.mode;
@@ -322,13 +347,23 @@ export const PermissionProvider = ({ children }) => {
         return;
       }
 
-      // Background sync application mode & module section view
+      // Background sync application mode & module section view & sidebar display mode
       api.get("/admin/settings/app-mode", BACKGROUND_GET_CONFIG)
         .then((res) => {
           const mode = res.data?.mode || "STANDARD";
           setAppMode(mode);
           const secView = res.data?.module_section_view === true;
           setModuleSectionViewEnabled(secView);
+          const sMode = res.data?.sidebar_display_mode;
+          if (sMode && ["MODULES", "SECTIONS", "PAGES"].includes(String(sMode).toUpperCase())) {
+            const normalized = String(sMode).toUpperCase();
+            setSidebarDisplayMode(normalized);
+            try {
+              if (typeof localStorage !== "undefined") {
+                localStorage.setItem("omnisuite.sidebar_display_mode", normalized);
+              }
+            } catch {}
+          }
           try {
             if (typeof localStorage !== "undefined") {
               localStorage.setItem("omnisuite.app_mode", mode);
@@ -1059,17 +1094,18 @@ export const PermissionProvider = ({ children }) => {
 
   const canViewDashboardElement = (moduleKey, type, key) => {
     const uid = Number(user?.id || user?.sub || 0);
-    // User ID = 1 is the Master Super Admin with unconditional access
-    if (uid === 1) return true;
     const mk = String(moduleKey || "");
     const t = String(type || "");
+    // User ID = 1 is the Master Super Admin with unconditional access, EXCEPT for curated Home cards
+    // which must strictly respect the user's specific selection (up to 4 cards)
+    if (uid === 1 && !(mk === "home" && t === "card")) return true;
     const rawKey = String(key || "");
     const normKey = rawKey
       .toLowerCase()
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
-    if (!dashboardViewLoaded) return uid === 1;
+    if (!dashboardViewLoaded) return uid === 1 && !(mk === "home" && t === "card");
 
     const mkVariants = getModuleKeyVariants(mk);
 
@@ -1120,37 +1156,8 @@ export const PermissionProvider = ({ children }) => {
         }
       }
 
-      // 4. Fallback for unconfigured Home
-      let hasHomeCardConfig = false;
-      for (const [k, v] of dashboardViewMap.entries()) {
-        if (k.startsWith("home|card|") && v === true) {
-          hasHomeCardConfig = true;
-          break;
-        }
-      }
-      if (hasHomeCardConfig) {
-        return false;
-      } else {
-        const defaultCards = [
-          "sales-total-revenue",
-          "sales-avg-sales-this-month",
-          "sales-pending-orders",
-          "purchase-total-value",
-        ];
-        const isDefault = defaultCards.some((dc) => candidates.has(dc));
-        if (!isDefault) return false;
-        if (parentMod) {
-          const parentVariants = getModuleKeyVariants(parentMod);
-          for (const pMod of parentVariants) {
-            for (const c of candidates) {
-              if (dashboardViewMap.get(`${pMod}|card|${c}`) === false) {
-                return false;
-              }
-            }
-          }
-        }
-        return true;
-      }
+      // 4. Fallback for Home: false (no forced default cards)
+      return false;
     }
 
     // For module cards/dashboards (mk !== "home"):
@@ -1762,6 +1769,8 @@ export const PermissionProvider = ({ children }) => {
     appMode,
     isBasicMode: appMode === "BASIC",
     setAppMode,
+    sidebarDisplayMode,
+    setSidebarDisplayMode,
     moduleSectionViewEnabled,
     setModuleSectionViewEnabled,
     appBackground,

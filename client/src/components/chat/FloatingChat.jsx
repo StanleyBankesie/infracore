@@ -17,12 +17,65 @@ import { useFloatingCollision } from "../../hooks/useFloatingCollision.js";
 export default function FloatingChat() {
   const [open, setOpen] = useState(false);
   const [unread, setUnread] = useState(0);
+  const [enabled, setEnabled] = useState(() => {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const v = localStorage.getItem("omnisuite.floating_chat_enabled");
+        if (v !== null) return v === "true";
+      }
+    } catch {}
+    return true;
+  });
   const containerRef = useRef(null);
   const shiftY = useFloatingCollision("floating-chat", containerRef);
   const socket = useSocket();
   const { user } = useAuth();
   const [lastSent, setLastSent] = useState({}); // { [conversation_id]: timestamp }
   const SENT_TTL_MS = 12000;
+
+  useEffect(() => {
+    let mounted = true;
+    api
+      .get("/admin/settings/floating-chat")
+      .then((res) => {
+        if (mounted && res.data?.enabled !== undefined) {
+          const isEn = Boolean(res.data.enabled);
+          setEnabled(isEn);
+          try {
+            if (typeof localStorage !== "undefined") {
+              localStorage.setItem("omnisuite.floating_chat_enabled", String(isEn));
+            }
+          } catch {}
+        }
+      })
+      .catch(() => {});
+
+    function onVisibility(e) {
+      if (e?.detail?.enabled !== undefined) {
+        const isEn = Boolean(e.detail.enabled);
+        setEnabled(isEn);
+        try {
+          if (typeof localStorage !== "undefined") {
+            localStorage.setItem("omnisuite.floating_chat_enabled", String(isEn));
+          }
+        } catch {}
+      }
+    }
+
+    function onStorage(e) {
+      if (e.key === "omnisuite.floating_chat_enabled" && e.newValue !== null) {
+        setEnabled(e.newValue === "true");
+      }
+    }
+
+    window.addEventListener("omni.floating_chat.visibility", onVisibility);
+    window.addEventListener("storage", onStorage);
+    return () => {
+      mounted = false;
+      window.removeEventListener("omni.floating_chat.visibility", onVisibility);
+      window.removeEventListener("storage", onStorage);
+    };
+  }, []);
   /**
    * Plays a notification tone for new messages.
    */
@@ -152,6 +205,10 @@ export default function FloatingChat() {
       </span>
     );
   }, [unread]);
+
+  if (!enabled) {
+    return open ? <ChatModal onClose={() => setOpen(false)} /> : null;
+  }
 
   return (
     <>

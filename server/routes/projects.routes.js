@@ -554,6 +554,13 @@ router.delete(
 // PROJECT MILESTONE MANAGEMENT ROUTES
 // ==========================================
 router.get(
+  "/milestones",
+  requireAuth,
+  requireCompanyScope,
+  milestonesController.listAllMilestones,
+);
+
+router.get(
   ["/projects/:projectId(\\d+)/milestones", "/:projectId(\\d+)/milestones"],
   requireAuth,
   requireCompanyScope,

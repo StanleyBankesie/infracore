@@ -241,8 +241,8 @@ export function ModuleTopNavBar({ sections = [], headerActions = [], moduleKey }
 // ─── Module Layout Wrapper ─────────────────────────────────────
 export default function ModuleLayout({ children, sections = [], headerActions = [], moduleKey }) {
   return (
-    <div className="min-h-screen flex flex-col bg-transparent text-slate-900 dark:text-slate-100">
-      <div className="flex-1">{children}</div>
+    <div className="min-h-screen flex flex-col bg-transparent text-slate-900 dark:text-slate-100 w-full max-w-full">
+      <div className="flex-1 w-full max-w-full">{children}</div>
     </div>
   );
 }

@@ -3501,21 +3501,26 @@ router.get(
         `SELECT company_id, setting_key, setting_value
          FROM adm_system_settings
          WHERE (company_id = :companyId OR company_id IS NULL)
-           AND setting_key IN ('SYSTEM_APPLICATION_MODE', 'MODULE_HOME_SECTION_VIEW')
+           AND setting_key IN ('SYSTEM_APPLICATION_MODE', 'MODULE_HOME_SECTION_VIEW', 'SIDEBAR_DISPLAY_MODE')
          ORDER BY CASE WHEN company_id IS NOT NULL THEN 0 ELSE 1 END ASC, id DESC`,
         { companyId: companyId ?? null }
       );
       let rawMode = null;
       let sectionView = null;
+      let sidebarDisplayMode = null;
       for (const r of rows) {
         if (r.setting_key === "SYSTEM_APPLICATION_MODE" && rawMode === null) {
           rawMode = r.setting_value ? String(r.setting_value).toUpperCase() : "STANDARD";
         } else if (r.setting_key === "MODULE_HOME_SECTION_VIEW" && sectionView === null) {
           sectionView = r.setting_value === "true" || r.setting_value === "1";
+        } else if (r.setting_key === "SIDEBAR_DISPLAY_MODE" && sidebarDisplayMode === null) {
+          sidebarDisplayMode = r.setting_value ? String(r.setting_value).toUpperCase() : "MODULES";
         }
       }
       const mode = rawMode === "BASIC" ? "BASIC" : "STANDARD";
-      res.json({ success: true, mode, module_section_view: sectionView === true });
+      const validSidebarModes = ["MODULES", "SECTIONS", "PAGES"];
+      const resolvedSidebarMode = validSidebarModes.includes(sidebarDisplayMode) ? sidebarDisplayMode : "MODULES";
+      res.json({ success: true, mode, module_section_view: sectionView === true, sidebar_display_mode: resolvedSidebarMode });
     } catch (err) {
       next(err);
     }
@@ -3571,11 +3576,213 @@ router.post(
         );
       }
 
+      if (req.body?.sidebar_display_mode !== undefined) {
+        const rawSidebarMode = String(req.body.sidebar_display_mode).toUpperCase();
+        const validSidebarModes = ["MODULES", "SECTIONS", "PAGES"];
+        const sidebarMode = validSidebarModes.includes(rawSidebarMode) ? rawSidebarMode : "MODULES";
+
+        await query(
+          `DELETE FROM adm_system_settings 
+           WHERE setting_key = 'SIDEBAR_DISPLAY_MODE' AND (company_id = :companyId OR company_id IS NULL)`,
+          { companyId: companyId ?? null }
+        );
+        if (companyId) {
+          await query(
+            `INSERT INTO adm_system_settings (company_id, branch_id, setting_key, setting_value)
+             VALUES (:companyId, NULL, 'SIDEBAR_DISPLAY_MODE', :sidebarMode)`,
+            { companyId, sidebarMode }
+          );
+        }
+        await query(
+          `INSERT INTO adm_system_settings (company_id, branch_id, setting_key, setting_value)
+           VALUES (NULL, NULL, 'SIDEBAR_DISPLAY_MODE', :sidebarMode)`,
+          { sidebarMode }
+        );
+      }
+
       res.json({
         success: true,
         message: `Application settings updated`,
         mode: requestedMode,
         module_section_view: moduleSectionView,
+        sidebar_display_mode: req.body?.sidebar_display_mode ? String(req.body.sidebar_display_mode).toUpperCase() : undefined,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ===== Sidebar Navigation Display Mode Settings =====
+router.get(
+  "/settings/sidebar-display-mode",
+  async (req, res, next) => {
+    try {
+      await ensureSystemSettingsTable();
+      let companyId = req.scope?.companyId ?? null;
+      if (!companyId) {
+        try {
+          const authHeader = String(req.headers.authorization || "");
+          const customHeader = String(req.headers["x-access-token"] || "");
+          const token = authHeader.startsWith("Bearer ")
+            ? authHeader.slice(7).trim()
+            : customHeader.trim();
+          if (token) {
+            const payload = verifyAccessToken(token);
+            if (payload) {
+              companyId =
+                Number(
+                  req.headers["x-company-id"] ||
+                    payload.companyId ||
+                    payload.company_id ||
+                    payload.companyIds?.[0],
+                ) || null;
+            }
+          }
+        } catch {}
+      }
+      const rows = await query(
+        `SELECT company_id, setting_key, setting_value
+         FROM adm_system_settings
+         WHERE (company_id = :companyId OR company_id IS NULL)
+           AND setting_key = 'SIDEBAR_DISPLAY_MODE'
+         ORDER BY CASE WHEN company_id IS NOT NULL THEN 0 ELSE 1 END ASC, id DESC LIMIT 1`,
+        { companyId: companyId ?? null }
+      );
+      let sidebarDisplayMode = "MODULES";
+      if (rows.length > 0 && rows[0].setting_value) {
+        const val = String(rows[0].setting_value).toUpperCase();
+        if (["MODULES", "SECTIONS", "PAGES"].includes(val)) {
+          sidebarDisplayMode = val;
+        }
+      }
+      res.json({ success: true, sidebar_display_mode: sidebarDisplayMode });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  "/settings/sidebar-display-mode",
+  requireAuth,
+  requireCompanyScope,
+  async (req, res, next) => {
+    try {
+      await ensureSystemSettingsTable();
+      const { companyId } = req.scope || {};
+      const rawMode = String(req.body?.sidebar_display_mode || req.body?.mode || "MODULES").toUpperCase();
+      const sidebarMode = ["MODULES", "SECTIONS", "PAGES"].includes(rawMode) ? rawMode : "MODULES";
+
+      await query(
+        `DELETE FROM adm_system_settings 
+         WHERE setting_key = 'SIDEBAR_DISPLAY_MODE' AND (company_id = :companyId OR company_id IS NULL)`,
+        { companyId: companyId ?? null }
+      );
+      if (companyId) {
+        await query(
+          `INSERT INTO adm_system_settings (company_id, branch_id, setting_key, setting_value)
+           VALUES (:companyId, NULL, 'SIDEBAR_DISPLAY_MODE', :sidebarMode)`,
+          { companyId, sidebarMode }
+        );
+      }
+      await query(
+        `INSERT INTO adm_system_settings (company_id, branch_id, setting_key, setting_value)
+         VALUES (NULL, NULL, 'SIDEBAR_DISPLAY_MODE', :sidebarMode)`,
+        { sidebarMode }
+      );
+
+      res.json({
+        success: true,
+        message: "Sidebar display mode updated successfully",
+        sidebar_display_mode: sidebarMode,
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+// ===== Floating Chat Widget Visibility Settings =====
+router.get(
+  "/settings/floating-chat",
+  async (req, res, next) => {
+    try {
+      await ensureSystemSettingsTable();
+      let companyId = req.scope?.companyId ?? null;
+      if (!companyId) {
+        try {
+          const authHeader = String(req.headers.authorization || "");
+          const customHeader = String(req.headers["x-access-token"] || "");
+          const token = authHeader.startsWith("Bearer ")
+            ? authHeader.slice(7).trim()
+            : customHeader.trim();
+          if (token) {
+            const payload = verifyAccessToken(token);
+            if (payload) {
+              companyId =
+                Number(
+                  req.headers["x-company-id"] ||
+                    payload.companyId ||
+                    payload.company_id ||
+                    payload.companyIds?.[0],
+                ) || null;
+            }
+          }
+        } catch {}
+      }
+      const rows = await query(
+        `SELECT company_id, setting_key, setting_value
+         FROM adm_system_settings
+         WHERE (company_id = :companyId OR company_id IS NULL)
+           AND setting_key = 'FLOATING_CHAT_ENABLED'
+         ORDER BY CASE WHEN company_id IS NOT NULL THEN 0 ELSE 1 END ASC, id DESC LIMIT 1`,
+        { companyId: companyId ?? null }
+      );
+      let enabled = true;
+      if (rows.length > 0 && rows[0].setting_value !== undefined && rows[0].setting_value !== null) {
+        enabled = rows[0].setting_value === "true" || rows[0].setting_value === "1";
+      }
+      res.json({ success: true, enabled });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+router.post(
+  "/settings/floating-chat",
+  requireAuth,
+  requireCompanyScope,
+  async (req, res, next) => {
+    try {
+      await ensureSystemSettingsTable();
+      const { companyId } = req.scope || {};
+      const enabled = req.body?.enabled === true || req.body?.enabled === "true" || req.body?.enabled === 1 || req.body?.enabled === "1";
+      const settingValue = enabled ? "true" : "false";
+
+      await query(
+        `DELETE FROM adm_system_settings 
+         WHERE setting_key = 'FLOATING_CHAT_ENABLED' AND (company_id = :companyId OR company_id IS NULL)`,
+        { companyId: companyId ?? null }
+      );
+      if (companyId) {
+        await query(
+          `INSERT INTO adm_system_settings (company_id, branch_id, setting_key, setting_value)
+           VALUES (:companyId, NULL, 'FLOATING_CHAT_ENABLED', :settingValue)`,
+          { companyId, settingValue }
+        );
+      }
+      await query(
+        `INSERT INTO adm_system_settings (company_id, branch_id, setting_key, setting_value)
+         VALUES (NULL, NULL, 'FLOATING_CHAT_ENABLED', :settingValue)`,
+        { settingValue }
+      );
+
+      res.json({
+        success: true,
+        message: "Floating chat setting updated successfully",
+        enabled,
       });
     } catch (err) {
       next(err);

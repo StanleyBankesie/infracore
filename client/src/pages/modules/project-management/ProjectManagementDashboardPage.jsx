@@ -55,11 +55,20 @@ import {
   groupCounts,
   sumBy,
 } from "../../../components/dashboard/ModuleDashboardWidgets.jsx";
+import {
+  PortfolioDeliveryHealthDonutChart,
+  ProjectExecutionHorizontalBarChart,
+  EarnedValueEfficiencyBubbleChart,
+  ProjectProfitabilityChart,
+  MilestoneAchievementDashboard,
+  ProjectScheduleForecastSection,
+  SubcontractorContractsChart,
+} from "../../home/components/HomeProjectBasicDashboard.jsx";
 
 // ─────────────────────────────────────────────────────────────
 // 1. COST COMPARATIVE BAR CHART (SVG)
 // ─────────────────────────────────────────────────────────────
-function CostBarChart({ data = [], height = 280 }) {
+export function CostBarChart({ data = [], height = 280 }) {
   const [hovered, setHovered] = useState(null);
 
   if (!data || data.length === 0) {
@@ -235,7 +244,7 @@ function CostBarChart({ data = [], height = 280 }) {
 // ─────────────────────────────────────────────────────────────
 // 2. TASKS DONUT CHART (SVG)
 // ─────────────────────────────────────────────────────────────
-function TasksDonutChart({ taskCounts = {}, total = 0 }) {
+export function TasksDonutChart({ taskCounts = {}, total = 0 }) {
   const [hoveredSlice, setHoveredSlice] = useState(null);
 
   const segments = useMemo(() => {
@@ -378,7 +387,7 @@ function TasksDonutChart({ taskCounts = {}, total = 0 }) {
 // ─────────────────────────────────────────────────────────────
 // 3. PROGRESS PERCENTAGE BAR (PORTFOLIO & PROJECT LEVEL)
 // ─────────────────────────────────────────────────────────────
-function ProgressPercentageBarSection({ portfolioAvg = 0, projects = [] }) {
+export function ProgressPercentageBarSection({ portfolioAvg = 0, projects = [] }) {
   return (
     <div className="space-y-4">
       {/* Portfolio Master Progress Bar */}
@@ -459,7 +468,7 @@ function ProgressPercentageBarSection({ portfolioAvg = 0, projects = [] }) {
 // ─────────────────────────────────────────────────────────────
 // 4. WORKLOAD HORIZONTAL BAR CHART (RESOURCE ALLOCATION)
 // ─────────────────────────────────────────────────────────────
-function WorkloadHorizontalBarChart({ tasks = [] }) {
+export function WorkloadHorizontalBarChart({ tasks = [] }) {
   const workloadByAssignee = useMemo(() => {
     const map = new Map();
 
@@ -570,7 +579,7 @@ function WorkloadHorizontalBarChart({ tasks = [] }) {
 // ─────────────────────────────────────────────────────────────
 // 5. PROJECT HEALTH BUBBLE CHART (TIME vs. COST vs. WORKLOAD)
 // ─────────────────────────────────────────────────────────────
-function ProjectHealthBubbleChart({ projects = [], height = 320 }) {
+export function ProjectHealthBubbleChart({ projects = [], height = 320 }) {
   const [hoveredBubble, setHoveredBubble] = useState(null);
 
   // SVG dimensions
@@ -945,6 +954,11 @@ export default function ProjectManagementDashboardPage() {
     timesheets: [],
     expenses: [],
     riskStats: {},
+    subcontracts: [],
+    valuations: [],
+    financialReports: null,
+    invoices: [],
+    milestones: [],
   });
 
   const loadData = async () => {
@@ -960,6 +974,11 @@ export default function ProjectManagementDashboardPage() {
         timesheetsRes,
         expensesRes,
         riskStatsRes,
+        subcontractsRes,
+        valuationsRes,
+        finReportRes,
+        invoicesRes,
+        milestonesRes,
       ] = await Promise.allSettled([
         api.get("/projects/dashboard/detail"),
         api.get("/projects/budget-vs-actual"),
@@ -969,6 +988,11 @@ export default function ProjectManagementDashboardPage() {
         api.get("/projects/timesheets"),
         api.get("/projects/expenses"),
         api.get("/projects/risks/stats"),
+        api.get("/construction/subcontracts"),
+        api.get("/construction/subcontract-valuations"),
+        api.get("/projects/reports/project-expense-income"),
+        api.get("/projects/project-invoices"),
+        api.get("/projects/milestones"),
       ]);
 
       setData({
@@ -980,6 +1004,11 @@ export default function ProjectManagementDashboardPage() {
         timesheets: timesheetsRes.status === "fulfilled" ? (timesheetsRes.value.data?.items || []) : [],
         expenses: expensesRes.status === "fulfilled" ? (expensesRes.value.data?.items || []) : [],
         riskStats: riskStatsRes.status === "fulfilled" ? (riskStatsRes.value.data?.data || {}) : {},
+        subcontracts: subcontractsRes.status === "fulfilled" ? subcontractsRes.value.data?.items || [] : [],
+        valuations: valuationsRes.status === "fulfilled" ? valuationsRes.value.data?.items || [] : [],
+        financialReports: finReportRes.status === "fulfilled" ? finReportRes.value.data || null : null,
+        invoices: invoicesRes.status === "fulfilled" ? invoicesRes.value.data?.items || invoicesRes.value.data || [] : [],
+        milestones: milestonesRes.status === "fulfilled" ? milestonesRes.value.data?.items || [] : [],
       });
     } catch (err) {
       setError(err?.response?.data?.message || "Failed to load project portfolio metrics.");
@@ -1005,6 +1034,12 @@ export default function ProjectManagementDashboardPage() {
     const tasks = isAll ? data.tasks : data.tasks.filter((t) => Number(t.project_id) === pId);
     const budgetRows = isAll ? data.budgetVsActual : data.budgetVsActual.filter((b) => Number(b.id) === pId);
     const statusItems = isAll ? data.statusItems : data.statusItems.filter((s) => Number(s.id) === pId);
+    const subcontracts = isAll ? data.subcontracts : data.subcontracts.filter((sc) => Number(sc.project_id) === pId);
+    const valuations = isAll
+      ? data.valuations
+      : data.valuations.filter((v) => Number(v.project_id) === pId || subcontracts.some((sc) => Number(sc.id) === Number(v.subcontract_id)));
+
+    const singleProj = !isAll ? data.projects.find((p) => Number(p.id) === pId) : null;
 
     // Group task statuses
     const taskCounts = {};
@@ -1014,7 +1049,7 @@ export default function ProjectManagementDashboardPage() {
     });
 
     const totalBudget = sumBy(projects, (p) => p.budget);
-    const totalSpent = sumBy(budgetRows, (b) => b.total_spent);
+    const totalSpent = sumBy(budgetRows, (b) => b.total_spent || b.total_expense);
     const avgCompletion = projects.length > 0
       ? sumBy(projects, (p) => p.completion_percent) / projects.length
       : 0;
@@ -1026,19 +1061,154 @@ export default function ProjectManagementDashboardPage() {
       code: b.project_code,
       shortName: b.project_code || (b.project_name ? b.project_name.slice(0, 10) : `P${b.id}`),
       budget: Number(b.budget || 0),
-      spent: Number(b.total_spent || 0),
+      spent: Number(b.total_spent || b.total_expense || 0),
     }));
 
+    // Financial Series for ProjectProfitabilityChart (Income, Expense, Profit)
+    const projectSummaries = data.financialReports?.projectSummary || [];
+    const invItems = Array.isArray(data.invoices) ? data.invoices : [];
+
+    const financialSeries = projects.map((p) => {
+      const bRow = budgetRows.find((b) => Number(b.id) === Number(p.id));
+      const pSum = projectSummaries.find((s) => Number(s.id) === Number(p.id));
+      const pInvoices = invItems.filter((inv) => Number(inv.project_id) === Number(p.id));
+
+      let invoiceTotal = pInvoices.reduce((sum, inv) => sum + Number(inv.net_amount || inv.total_amount || 0), 0);
+      let voucherIncome = Number(pSum?.total_income || 0);
+      let recognizedIncome = invoiceTotal > 0 ? invoiceTotal : voucherIncome;
+      if (recognizedIncome === 0 && Number(p.budget || 0) > 0) {
+        const comp = Number(p.completion_percent || 0);
+        recognizedIncome = comp > 0 ? (Number(p.budget) * (comp / 100)) : Number(p.budget);
+      }
+
+      let directSpent = Number(bRow?.total_spent || 0);
+      let voucherExpense = Number(pSum?.total_expense || 0);
+      let subVal = valuations
+        .filter((v) => Number(v.project_id) === Number(p.id))
+        .reduce((s, v) => s + Number(v.net_payable ?? v.net_certified_amount ?? 0), 0);
+      let totalExpense = Math.max(directSpent + subVal, voucherExpense);
+
+      let profit = recognizedIncome - totalExpense;
+      let margin = recognizedIncome > 0 ? (profit / recognizedIncome) * 100 : (profit < 0 ? -100 : 0);
+
+      return {
+        id: p.id,
+        name: p.project_name,
+        code: p.project_code || `PRJ-${p.id}`,
+        shortName: p.project_code || (p.project_name ? p.project_name.slice(0, 10) : `P${p.id}`),
+        budget: Number(p.budget || 0),
+        income: recognizedIncome,
+        expense: totalExpense,
+        profit,
+        margin,
+        isProfitable: profit >= 0,
+      };
+    });
+
+    // Milestone Achievement Data
+    const projectMilestones = projects.map((p) => {
+      const pReal = (data.milestones || []).filter((m) => Number(m.project_id) === Number(p.id));
+      if (pReal.length > 0) {
+        const achieved = pReal.filter(
+          (m) =>
+            String(m.status || "").toUpperCase() === "ACHIEVED" ||
+            String(m.status || "").toUpperCase() === "COMPLETED"
+        ).length;
+        const total = pReal.length;
+        const pct = total > 0 ? Math.round((achieved / total) * 100) : 0;
+        return {
+          id: p.id,
+          name: p.project_name,
+          code: p.project_code || `PRJ-${p.id}`,
+          achieved,
+          total,
+          pct,
+        };
+      }
+
+      const comp = Number(p.completion_percent || 0);
+      const stageThresholds = [20, 40, 60, 80, 100];
+      const achieved = stageThresholds.filter((t) => comp >= t).length;
+      const total = stageThresholds.length;
+      const pct = Math.round((achieved / total) * 100);
+
+      return {
+        id: p.id,
+        name: p.project_name,
+        code: p.project_code || `PRJ-${p.id}`,
+        achieved,
+        total,
+        pct,
+      };
+    });
+
+    const totalAchieved = projectMilestones.reduce((acc, p) => acc + p.achieved, 0);
+    const grandTotal = projectMilestones.reduce((acc, p) => acc + p.total, 0) || 1;
+    const overallPct = Math.round((totalAchieved / grandTotal) * 100);
+
+    const milestoneData = {
+      overallPct,
+      totalAchieved,
+      grandTotal,
+      projectMilestones,
+    };
+
+    // Schedule Forecasting Data
+    const today = new Date();
+    const forecastData = projects.map((p) => {
+      let startDate = p.start_date ? new Date(p.start_date) : new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+      let plannedEndDate = p.end_date ? new Date(p.end_date) : new Date(today.getTime() + 120 * 24 * 60 * 60 * 1000);
+
+      if (isNaN(startDate.getTime())) startDate = new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
+      if (isNaN(plannedEndDate.getTime()) || plannedEndDate <= startDate) {
+        plannedEndDate = new Date(startDate.getTime() + 180 * 24 * 60 * 60 * 1000);
+      }
+
+      const comp = Math.min(100, Math.max(0, Number(p.completion_percent || 0)));
+      const elapsedDays = Math.max(1, Math.round((today - startDate) / (1000 * 60 * 60 * 24)));
+      const totalPlannedDays = Math.max(1, Math.round((plannedEndDate - startDate) / (1000 * 60 * 60 * 24)));
+
+      const dailyVelocity = comp > 0 ? comp / elapsedDays : (100 / totalPlannedDays) * 0.7;
+      const remainingWork = 100 - comp;
+      const daysNeeded = Math.round(remainingWork / Math.max(0.08, dailyVelocity));
+
+      const projectedEndDate = new Date(today.getTime() + daysNeeded * 24 * 60 * 60 * 1000);
+      const varianceDays = Math.round((projectedEndDate - plannedEndDate) / (1000 * 60 * 60 * 24));
+      const isDelayed = varianceDays > 0;
+      const isComplete = comp >= 100;
+
+      return {
+        id: p.id,
+        name: p.project_name,
+        code: p.project_code || `PRJ-${p.id}`,
+        startDate,
+        plannedEndDate,
+        projectedEndDate,
+        varianceDays,
+        isDelayed,
+        isComplete,
+        dailyVelocity: dailyVelocity.toFixed(2),
+        comp,
+      };
+    });
+
     return {
+      isAll,
+      singleProj,
       projects,
       tasks,
       taskCounts,
       budgetRows,
       statusItems,
+      subcontracts,
+      valuations,
       totalBudget,
       totalSpent,
       avgCompletion,
       costSeries,
+      financialSeries,
+      milestoneData,
+      forecastData,
     };
   }, [data, selectedProjectId]);
 
@@ -1152,14 +1322,106 @@ export default function ProjectManagementDashboardPage() {
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 1: COST BAR CHART & TASKS DONUT CHART                     */}
+      {/* ROW 1: PROJECT PROFITABILITY & WORK EXECUTION DELIVERY         */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Project Profitability: Expense, Income & Profit per Project */}
+        <SectionCard
+          title="Project Profitability & P&L"
+          subtitle={
+            filteredData.isAll
+              ? `Comparative revenue, expenses, and net profit margins across ${filteredData.projects.length} projects`
+              : `Income, expenditure, and net operating margin for ${filteredData.singleProj?.project_name}`
+          }
+        >
+          <ProjectProfitabilityChart
+            data={filteredData.financialSeries}
+            height={290}
+          />
+        </SectionCard>
+
+        {/* Project Execution & Work Velocity */}
+        <SectionCard
+          title="Project Execution & Work Delivery"
+          subtitle={
+            filteredData.isAll
+              ? `Delivery progress & task velocity across ${filteredData.projects.length} projects`
+              : `Delivery breakdown by work package for ${filteredData.singleProj?.project_name}`
+          }
+        >
+          <ProjectExecutionHorizontalBarChart
+            projects={filteredData.projects}
+            tasks={filteredData.tasks}
+            isAll={filteredData.isAll}
+          />
+        </SectionCard>
+      </div>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ROW 2: PORTFOLIO DELIVERY HEALTH & RISK STATUS                */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <SectionCard
+        title="Portfolio Delivery Health & Risk"
+        subtitle={
+          filteredData.isAll
+            ? `Delivery confidence and schedule/budget risk rating across ${filteredData.projects.length} projects`
+            : `Delivery confidence & task risk for ${filteredData.singleProj?.project_name}`
+        }
+      >
+        <PortfolioDeliveryHealthDonutChart
+          projects={filteredData.budgetRows}
+          tasks={filteredData.tasks}
+          isAll={filteredData.isAll}
+        />
+      </SectionCard>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ROW 3: MILESTONE ACHIEVEMENT MATRIX                           */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <SectionCard
+        title="Milestone Achievement Matrix"
+        subtitle={
+          filteredData.isAll
+            ? `Portfolio milestone delivery (${filteredData.milestoneData?.totalAchieved || 0} of ${filteredData.milestoneData?.grandTotal || 0} achieved) with per-project breakdown`
+            : `Milestone delivery status for ${filteredData.singleProj?.project_name}`
+        }
+      >
+        <MilestoneAchievementDashboard
+          milestoneData={filteredData.milestoneData}
+          isAll={filteredData.isAll}
+        />
+      </SectionCard>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ROW 4: SCHEDULE FORECASTING & COMPLETION PROJECTION           */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <SectionCard
+        title="Schedule Forecast & Completion Projection"
+        subtitle={
+          filteredData.isAll
+            ? "Projected completion dates vs. contract end dates per project based on delivery velocity"
+            : `Projected completion date vs. contract end date for ${filteredData.singleProj?.project_name}`
+        }
+      >
+        <ProjectScheduleForecastSection
+          forecasts={filteredData.forecastData}
+          isAll={filteredData.isAll}
+        />
+      </SectionCard>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ROW 5: COST BAR CHART & TASKS DONUT CHART                     */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="grid gap-6 xl:grid-cols-12">
         {/* Cost = Bar Chart (7 Cols) */}
         <div className="xl:col-span-7">
           <SectionCard
             title="Cost & Budget Variance"
-            subtitle="Budget vs. actual spend"
+            subtitle={
+              filteredData.isAll
+                ? "Approved budget vs. actual expenditure across all projects"
+                : `Cost variance for ${filteredData.singleProj?.project_name}`
+            }
           >
             <CostBarChart data={filteredData.costSeries} height={300} />
           </SectionCard>
@@ -1180,18 +1442,36 @@ export default function ProjectManagementDashboardPage() {
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 2: PROJECT HEALTH BUBBLE CHART & WORKLOAD HORIZONTAL BAR  */}
+      {/* ROW 6: SUBCONTRACTOR CONTRACTS & PAYMENT BALANCES             */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      <SectionCard
+        title="Subcontractor Contracts & Payment Balances"
+        subtitle={
+          filteredData.isAll
+            ? "Contract sums, amount paid, and outstanding balances across all subcontractors"
+            : `Subcontractor contracts for ${filteredData.singleProj?.project_name}`
+        }
+      >
+        <SubcontractorContractsChart
+          subcontracts={filteredData.subcontracts}
+          valuations={filteredData.valuations}
+          selectedProjectName={filteredData.singleProj?.project_name}
+        />
+      </SectionCard>
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* ROW 7: EARNED VALUE EFFICIENCY MATRIX & RESOURCE WORKLOAD     */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="grid gap-6 xl:grid-cols-12">
-        {/* Project Health = Bubble Chart (7 Cols) */}
+        {/* Earned Value Efficiency (CPI vs. SPI) = Bubble Chart (7 Cols) */}
         <div className="xl:col-span-7">
           <SectionCard
-            title="Project Health Matrix"
-            subtitle="Schedule vs. cost performance"
+            title="Earned Value Efficiency Matrix (CPI vs. SPI)"
+            subtitle="Cost Performance Index (CPI) vs. Schedule Performance Index (SPI)"
           >
-            <ProjectHealthBubbleChart
+            <EarnedValueEfficiencyBubbleChart
               projects={filteredData.budgetRows}
-              height={330}
+              height={320}
             />
           </SectionCard>
         </div>
@@ -1208,7 +1488,7 @@ export default function ProjectManagementDashboardPage() {
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 3: PROGRESS PERCENTAGE BAR & EARNED VALUE MANAGEMENT      */}
+      {/* ROW 8: PROGRESS PERCENTAGE BAR & EARNED VALUE MANAGEMENT      */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="grid gap-6 xl:grid-cols-12">
         {/* Progress = Percentage Bar (6 Cols) */}

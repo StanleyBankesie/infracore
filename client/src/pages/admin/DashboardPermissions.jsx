@@ -124,11 +124,14 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
   };
 
   useEffect(() => {
-    if (defaultCompanyId && users.length > 0 && !selectedUserId) {
-      const match = users.find((u) => String(u.company_id) === String(defaultCompanyId));
+    if (users.length > 0 && !selectedUserId) {
+      const match =
+        (user?.id ? users.find((u) => String(u.id) === String(user.id)) : null) ||
+        (defaultCompanyId ? users.find((u) => String(u.company_id) === String(defaultCompanyId)) : null) ||
+        users[0];
       if (match) setSelectedUserId(String(match.id));
     }
-  }, [defaultCompanyId, users, selectedUserId]);
+  }, [defaultCompanyId, users, selectedUserId, user]);
 
   useEffect(() => {
     setUserToggles({});
@@ -416,17 +419,7 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
       }
 
       if (module_key === "home" && card_key) {
-        const hasHomeConfig = perms.some((p) => String(p.module_key) === "home" && p.card_key && Number(p.can_view) === 1);
-        if (hasHomeConfig) {
-          return false;
-        }
-        const defaultCards = [
-          "sales-total-revenue",
-          "sales-avg-sales-this-month",
-          "sales-pending-orders",
-          "purchase-total-value",
-        ];
-        return defaultCards.includes(card_key);
+        return false;
       }
 
       // Default dashboard permissions to unchecked (false) when not explicitly granted
@@ -882,7 +875,7 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                                       </div>
                                     ) : (
                                       <p className="text-xs text-amber-600 dark:text-amber-400 italic">
-                                        No cards selected. (Default cards will be shown until you select at least one card).
+                                        No cards selected. Select up to 4 cards below to display on the Homepage.
                                       </p>
                                     )}
                                   </div>

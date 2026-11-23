@@ -544,3 +544,23 @@ export const deleteMilestone = async (req, res, next) => {
     next(err);
   }
 };
+
+/**
+ * List all milestones across all projects in company scope.
+ */
+export const listAllMilestones = async (req, res, next) => {
+  try {
+    const { companyId } = req.scope || {};
+    const milestones = await query(
+      `SELECT m.*, p.project_name, p.project_code
+       FROM pm_milestones m
+       LEFT JOIN pm_projects p ON p.id = m.project_id
+       WHERE (m.company_id = :companyId OR :companyId IS NULL)
+       ORDER BY m.id DESC`,
+      { companyId: companyId || 1 }
+    );
+    res.json({ items: Array.isArray(milestones) ? milestones : [] });
+  } catch (err) {
+    next(err);
+  }
+};

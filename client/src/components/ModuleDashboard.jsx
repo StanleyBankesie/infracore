@@ -5,6 +5,72 @@ import { usePermission } from "../auth/PermissionContext.jsx";
 import { MODULES_REGISTRY } from "../data/modulesRegistry.js";
 import { ModuleTopNavBar } from "./ModuleLayout.jsx";
 import MobileMovingCarousel from "./MobileMovingCarousel.jsx";
+import { getPageWhiteIcon } from "../layout/AppShell.jsx";
+
+const BRIGHT_ICON_PALETTE = [
+  "bg-amber-500 text-white shadow-amber-500/30",
+  "bg-sky-500 text-white shadow-sky-500/30",
+  "bg-emerald-500 text-white shadow-emerald-500/30",
+  "bg-indigo-600 text-white shadow-indigo-600/30",
+  "bg-rose-500 text-white shadow-rose-500/30",
+  "bg-violet-600 text-white shadow-violet-600/30",
+  "bg-teal-500 text-white shadow-teal-500/30",
+  "bg-blue-600 text-white shadow-blue-600/30",
+  "bg-orange-500 text-white shadow-orange-500/30",
+  "bg-cyan-600 text-white shadow-cyan-600/30",
+];
+
+const getItemColorClass = (item, index = 0) => {
+  const t = String(item?.title || item?.name || "").toLowerCase();
+  if (t.includes("expense") || t.includes("invoice") || t.includes("receipt") || t.includes("payment") || t.includes("cost") || t.includes("valuation") || t.includes("finance")) {
+    return "bg-emerald-500 text-white shadow-emerald-500/30";
+  }
+  if (t.includes("return") || t.includes("refund") || t.includes("on-hold") || t.includes("hold") || t.includes("pause")) {
+    return "bg-amber-600 text-white shadow-amber-600/30";
+  }
+  if (t.includes("pending") || t.includes("time") || t.includes("schedule") || t.includes("clock") || t.includes("alert")) {
+    return "bg-amber-500 text-white shadow-amber-500/30";
+  }
+  if (t.includes("order") || t.includes("quotation") || t.includes("proposal") || t.includes("requisition")) {
+    return "bg-sky-500 text-white shadow-sky-500/30";
+  }
+  if (t.includes("project") || t.includes("milestone") || t.includes("phase") || t.includes("portfolio")) {
+    return "bg-indigo-600 text-white shadow-indigo-600/30";
+  }
+  if (t.includes("quality") || t.includes("qa") || t.includes("qc") || t.includes("inspect") || t.includes("check")) {
+    return "bg-teal-500 text-white shadow-teal-500/30";
+  }
+  if (t.includes("team") || t.includes("client") || t.includes("user") || t.includes("resource") || t.includes("worker") || t.includes("people")) {
+    return "bg-violet-600 text-white shadow-violet-600/30";
+  }
+  if (t.includes("risk") || t.includes("variance") || t.includes("issue") || t.includes("defect") || t.includes("hazard")) {
+    return "bg-rose-500 text-white shadow-rose-500/30";
+  }
+  if (t.includes("site") || t.includes("subcontractor") || t.includes("boq") || t.includes("construction") || t.includes("wbs")) {
+    return "bg-blue-600 text-white shadow-blue-600/30";
+  }
+  if (t.includes("store") || t.includes("warehouse") || t.includes("inventory") || t.includes("stock") || t.includes("item")) {
+    return "bg-cyan-600 text-white shadow-cyan-600/30";
+  }
+  if (t.includes("note") || t.includes("mindmap") || t.includes("plan")) {
+    return "bg-purple-600 text-white shadow-purple-600/30";
+  }
+
+  // Deterministic fallback using item path/title hash so each item gets a consistent bright color
+  const key = item?.path || item?.title || item?.name || String(index);
+  let hash = 0;
+  for (let i = 0; i < key.length; i++) {
+    hash = (hash << 5) - hash + key.charCodeAt(i);
+    hash |= 0;
+  }
+  return BRIGHT_ICON_PALETTE[Math.abs(hash + index) % BRIGHT_ICON_PALETTE.length];
+};
+
+const renderItemIcon = (item, itemTitle) => {
+  const title = itemTitle || item?.title || item?.name || item?.label || "";
+  // Ensure every card icon is directly related to the card's title
+  return getPageWhiteIcon(title, item?.path, item?.feature_key || item?.key, item?.icon);
+};
 
 const getSectionIcon = (section, sectionIndex) => {
   if (section.icon) return section.icon;
@@ -39,7 +105,19 @@ const getSectionIcon = (section, sectionIndex) => {
   return fallbackIcons[sectionIndex % fallbackIcons.length];
 };
 
-const safeRenderIcon = (icon, className = "w-5 h-5") => {
+const safeRenderIcon = (icon, className = "w-5 h-5", title = "") => {
+  if (typeof icon === "function" || (typeof icon === "object" && (icon?.$typeof || icon?.render))) {
+    return React.createElement(icon, { className });
+  }
+  if (typeof icon === "string" && icon.trim() && icon.trim().length <= 4) {
+    return icon;
+  }
+  if (title) {
+    const whiteIcon = getPageWhiteIcon(title);
+    if (whiteIcon && React.isValidElement(whiteIcon)) {
+      return React.cloneElement(whiteIcon, { className });
+    }
+  }
   if (!icon) return "📄";
   if (typeof icon === "string") {
     if (icon.length > 4 && /^[A-Za-z0-9_-]+$/.test(icon)) {
@@ -51,9 +129,6 @@ const safeRenderIcon = (icon, className = "w-5 h-5") => {
       return "📄";
     }
     return icon;
-  }
-  if (typeof icon === "function" || (typeof icon === "object" && (icon.$typeof || icon.render))) {
-    return React.createElement(icon, { className });
   }
   return "📄";
 };
@@ -122,13 +197,9 @@ function ModuleNavDropdown({ section, location, navigate }) {
                       : "text-slate-700 dark:text-slate-300 hover:bg-brand-50 dark:hover:bg-brand-900/20 hover:text-brand-700 dark:hover:text-brand-300"
                   }`}
                 >
-                  {typeof itemIcon === "string" ? (
-                    <span className="text-base flex-shrink-0 mt-0.5">{itemIcon}</span>
-                  ) : itemIcon ? (
-                    React.createElement(itemIcon, { className: "w-4 h-4 flex-shrink-0 mt-0.5" })
-                  ) : (
-                    <span className="text-base flex-shrink-0 mt-0.5">📄</span>
-                  )}
+                  <span className="flex-shrink-0 mt-0.5 [&>svg]:w-4 [&>svg]:h-4">
+                    {renderItemIcon(item, itemTitle)}
+                  </span>
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="truncate leading-snug">{itemTitle}</span>
                     {itemDesc && (
@@ -605,22 +676,22 @@ const ModuleDashboard = ({
   }, [location.pathname, location.search, location.hash, navigate]);
 
   return (
-    <div className="space-y-3 md:space-y-6 animate-fade-in bg-transparent text-slate-900 dark:text-slate-100">
+    <div className="w-full max-w-full space-y-3 md:space-y-6 animate-fade-in bg-transparent text-slate-900 dark:text-slate-100">
       <div className="hidden md:block sticky top-0 z-40 bg-transparent transition-colors">
         <ModuleTopNavBar sections={allSections} headerActions={resolvedHeaderActions} moduleKey={moduleKey} />
       </div>
 
-      <div className="space-y-4 md:space-y-8">
+      <div className="w-full max-w-full space-y-4 md:space-y-8">
         {/* Apple Design Translucent Liquid Glass Module Title Banner */}
-        <div className="relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/95 via-slate-50/90 to-slate-100/80 dark:from-slate-900/95 dark:via-slate-900/90 dark:to-slate-950/95 p-3.5 sm:p-5 md:p-7 border border-slate-200/80 dark:border-white/10 shadow-[0_4px_24px_-4px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-2xl transition-all mb-3 md:mb-6">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10">
-            <div className="min-w-0">
-              <div className="flex items-center gap-2.5 sm:gap-3">
-                <div className="w-9 h-9 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-700/50 flex items-center justify-center text-lg sm:text-xl md:text-2xl shadow-inner shrink-0">
+        <div className="w-full relative overflow-hidden rounded-2xl sm:rounded-3xl bg-gradient-to-br from-white/95 via-slate-50/90 to-slate-100/80 dark:from-slate-900/95 dark:via-slate-900/90 dark:to-slate-950/95 p-3.5 sm:p-5 md:p-7 border border-slate-200/80 dark:border-white/10 shadow-[0_4px_24px_-4px_rgba(15,23,42,0.08),0_1px_3px_rgba(15,23,42,0.04)] dark:shadow-[0_12px_40px_-10px_rgba(0,0,0,0.7)] backdrop-blur-2xl transition-all mb-3 md:mb-6">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10 w-full min-w-0">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2.5 sm:gap-3 w-full min-w-0">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-700/50 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
                   {typeof icon === "string" ? icon : (typeof moduleInfo?.icon === "string" ? moduleInfo.icon : "📂")}
                 </div>
-                <div>
-                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight">
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-xl sm:text-2xl lg:text-4xl font-black text-slate-900 dark:text-white tracking-tight leading-tight truncate sm:whitespace-normal">
                     {title}
                   </h1>
                 </div>
@@ -632,43 +703,45 @@ const ModuleDashboard = ({
               )}
             </div>
 
-            <div className="flex items-center flex-wrap gap-2 shrink-0">
-              {shouldShowSectionCardsFirst && !searchTerm && activeSection !== null && (
-                <button 
-                  type="button"
-                  onClick={() => {
-                    setActiveSection(null);
-                    const searchParams = new URLSearchParams(location.search || "");
-                    searchParams.delete("section");
-                    navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
-                  }}
-                  className="btn btn-secondary flex items-center gap-2 shadow-sm hover:shadow transition-all font-semibold rounded-xl text-xs sm:text-sm active:scale-95"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                  </svg>
-                  <span>Back to Sections</span>
-                </button>
-              )}
-              {resolvedHeaderActions.map((a, i) => (
-                <button
-                  key={i}
-                  onClick={(e) => handleNavigate(a.path, e)}
-                  className={`btn font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-all active:scale-95 flex items-center gap-2 ${
-                    a.className || ((!a.variant && (String(a.label || a.title || "").toLowerCase().includes("dashboard") || String(a.path || "").toLowerCase().includes("dashboard"))) ? "btn-dashboard" : "btn btn-primary")
-                  }`}
-                  data-action={(!a.variant && (String(a.label || a.title || "").toLowerCase().includes("dashboard") || String(a.path || "").toLowerCase().includes("dashboard"))) ? "dashboard" : undefined}
-                  title={a.title || a.label}
-                >
-                  {(a.icon || (!a.variant && (String(a.label || a.title || "").toLowerCase().includes("dashboard") || String(a.path || "").toLowerCase().includes("dashboard")) ? "📊" : null)) ? (
-                    <span>
-                      {typeof (a.icon || "📊") === "string" ? (a.icon || "📊") : React.createElement(a.icon, { className: "w-4 h-4 inline" })}
-                    </span>
-                  ) : null}
-                  <span>{a.label || "Open"}</span>
-                </button>
-              ))}
-            </div>
+            {resolvedHeaderActions.length > 0 && (
+              <div className="flex items-center flex-wrap gap-2 shrink-0">
+                {shouldShowSectionCardsFirst && !searchTerm && activeSection !== null && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setActiveSection(null);
+                      const searchParams = new URLSearchParams(location.search || "");
+                      searchParams.delete("section");
+                      navigate({ pathname: location.pathname, search: searchParams.toString() }, { replace: true });
+                    }}
+                    className="btn btn-secondary flex items-center gap-2 shadow-sm hover:shadow transition-all font-semibold rounded-xl text-xs sm:text-sm active:scale-95"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span>Back to Sections</span>
+                  </button>
+                )}
+                {resolvedHeaderActions.map((a, i) => (
+                  <button
+                    key={i}
+                    onClick={(e) => handleNavigate(a.path, e)}
+                    className={`btn font-semibold rounded-xl text-xs sm:text-sm shadow-sm transition-all active:scale-95 flex items-center gap-2 ${
+                      a.className || ((!a.variant && (String(a.label || a.title || "").toLowerCase().includes("dashboard") || String(a.path || "").toLowerCase().includes("dashboard"))) ? "btn-dashboard" : "btn btn-primary")
+                    }`}
+                    data-action={(!a.variant && (String(a.label || a.title || "").toLowerCase().includes("dashboard") || String(a.path || "").toLowerCase().includes("dashboard"))) ? "dashboard" : undefined}
+                    title={a.title || a.label}
+                  >
+                    {(a.icon || (!a.variant && (String(a.label || a.title || "").toLowerCase().includes("dashboard") || String(a.path || "").toLowerCase().includes("dashboard")) ? "📊" : null)) ? (
+                      <span>
+                        {typeof (a.icon || "📊") === "string" ? (a.icon || "📊") : React.createElement(a.icon, { className: "w-4 h-4 inline" })}
+                      </span>
+                    ) : null}
+                    <span>{a.label || "Open"}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
           {/* Subtle Apple ambient glass glow decoration */}
           <div className="absolute -right-12 -top-12 w-44 h-44 bg-brand-500/10 dark:bg-brand-400/10 rounded-full blur-3xl pointer-events-none" />
@@ -892,7 +965,7 @@ const ModuleDashboard = ({
                   onClick={() => handleNavigate(action.path)}
                 >
                   <div className="w-12 h-12 rounded-xl bg-brand-50/50 dark:bg-slate-700/50 flex items-center justify-center text-2xl mb-3 shadow-inner group-hover:scale-110 group-hover:rotate-3 group-hover:from-brand-100 group-hover:to-brand-200/50 dark:group-hover:from-slate-600 dark:group-hover:to-slate-700 transition-all duration-300">
-                    {safeRenderIcon(action.icon, "w-6 h-6")}
+                    {safeRenderIcon(action.icon, "w-6 h-6", action.label || action.title || "")}
                   </div>
                   <span className="text-sm font-semibold text-slate-700 dark:text-slate-200 group-hover:text-brand-700 dark:group-hover:text-brand-300 transition-colors">
                     {action.label}
@@ -972,7 +1045,7 @@ const ModuleDashboard = ({
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-4">
                         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white text-xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-2 transition-transform duration-300 shrink-0">
-                          {safeRenderIcon(sectionIcon, "w-6 h-6")}
+                          {safeRenderIcon(sectionIcon, "w-6 h-6", sectionTitle)}
                         </div>
                         {section.badge ? (
                           <span className="bg-brand-50 text-brand-700 dark:bg-brand-950/40 dark:text-brand-300 text-[10px] font-bold px-2.5 py-0.5 rounded-full uppercase tracking-wider border border-brand-200/60 dark:border-brand-800/60 shrink-0">
@@ -1059,75 +1132,7 @@ const ModuleDashboard = ({
               </div>
             )}
 
-            {/* Mobile Sub-module Navigation Pills (< md) */}
-            {filteredSections.length > 1 && !searchTerm && (
-              <div className="md:hidden flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none -mx-1 px-1 mb-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setActiveSection(null);
-                    const searchParams = new URLSearchParams(location.search || "");
-                    searchParams.delete("section");
-                    navigate(
-                      { pathname: location.pathname, search: searchParams.toString() },
-                      { replace: true }
-                    );
-                  }}
-                  className={`px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-                    activeSection === null
-                      ? "bg-brand-600 text-white shadow-xs"
-                      : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
-                  }`}
-                >
-                  All ({totalVisiblePages})
-                </button>
-                {filteredSections.map((sec, idx) => {
-                  const rawSecItems = sec.items || sec.features || [];
-                  const secVisibleCount = rawSecItems.filter((item) => canShowItem(item)).length;
-                  if (secVisibleCount === 0) return null;
-                  const secTitle = sec.title || sec.category || `Section ${idx + 1}`;
-                  const isSelected = activeSection === idx;
-                  const secIcon = getSectionIcon(sec, idx);
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => {
-                        const newIdx = isSelected ? null : idx;
-                        setActiveSection(newIdx);
-                        const searchParams = new URLSearchParams(location.search || "");
-                        if (newIdx !== null) {
-                          searchParams.set("section", String(newIdx));
-                        } else {
-                          searchParams.delete("section");
-                        }
-                        navigate(
-                          { pathname: location.pathname, search: searchParams.toString() },
-                          { replace: true }
-                        );
-                      }}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all shrink-0 ${
-                        isSelected
-                          ? "bg-brand-600 text-white shadow-xs"
-                          : "bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-50"
-                      }`}
-                    >
-                      <span className="text-xs">{safeRenderIcon(secIcon, "w-3.5 h-3.5")}</span>
-                      <span>{secTitle}</span>
-                      <span
-                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
-                          isSelected
-                            ? "bg-white/20 text-white"
-                            : "bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400"
-                        }`}
-                      >
-                        {secVisibleCount}
-                      </span>
-                    </button>
-                  );
-                })}
-              </div>
-            )}
+
 
             {filteredSections.map((section, sectionIndex) => {
               if (!searchTerm && activeSection !== null && activeSection !== sectionIndex) {
@@ -1151,7 +1156,7 @@ const ModuleDashboard = ({
                   <div className="hidden md:flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 pb-3">
                     <div className="flex items-center gap-3 min-w-0">
                       <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white text-lg flex items-center justify-center shadow-xs shrink-0">
-                        {safeRenderIcon(sectionIcon, "w-5 h-5")}
+                        {safeRenderIcon(sectionIcon, "w-5 h-5", sectionTitle)}
                       </div>
                       <div className="flex flex-col min-w-0">
                         <div className="flex items-center gap-2.5 min-w-0 flex-wrap">
@@ -1180,7 +1185,7 @@ const ModuleDashboard = ({
                   <div className="md:hidden flex items-center gap-2.5 pt-3 pb-1">
                     <div className="flex items-center gap-2 min-w-0 shrink-0">
                       <div className="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 flex items-center justify-center text-sm font-semibold shrink-0 border border-brand-200/60 dark:border-brand-800/60">
-                        {safeRenderIcon(sectionIcon, "w-3.5 h-3.5")}
+                        {safeRenderIcon(sectionIcon, "w-3.5 h-3.5", sectionTitle)}
                       </div>
                       <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate">
                         {sectionTitle}
@@ -1192,10 +1197,48 @@ const ModuleDashboard = ({
                     <div className="h-px bg-slate-200/90 dark:bg-slate-800/90 flex-1 min-w-[20px]" />
                   </div>
 
-                  {/* Individual Page Cards Grid */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {/* Mobile and Small Devices (< md): 4-column compact squircle grid with labels below */}
+                  <div data-module-items-grid className="grid grid-cols-4 gap-2 md:hidden">
                     {visibleSectionItems.map((item, itemIndex) => {
                       const itemTitle = item.title || item.name || item.label;
+                      const colorClass = getItemColorClass(item, itemIndex);
+
+                      return (
+                        <div
+                          key={`mobile-${item.path || itemIndex}`}
+                          className="flex flex-col items-center group cursor-pointer w-full text-center"
+                          onClick={() => handleNavigate(item.path)}
+                        >
+                          {/* Equal sides card (1:1 aspect-ratio square, compact Apple tile) */}
+                          <div
+                            style={{ aspectRatio: "1 / 1" }}
+                            className="w-full aspect-square rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-smoky-card hover:shadow-smoky-lg hover:-translate-y-1 hover:border-brand-300/80 dark:hover:border-brand-500/50 transition-all duration-300 flex items-center justify-center p-2 relative overflow-hidden active:scale-95"
+                          >
+                            {/* Ambient Corner Glow on Hover */}
+                            <div className="absolute -right-4 -top-4 w-12 h-12 bg-gradient-to-br from-brand-500/10 to-indigo-500/10 group-hover:from-brand-500/20 group-hover:to-indigo-500/20 rounded-full blur-md transition-all duration-500 pointer-events-none" />
+
+                            {/* Round bright colored icon badge */}
+                            <div
+                              className={`relative z-10 w-9 h-9 rounded-full flex items-center justify-center ${colorClass} shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300 [&>svg]:w-5 [&>svg]:h-5 [&>svg]:stroke-[2] text-white shrink-0`}
+                            >
+                              {renderItemIcon(item, itemTitle)}
+                            </div>
+                          </div>
+
+                          {/* Card Name Below the Card */}
+                          <span className="mt-1.5 text-center font-medium text-[11px] text-slate-800 dark:text-slate-200 group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors line-clamp-2 leading-tight px-0.5 w-full">
+                            {itemTitle}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+
+                  {/* Medium and Large Devices (>= md): Former rectangular card layout with bright circular icons */}
+                  <div className="hidden md:grid md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                    {visibleSectionItems.map((item, itemIndex) => {
+                      const itemTitle = item.title || item.name || item.label;
+                      const colorClass = getItemColorClass(item, itemIndex);
                       const itemActions = Array.isArray(item.actions)
                         ? item.actions.filter((action) => canShowItem(action))
                         : [];
@@ -1203,8 +1246,8 @@ const ModuleDashboard = ({
 
                       return (
                         <div
-                          key={item.path || itemIndex}
-                          className="card relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 sm:p-5 lg:p-3.5 lg:py-3 border border-slate-200/90 dark:border-slate-800/90 shadow-smoky-card hover:shadow-smoky-lg hover:-translate-y-1 hover:border-brand-300/80 dark:hover:border-brand-500/50 transition-all duration-300 group cursor-pointer flex flex-col justify-between"
+                          key={`desktop-${item.path || itemIndex}`}
+                          className="card relative overflow-hidden rounded-2xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md p-4 sm:p-5 lg:p-4 border border-slate-200/90 dark:border-slate-800/90 shadow-smoky-card hover:shadow-smoky-lg hover:-translate-y-1 hover:border-brand-300/80 dark:hover:border-brand-500/50 transition-all duration-300 group cursor-pointer flex flex-col justify-between"
                           onClick={() => handleNavigate(item.path)}
                         >
                           {/* Ambient Corner Glow on Hover */}
@@ -1212,19 +1255,11 @@ const ModuleDashboard = ({
 
                           <div className="relative z-10">
                             <div className="flex items-start justify-between gap-3 mb-3">
-                              <div 
-                                className="shrink-0 rounded-xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/70 dark:border-slate-700/80 flex items-center justify-center text-xl shadow-2xs group-hover:scale-110 group-hover:border-brand-300 dark:group-hover:border-brand-500/60 transition-all duration-300"
-                                style={{ width: "44px", height: "44px", minWidth: "44px", minHeight: "44px" }}
+                              {/* Icon in bright circular badge matching mobile/small devices */}
+                              <div
+                                className={`w-11 h-11 rounded-full flex items-center justify-center ${colorClass} shadow-sm group-hover:scale-110 group-hover:shadow-md transition-all duration-300 [&>svg]:w-5.5 [&>svg]:h-5.5 [&>svg]:stroke-[2] text-white shrink-0`}
                               >
-                                {typeof item.icon === "string" ? (
-                                  item.icon
-                                ) : item.icon && typeof item.icon === "function" ? (
-                                  <item.icon className="w-5 h-5 text-slate-700 dark:text-slate-300" />
-                                ) : item.icon ? (
-                                  React.createElement(item.icon, { className: "w-5 h-5 text-slate-700 dark:text-slate-300" })
-                                ) : (
-                                  "📄"
-                                )}
+                                {renderItemIcon(item, itemTitle)}
                               </div>
 
                               {sectionTitle && (

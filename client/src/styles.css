@@ -391,7 +391,7 @@
 
   /* ── Form Inputs Global Clean Surface (Apple Clean Controls) ── */
   /* Remove any grey / slate background fill from all inputs, selects, and textareas across all form pages */
-  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]),
+  input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):not([data-menu-search-input]),
   select,
   textarea {
     @apply bg-white dark:bg-slate-900;
@@ -836,79 +836,360 @@
     }
 
     /* -- Hide page subtitle in title banners on smaller devices -- */
-    .card-header p,
-    .card-header h1 + p,
-    .card-header h2 + p,
-    .card-header div > p.text-sm,
-    .card-header div > p.text-xs,
-    .card-header p.text-slate-100,
-    .card-header p.text-slate-200,
-    .card-header p.text-slate-300,
-    .card-header p.text-slate-400,
-    .card-header p.text-slate-500 {
+    .card-header div:has(> h1, > h2) > p,
+    .page-header div:has(> h1, > h2) > p,
+    .list-page-header div:has(> h1, > h2) > p,
+    .flex:has(> h1, > h2) > p.text-slate-500,
+    .flex:has(> h1, > h2) > p.text-sm,
+    h1 + p.text-slate-500,
+    h1 + p.text-sm,
+    h2 + p.text-slate-500,
+    h2 + p.text-sm {
       display: none !important;
     }
 
-    /* -- Header banner on mobile: stack title on top, full-width buttons below -- */
+    /* Stat cards and metric cards: Ensure labels, values and subtitles are ALWAYS visible */
+    [data-page-carousel] p,
+    [data-module-carousel] p,
+    [data-home-carousel] p,
+    [data-carousel-card] p,
+    [data-carousel-card] span,
+    .card p,
+    .stat-card p,
+    .card-body p,
+    .page-metric-card p,
+    [data-page-carousel] .card p,
+    [data-carousel-card] .card p,
+    [data-carousel-card] p.text-slate-500,
+    [data-page-carousel] p.text-slate-500,
+    .card p.text-slate-500 {
+      display: block !important;
+      visibility: visible !important;
+      opacity: 1 !important;
+    }
+
+    /* -- Header banner on mobile: stack title on top, action buttons below -- */
     .card-header > .flex,
     .card-header > div.flex,
-    .card-header .flex.justify-between {
+    .card-header .flex.justify-between,
+    .card-header > .flex.justify-between,
+    .card-header > .flex.flex-col,
+    .page-header > .flex,
+    .list-page-header > .flex,
+    .page-header,
+    .list-page-header {
+      display: flex !important;
       flex-direction: column !important;
       align-items: stretch !important;
-      gap: 0.75rem !important;
+      gap: 0.625rem !important;
+      width: 100% !important;
     }
 
-    /* -- All buttons in headers and toolbars arranged horizontally in a 2-grid column -- */
-    .card-header .flex:has(> button, > a, > .btn),
-    .card-header .flex-wrap,
+    /* ═══════════════════════════════════════════════════════════════
+       APPLE HIG MOBILE PAGE TITLE & NAVIGATION (< 640px)
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* Navigation & Title Row: Unified horizontal flex alignment */
+    .card-header .flex:has(> a[href*="/"]:first-child):has(h1, h2),
+    .card-header .flex:has(> button:first-child):has(h1, h2),
+    .page-header .flex:has(> a[href*="/"]:first-child):has(h1, h2),
+    .page-header .flex:has(> button:first-child):has(h1, h2),
+    .list-page-header .flex:has(> a[href*="/"]:first-child):has(h1, h2),
+    .list-page-header .flex:has(> button:first-child):has(h1, h2),
+    .card-header div:has(> a.btn:first-child):has(h1, h2),
+    .page-header div:has(> a.btn:first-child):has(h1, h2),
+    .list-page-header div:has(> a.btn:first-child):has(h1, h2),
+    .card-header div.flex.items-center:has(h1, h2),
+    .page-header div.flex.items-center:has(h1, h2),
+    .list-page-header div.flex.items-center:has(h1, h2) {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      flex-wrap: nowrap !important;
+      gap: 0.5rem 0.75rem !important;
+      width: 100% !important;
+      min-width: 0 !important;
+    }
+
+    /* Apple HIG Compact Back Navigation Pill - ONLY for secondary/back navigation */
+    .flex:has(> h1, > h2) > a.btn-secondary:first-child,
+    .flex:has(> h1, > h2) > button.btn-secondary:first-child,
+    .flex:has(> h1, > h2) > a.btn:first-child:not(.btn-primary):not(.btn-success):not([data-action="create"]):not(.btn-create):not([href*="/new"]):not([href*="/create"]),
+    .flex:has(> h1, > h2) > button.btn:first-child:not(.btn-primary):not(.btn-success):not([data-action="create"]):not(.btn-create),
+    div:has(> h1, > h2) a.btn-secondary:first-child,
+    div:has(> h1, > h2) button.btn-secondary:first-child,
+    .card-header a.btn-secondary:first-child,
+    .page-header a.btn-secondary:first-child,
+    a.btn:has(> svg:first-child):has(span:last-child):not(.btn-primary):not(.btn-success):not([data-action="create"]):not(.btn-create):not([href*="/new"]):not([href*="/create"]),
+    a.btn-secondary:has(> svg:first-child):not([data-nav-item]) {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      gap: 0.35rem !important;
+      height: 2.125rem !important; /* 34px Apple push button */
+      min-height: 2.125rem !important;
+      padding: 0.35rem 0.75rem !important;
+      font-size: 0.8125rem !important; /* 13px SF Pro Text */
+      font-weight: 600 !important;
+      line-height: 1 !important;
+      border-radius: 0.625rem !important; /* 10px continuous squircle */
+      border: 1px solid rgba(203, 213, 225, 0.8) !important;
+      background-color: #f8fafc !important;
+      color: #334155 !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04) !important;
+      transition: all 0.15s ease-in-out !important;
+      flex: 0 0 auto !important;
+      width: auto !important;
+      max-width: fit-content !important;
+      white-space: nowrap !important;
+    }
+
+    .dark .flex:has(> h1, > h2) > a.btn-secondary:first-child,
+    .dark .flex:has(> h1, > h2) > button.btn-secondary:first-child,
+    .dark .flex:has(> h1, > h2) > a.btn:first-child:not(.btn-primary):not(.btn-success):not([data-action="create"]):not(.btn-create):not([href*="/new"]):not([href*="/create"]),
+    .dark .flex:has(> h1, > h2) > button.btn:first-child:not(.btn-primary):not(.btn-success):not([data-action="create"]):not(.btn-create),
+    .dark div:has(> h1, > h2) a.btn-secondary:first-child,
+    .dark div:has(> h1, > h2) button.btn-secondary:first-child,
+    .dark .card-header a.btn-secondary:first-child,
+    .dark .page-header a.btn-secondary:first-child,
+    .dark a.btn:has(> svg:first-child):has(span:last-child):not(.btn-primary):not(.btn-success):not([data-action="create"]):not(.btn-create):not([href*="/new"]):not([href*="/create"]),
+    .dark a.btn-secondary:has(> svg:first-child):not([data-nav-item]) {
+      background-color: #1e293b !important;
+      border-color: #334155 !important;
+      color: #e2e8f0 !important;
+    }
+
+    /* Page Title wrapper */
+    .card-header .flex:has(h1, h2) > div:has(h1, h2),
+    .page-header .flex:has(h1, h2) > div:has(h1, h2),
+    .list-page-header .flex:has(h1, h2) > div:has(h1, h2) {
+      flex: 1 1 auto !important;
+      min-width: 0 !important;
+      display: flex !important;
+      flex-direction: column !important;
+      justify-content: center !important;
+    }
+
+    /* Page Title (h1, h2) in Mobile View: Prominent, legible, un-fragmented */
+    .card-header h1,
+    .page-header h1,
+    .list-page-header h1,
+    h1.text-2xl,
+    h1.text-xl,
+    h1.text-3xl {
+      font-size: 1.25rem !important; /* 20px Apple Large Title */
+      line-height: 1.3 !important;
+      font-weight: 700 !important;
+      letter-spacing: -0.015em !important;
+      margin: 0 !important;
+      display: inline-flex !important;
+      align-items: center !important;
+      gap: 0.375rem 0.5rem !important;
+      min-width: 0 !important;
+      flex: 1 1 auto !important;
+      word-break: normal !important;
+      overflow-wrap: break-word !important;
+    }
+
+    /* Page Title icons: Crisp 20px symbol */
+    h1 svg,
+    h1 .w-6.h-6,
+    h1 .w-5.h-5,
+    h2 svg,
+    h2 .w-6.h-6,
+    h2 .w-5.h-5 {
+      width: 1.25rem !important;
+      height: 1.25rem !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* ═══════════════════════════════════════════════════════════════
+       APPLE HIG ACTION BUTTONS TOOLBAR (< 640px)
+       ═══════════════════════════════════════════════════════════════ */
+
+    /* Action buttons container - aligned to start, never stretched */
+    .card-header .flex:not(:has(h1, h2, h3)):has(> button, > a, > .btn),
+    .page-header .flex:not(:has(h1, h2, h3)):has(> button, > a, > .btn),
+    .list-page-header .flex:not(:has(h1, h2, h3)):has(> button, > a, > .btn),
     .header-actions,
     .action-toolbar,
-    .flex.gap-2:not(.flex-nowrap):not([data-carousel-container]):has(> .btn-primary, > .btn-secondary, > .btn-outline, > .btn-success, > button, > a.btn),
-    .flex.gap-3:not(.flex-nowrap):not([data-carousel-container]):has(> .btn-primary, > .btn-secondary, > .btn-outline, > .btn-success, > button, > a.btn),
-    .flex.gap-4:not(.flex-nowrap):not([data-carousel-container]):has(> .btn-primary, > .btn-secondary, > .btn-outline, > .btn-success, > button, > a.btn) {
-      display: grid !important;
-      grid-template-columns: repeat(2, minmax(0, 1fr)) !important;
-      width: 100% !important;
+    .flex.flex-wrap.items-center.gap-2\.5,
+    .flex.flex-wrap.items-center.gap-2,
+    .flex.flex-wrap.items-center.gap-3,
+    .flex.items-center.gap-2\.5:not(:has(h1, h2)),
+    .flex.items-center.gap-2:not(:has(h1, h2)),
+    .flex.items-center.gap-3:not(:has(h1, h2)) {
+      display: flex !important;
+      flex-direction: row !important;
+      align-items: center !important;
+      justify-content: flex-start !important;
+      flex-wrap: wrap !important;
       gap: 0.5rem !important;
+      width: auto !important;
+      max-width: 100% !important;
+      margin-top: 0.25rem !important;
     }
 
-    .card-header .flex > .btn,
-    .card-header .flex > button,
-    .card-header .flex > a,
-    .flex.gap-2 > .btn-primary,
-    .flex.gap-2 > .btn-secondary,
-    .flex.gap-2 > .btn-outline,
-    .flex.gap-2 > .btn-success,
-    .flex.gap-3 > .btn-primary,
-    .flex.gap-3 > .btn-secondary,
-    .flex.gap-3 > .btn-outline,
-    .flex.gap-3 > .btn-success,
-    .flex.gap-4 > .btn-primary,
-    .flex.gap-4 > .btn-secondary,
-    .flex.gap-4 > .btn-outline,
-    .flex.gap-4 > .btn-success,
-    button.btn,
-    a.btn,
+    /* Primary Create Action Buttons on Mobile: Restored Dark Blue #0E3646 background & compact, reduced, aligned width */
     .btn-primary,
-    .btn-secondary,
-    .btn-outline,
-    .btn-success {
+    .btn.btn-primary,
+    button.btn-primary,
+    a.btn-primary,
+    button[data-action="create"],
+    .btn-create,
+    a[href$="/new"],
+    a[href*="/new?"],
+    a[href$="/create"],
+    a[href*="/create?"],
+    .card-header .btn-primary,
+    .page-header .btn-primary,
+    .list-page-header .btn-primary {
       display: inline-flex !important;
       align-items: center !important;
       justify-content: center !important;
       text-align: center !important;
+      gap: 0.375rem 0.5rem !important;
+      height: 2.25rem !important; /* 36px standard Apple push button */
       min-height: 2.25rem !important;
-      padding: 0.35rem 0.5rem !important;
-      font-size: 0.75rem !important;
+      padding: 0.35rem 0.875rem !important;
+      font-size: 0.8125rem !important; /* 13px */
+      font-weight: 600 !important;
+      border-radius: 0.75rem !important; /* 12px continuous squircle */
       line-height: 1.2 !important;
-      white-space: normal !important;
-      word-break: normal !important;
-      overflow: visible !important;
-      text-overflow: clip !important;
+      white-space: nowrap !important;
+      box-shadow: 0 1px 3px rgba(14, 54, 70, 0.25) !important;
+      transition: all 0.15s ease-in-out !important;
+      cursor: pointer !important;
       box-sizing: border-box !important;
-      width: 100% !important;
-      max-width: 100% !important;
-      flex: 1 1 auto !important;
+
+      /* Restored Brand Dark Blue */
+      background-color: #0E3646 !important;
+      color: #ffffff !important;
+      border: 1px solid #0E3646 !important;
+
+      /* Compact, reduced and aligned width */
+      width: auto !important;
+      max-width: fit-content !important;
+      min-width: fit-content !important;
+      flex: 0 0 auto !important;
+      align-self: flex-start !important;
+    }
+
+    /* Ensure icons inside primary/create buttons stay white */
+    .btn-primary svg,
+    .btn.btn-primary svg,
+    button.btn-primary svg,
+    a.btn-primary svg,
+    button[data-action="create"] svg,
+    .btn-create svg,
+    a[href$="/new"] svg,
+    a[href$="/create"] svg {
+      color: #ffffff !important;
+      stroke: currentColor !important;
+      width: 1rem !important;
+      height: 1rem !important;
+      flex-shrink: 0 !important;
+    }
+
+    /* Hover and active states for primary buttons */
+    .btn-primary:hover:not(:disabled),
+    .btn.btn-primary:hover:not(:disabled),
+    button.btn-primary:hover:not(:disabled),
+    a.btn-primary:hover:not(:disabled),
+    button[data-action="create"]:hover:not(:disabled),
+    .btn-create:hover:not(:disabled),
+    a[href$="/new"]:hover,
+    a[href$="/create"]:hover {
+      background-color: #173d50 !important;
+      color: #ffffff !important;
+      border-color: #173d50 !important;
+    }
+
+    .btn-primary:active:not(:disabled),
+    .btn.btn-primary:active:not(:disabled),
+    button.btn-primary:active:not(:disabled),
+    a.btn-primary:active:not(:disabled),
+    button[data-action="create"]:active:not(:disabled),
+    .btn-create:active:not(:disabled),
+    a[href$="/new"]:active,
+    a[href$="/create"]:active {
+      background-color: #061a22 !important;
+      color: #ffffff !important;
+      border-color: #061a22 !important;
+      transform: scale(0.97) !important;
+    }
+
+    /* Dark Mode: Maintain the Dark Blue (#0E3646) theme with clear contrast */
+    .dark .btn-primary,
+    .dark .btn.btn-primary,
+    .dark button.btn-primary,
+    .dark a.btn-primary,
+    .dark button[data-action="create"],
+    .dark .btn-create,
+    .dark a[href$="/new"],
+    .dark a[href*="/new?"],
+    .dark a[href$="/create"],
+    .dark a[href*="/create?"],
+    .dark .card-header .btn-primary,
+    .dark .page-header .btn-primary,
+    .dark .list-page-header .btn-primary {
+      background-color: #0E3646 !important;
+      color: #ffffff !important;
+      border: 1px solid #1b5b75 !important;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.4) !important;
+      width: auto !important;
+      max-width: fit-content !important;
+      min-width: fit-content !important;
+      flex: 0 0 auto !important;
+      align-self: flex-start !important;
+    }
+
+    .dark .btn-primary:hover:not(:disabled),
+    .dark button.btn-primary:hover:not(:disabled),
+    .dark a.btn-primary:hover:not(:disabled),
+    .dark a[href$="/new"]:hover,
+    .dark a[href$="/create"]:hover {
+      background-color: #154e64 !important;
+      border-color: #25789b !important;
+      color: #ffffff !important;
+    }
+
+    /* Secondary / Outline Action Buttons on Mobile: Standard Apple HIG Push Button */
+    .flex:not(.table *):not(td *) > .btn-secondary:not(:first-child),
+    .flex:not(.table *):not(td *) > a.btn-secondary:not(:first-child),
+    .flex:not(.table *):not(td *) > .btn-outline,
+    .flex:not(.table *):not(td *) > a.btn-outline,
+    .flex:not(.table *):not(td *) > .btn-success,
+    .flex:not(.table *):not(td *) > a.btn-success {
+      display: inline-flex !important;
+      align-items: center !important;
+      justify-content: center !important;
+      text-align: center !important;
+      height: 2.25rem !important;
+      min-height: 2.25rem !important;
+      padding: 0.35rem 0.875rem !important;
+      font-size: 0.8125rem !important;
+      font-weight: 600 !important;
+      border-radius: 0.75rem !important;
+      line-height: 1.2 !important;
+      white-space: nowrap !important;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05) !important;
+      transition: all 0.15s ease-in-out !important;
+      cursor: pointer !important;
+      box-sizing: border-box !important;
+      width: auto !important;
+      max-width: fit-content !important;
+      flex: 0 0 auto !important;
+    }
+
+    /* Apple HIG tactile press feedback */
+    button.btn:active,
+    a.btn:active,
+    .btn-primary:active,
+    .btn-secondary:active,
+    .btn-success:active,
+    .btn-outline:active {
+      transform: scale(0.97) !important;
     }
 
     /* -- All filter and search fields in all pages arranged horizontally in a 2-grid column -- */
@@ -1074,42 +1355,65 @@
     }
 
     /* -- Grid: force single column -- */
-    .grid.grid-cols-3,
-    .grid.grid-cols-4,
-    .grid.grid-cols-5,
-    .grid.grid-cols-6,
-    div.grid.grid-cols-3,
-    div.grid.grid-cols-4,
-    div.grid.grid-cols-5,
-    div.grid.grid-cols-6 {
+    .grid.grid-cols-3:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    .grid.grid-cols-4:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    .grid.grid-cols-5:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    .grid.grid-cols-6:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    div.grid.grid-cols-3:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    div.grid.grid-cols-4:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    div.grid.grid-cols-5:not([data-mobile-menu-grid]):not([data-module-items-grid]),
+    div.grid.grid-cols-6:not([data-mobile-menu-grid]):not([data-module-items-grid]) {
       grid-template-columns: repeat(1, minmax(0, 1fr));
     }
 
+    [data-mobile-menu-grid] {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 0.625rem 0.25rem !important;
+    }
+    [data-mobile-menu-grid] a {
+      padding-left: 0.25rem !important;
+      padding-right: 0.25rem !important;
+    }
+    [data-mobile-menu-grid] span {
+      word-break: normal !important;
+      overflow-wrap: normal !important;
+      letter-spacing: -0.02em !important;
+    }
+    [data-module-items-grid] {
+      display: grid !important;
+      grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+      gap: 0.5rem !important;
+    }
+    [data-desktop-floating-board-grid] {
+      display: grid !important;
+      grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
+    }
+
     /* -- Filters/header bars: stack (only list-page action bars, NOT main app header) -- */
-    .flex.items-center.gap-2,
-    .flex.items-center.gap-3,
-    .flex.items-center.gap-4 {
+    .flex.items-center.gap-2:not(:has(h1, h2)),
+    .flex.items-center.gap-3:not(:has(h1, h2)),
+    .flex.items-center.gap-4:not(:has(h1, h2)) {
       flex-wrap: wrap;
     }
-    .flex.justify-between.items-center.mb-4,
-    .flex.justify-between.items-center.mb-6,
-    .flex.justify-between.items-center.mb-3,
-    .flex.justify-between.items-center.mb-2 {
+    .flex.justify-between.items-center.mb-4:not([data-sheet-header]):not([data-no-stack]),
+    .flex.justify-between.items-center.mb-6:not([data-sheet-header]):not([data-no-stack]),
+    .flex.justify-between.items-center.mb-3:not([data-sheet-header]):not([data-no-stack]),
+    .flex.justify-between.items-center.mb-2:not([data-sheet-header]):not([data-no-stack]) {
       flex-direction: column;
       align-items: stretch;
     }
-    .flex.justify-between.items-center.mb-4 > *,
-    .flex.justify-between.items-center.mb-6 > *,
-    .flex.justify-between.items-center.mb-3 > *,
-    .flex.justify-between.items-center.mb-2 > * {
+    .flex.justify-between.items-center.mb-4:not([data-sheet-header]):not([data-no-stack]) > *,
+    .flex.justify-between.items-center.mb-6:not([data-sheet-header]):not([data-no-stack]) > *,
+    .flex.justify-between.items-center.mb-3:not([data-sheet-header]):not([data-no-stack]) > *,
+    .flex.justify-between.items-center.mb-2:not([data-sheet-header]):not([data-no-stack]) > * {
       width: 100%;
     }
 
     /* -- Nav tabs / inline filters: scroll horizontally -- */
     .flex.space-x-2,
     .flex.space-x-3,
-    .flex.space-x-4,
-    div:has(> .btn-primary + .btn-secondary):not(.table *) {
+    .flex.space-x-4 {
       overflow-x: auto;
       -webkit-overflow-scrolling: touch;
       flex-wrap: nowrap;
@@ -1199,10 +1503,32 @@
   @media (min-width: 640px) and (max-width: 1023px) {
     /* -- Keep buttons inline but ensure min touch target -- */
     .btn-primary,
+    .btn.btn-primary,
+    button.btn-primary,
+    a.btn-primary,
+    button[data-action="create"],
+    .btn-create,
+    a[href$="/new"],
+    a[href*="/new?"],
+    a[href$="/create"],
+    a[href*="/create?"] {
+      min-height: 40px;
+      width: auto !important;
+      max-width: fit-content !important;
+      min-width: fit-content !important;
+      flex: 0 0 auto !important;
+      background-color: #0E3646 !important;
+      color: #ffffff !important;
+      border: 1px solid #0E3646 !important;
+    }
+
     .btn-secondary,
     .btn-outline,
     .btn-success {
       min-height: 40px;
+      width: auto !important;
+      max-width: fit-content !important;
+      flex: 0 0 auto !important;
     }
 
     /* -- Tables: compact -- */
@@ -1222,13 +1548,18 @@
     }
 
     /* -- Grid: 2 columns for 4+ col grids -- */
-    .grid.grid-cols-4,
-    .grid.grid-cols-5,
-    .grid.grid-cols-6 {
+    .grid.grid-cols-4:not([data-module-items-grid]),
+    .grid.grid-cols-5:not([data-module-items-grid]),
+    .grid.grid-cols-6:not([data-module-items-grid]) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
-    .grid.grid-cols-3 {
+    .grid.grid-cols-3:not([data-module-items-grid]) {
       grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    [data-desktop-floating-board-grid] {
+      display: grid !important;
+      grid-template-columns: repeat(8, minmax(0, 1fr)) !important;
     }
 
     /* -- Typography: slight scale-down -- */
@@ -1255,6 +1586,8 @@
     [data-module-carousel] [data-carousel-card] > div {
       min-height: 0 !important;
     }
+
+
   }
 }
 
@@ -1589,7 +1922,7 @@
    Ensures crisp white in light mode and deep slate-900 in dark mode.
    ========================================================================== */
 /* Universal form fields: background and smokey grey shadow */
-input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]),
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):not([data-menu-search-input]),
 select,
 textarea,
 .input,
@@ -1602,7 +1935,7 @@ textarea,
   transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):hover,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):not([data-menu-search-input]):hover,
 select:hover,
 textarea:hover,
 .input:hover,
@@ -1613,7 +1946,7 @@ textarea:hover,
   box-shadow: 0 5px 12px -2px rgba(15, 23, 42, 0.18), 0 2px 5px -1px rgba(15, 23, 42, 0.12) !important;
 }
 
-input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):focus,
+input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="reset"]):not([type="file"]):not([type="range"]):not([type="color"]):not([data-menu-search-input]):focus,
 select:focus,
 textarea:focus,
 .input:focus,
@@ -1657,6 +1990,39 @@ textarea:focus,
 .dark .form-select:focus,
 .dark .form-textarea:focus {
   box-shadow: 0 0 0 3px rgba(59, 134, 168, 0.30), 0 4px 14px -2px rgba(0, 0, 0, 0.70) !important;
+}
+
+/* ── Navigation Launcher Menu Search Input ── */
+input[data-menu-search-input],
+.dark input[data-menu-search-input] {
+  background-color: #0e3646 !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  caret-color: #f8bc24 !important;
+  border: 1px solid #14475c !important;
+  box-shadow: 0 2px 6px -1px rgba(0, 0, 0, 0.35) !important;
+}
+
+input[data-menu-search-input]::placeholder,
+.dark input[data-menu-search-input]::placeholder {
+  color: #94a3b8 !important;
+  -webkit-text-fill-color: #94a3b8 !important;
+}
+
+input[data-menu-search-input]:hover,
+.dark input[data-menu-search-input]:hover {
+  background-color: #114053 !important;
+  border-color: #1b5b75 !important;
+}
+
+input[data-menu-search-input]:focus,
+.dark input[data-menu-search-input]:focus {
+  background-color: #13465b !important;
+  color: #ffffff !important;
+  -webkit-text-fill-color: #ffffff !important;
+  border-color: #f8bc24 !important;
+  box-shadow: 0 0 0 2px rgba(248, 188, 36, 0.45) !important;
+  outline: none !important;
 }
 
 /* ==========================================================================

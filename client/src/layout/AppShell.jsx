@@ -165,6 +165,7 @@ import {
   Calculator,
   ShieldAlert,
   X,
+  Search,
   WifiOff,
   ChevronDown,
   ChevronRight,
@@ -175,6 +176,7 @@ import {
   Gauge,
   CheckCircle2,
   FileText,
+  FileSpreadsheet,
   BarChart3,
   Receipt,
   Package,
@@ -186,6 +188,105 @@ import {
   Tag,
   ClipboardList,
   GitBranch,
+  Handshake,
+  FileCheck,
+  Boxes,
+  Database,
+  Bug,
+  Ticket,
+  ArrowLeftRight,
+  BookOpen,
+  Sparkles,
+  Zap,
+  Hourglass,
+  PauseCircle,
+  ScanBarcode,
+  Warehouse,
+  MapPin,
+  Scale,
+  CircleDollarSign,
+  SlidersHorizontal,
+  ClipboardCheck,
+  RefreshCw,
+  Upload,
+  PackageMinus,
+  PackagePlus,
+  PackageCheck,
+  RotateCcw,
+  Tags,
+  History,
+  BellRing,
+  AlertTriangle,
+  ShieldCheck,
+  UserPlus,
+  UserMinus,
+  Navigation,
+  Coins,
+  Leaf,
+  Trash2,
+  Ruler,
+  FolderKanban,
+  Briefcase,
+  FolderOpen,
+  Milestone,
+  Flag,
+  GanttChart,
+  CalendarRange,
+  CalendarCheck,
+  CalendarClock,
+  Kanban,
+  Columns3,
+  ListTodo,
+  ListChecks,
+  Network,
+  GitFork,
+  Workflow,
+  GitCompare,
+  BrainCircuit,
+  StickyNote,
+  NotebookPen,
+  FileEdit,
+  HardHat,
+  Construction,
+  BadgeDollarSign,
+  HandCoins,
+  FileSignature,
+  FileCheck2,
+  FileQuestion,
+  FileKey,
+  FileCode,
+  Store,
+  ShoppingBag,
+  Fuel,
+  Ship,
+  Anchor,
+  Route as RouteIcon,
+  GraduationCap,
+  Gavel,
+  Cog,
+  DoorOpen,
+  Activity,
+  Percent,
+  PieChart,
+  LineChart,
+  UserCheck,
+  UserCog,
+  Key,
+  KeyRound,
+  Scroll,
+  Stethoscope,
+  Printer,
+  Star,
+  Siren,
+  Biohazard,
+  AlertOctagon,
+  Shield,
+  Target,
+  Award,
+  TrendingUp,
+  Send,
+  Lock,
+  LifeBuoy,
 } from "lucide-react";
 import FloatingChat from "../components/chat/FloatingChat.jsx";
 import BanksAiFloating from "../components/ai/BanksAiFloating.jsx";
@@ -493,30 +594,200 @@ function getSectionIcon(secKey, secTitle) {
   const k = String(secKey || "").toLowerCase();
   const t = String(secTitle || "").toLowerCase();
 
-  if (k.includes("dashboard") || t.includes("dashboard")) return <LayoutDashboard className="w-3.5 h-3.5" />;
-  if (k.includes("initiation") || t.includes("initiation") || t.includes("start")) return <Rocket className="w-3.5 h-3.5" />;
-  if (k.includes("planning") || t.includes("planning") || t.includes("plan")) return <Compass className="w-3.5 h-3.5" />;
-  if (k.includes("execution") || t.includes("execution") || t.includes("shop floor")) return <PlayCircle className="w-3.5 h-3.5" />;
-  if (k.includes("monitoring") || t.includes("monitoring") || k.includes("control") || t.includes("control")) return <Gauge className="w-3.5 h-3.5" />;
-  if (k.includes("closure") || t.includes("closure") || t.includes("handover")) return <CheckCircle2 className="w-3.5 h-3.5" />;
-  if (k.includes("voucher") || t.includes("voucher") || k.includes("document") || t.includes("document")) return <FileText className="w-3.5 h-3.5" />;
-  if (k.includes("transaction") || t.includes("transaction") || k.includes("invoice") || t.includes("invoice") || k.includes("billing") || t.includes("billing")) return <Receipt className="w-3.5 h-3.5" />;
-  if (k.includes("report") || t.includes("report") || k.includes("analytic") || t.includes("analytic")) return <BarChart3 className="w-3.5 h-3.5" />;
-  if (k.includes("setup") || t.includes("setup") || k.includes("setting") || t.includes("setting") || k.includes("config") || t.includes("config")) return <Settings className="w-3.5 h-3.5" />;
-  if (k.includes("customer") || t.includes("customer") || k.includes("user") || t.includes("user") || k.includes("employee") || t.includes("employee") || k.includes("resource") || t.includes("resource")) return <Users className="w-3.5 h-3.5" />;
-  if (k.includes("price") || t.includes("pricing") || k.includes("discount") || t.includes("discount")) return <Tag className="w-3.5 h-3.5" />;
-  if (k.includes("stock") || t.includes("stock") || k.includes("item") || t.includes("inventory") || k.includes("receipt") || t.includes("receipt")) return <Package className="w-3.5 h-3.5" />;
-  if (k.includes("procurement") || t.includes("procurement") || k.includes("purchase") || t.includes("purchase") || k.includes("order") || t.includes("order")) return <ShoppingCart className="w-3.5 h-3.5" />;
-  if (k.includes("bank") || t.includes("banking") || k.includes("finance") || t.includes("finance") || k.includes("depreciation")) return <Landmark className="w-3.5 h-3.5" />;
-  if (k.includes("time") || t.includes("time") || k.includes("attendance") || t.includes("attendance")) return <Clock className="w-3.5 h-3.5" />;
-  if (k.includes("leave") || t.includes("leave") || k.includes("calendar") || t.includes("calendar") || k.includes("timeline")) return <Calendar className="w-3.5 h-3.5" />;
-  if (k.includes("payroll") || t.includes("payroll") || k.includes("benefit") || t.includes("benefit") || k.includes("pos")) return <CreditCard className="w-3.5 h-3.5" />;
-  if (k.includes("equipment") || t.includes("equipment") || k.includes("asset") || t.includes("maintenance")) return <Wrench className="w-3.5 h-3.5" />;
-  if (k.includes("safety") || t.includes("safety") || k.includes("incident") || t.includes("hazard") || k.includes("compliance")) return <ShieldAlert className="w-3.5 h-3.5" />;
-  if (k.includes("workflow") || t.includes("workflow")) return <GitBranch className="w-3.5 h-3.5" />;
-  if (k.includes("log") || t.includes("log") || k.includes("audit") || t.includes("audit") || k.includes("task") || t.includes("task")) return <ClipboardList className="w-3.5 h-3.5" />;
-  if (k.includes("operation") || t.includes("operation")) return <Layers className="w-3.5 h-3.5" />;
-  return <Folder className="w-3.5 h-3.5" />;
+  if (k.includes("dashboard") || t.includes("dashboard") || k.includes("overview") || t.includes("overview")) return <LayoutDashboard />;
+  if (k.includes("initiation") || t.includes("initiation") || t.includes("start")) return <Rocket />;
+  if (k.includes("planning") || t.includes("planning") || t.includes("plan")) return <Compass />;
+  if (k.includes("execution") || t.includes("execution") || t.includes("shop floor")) return <PlayCircle />;
+  if (k.includes("monitoring") || t.includes("monitoring") || k.includes("control") || t.includes("control")) return <Gauge />;
+  if (k.includes("closure") || t.includes("closure") || t.includes("handover")) return <CheckCircle2 />;
+  if (k.includes("receipt") || t.includes("goods receipt") || k.includes("grn") || t.includes("grn")) return <PackagePlus />;
+  if (k.includes("voucher") || t.includes("voucher") || k.includes("document") || t.includes("document")) return <FileText />;
+  if (k.includes("transaction") || t.includes("transaction") || k.includes("invoice") || t.includes("invoice") || k.includes("billing") || t.includes("billing")) return <Receipt />;
+  if (k.includes("report") || t.includes("report") || k.includes("analytic") || t.includes("analytic") || k.includes("valuation") || t.includes("valuation")) return <BarChart3 />;
+  if (k.includes("setup") || t.includes("setup") || k.includes("setting") || t.includes("setting") || k.includes("config") || t.includes("config") || k.includes("parameter") || t.includes("parameter")) return <Settings />;
+  if (k.includes("customer") || t.includes("customer") || k.includes("user") || t.includes("user") || k.includes("employee") || t.includes("employee") || k.includes("resource") || t.includes("resource")) return <Users />;
+  if (k.includes("price") || t.includes("pricing") || k.includes("discount") || t.includes("discount")) return <Tag />;
+  if (k.includes("warehouse") || t.includes("warehouse") || k.includes("store") || t.includes("store")) return <Warehouse />;
+  if (k.includes("operation") || t.includes("operation") || k.includes("stock") || t.includes("stock") || k.includes("item") || t.includes("inventory")) return <Package />;
+  if (k.includes("procurement") || t.includes("procurement") || k.includes("purchase") || t.includes("purchase") || k.includes("order") || t.includes("order")) return <ShoppingCart />;
+  if (k.includes("bank") || t.includes("banking") || k.includes("finance") || t.includes("finance") || k.includes("depreciation")) return <Coins />;
+  if (k.includes("time") || t.includes("time") || k.includes("attendance") || t.includes("attendance")) return <Clock />;
+  if (k.includes("leave") || t.includes("leave") || k.includes("calendar") || t.includes("calendar") || k.includes("timeline")) return <Calendar />;
+  if (k.includes("payroll") || t.includes("payroll") || k.includes("benefit") || t.includes("benefit") || k.includes("pos")) return <CreditCard />;
+  if (k.includes("equipment") || t.includes("equipment") || k.includes("asset") || t.includes("maintenance")) return <Wrench />;
+  if (k.includes("safety") || t.includes("safety") || k.includes("incident") || t.includes("hazard") || k.includes("compliance")) return <ShieldAlert />;
+  if (k.includes("workflow") || t.includes("workflow")) return <GitBranch />;
+  if (k.includes("log") || t.includes("log") || k.includes("audit") || t.includes("audit") || k.includes("task") || t.includes("task")) return <ClipboardList />;
+  return <Folder />;
+}
+
+export function getPageWhiteIcon(pageTitle, path, featureKey, explicitIcon) {
+  const t = String(pageTitle || "").toLowerCase().trim();
+  const f = String(featureKey || "").toLowerCase().trim();
+  const p = String(path || "").toLowerCase().trim();
+
+  // 1. Project Management, Construction & Engineering Lifecycle
+  if (t.includes("milestone") || t.includes("phase gate") || t.includes("phase-gate") || t.includes("phase approval") || t.includes("roadmap")) return <Milestone />;
+  if (t.includes("gantt") || t.includes("timeline") || t.includes("schedule monitoring")) return <GanttChart />;
+  if (t.includes("kanban") || t.includes("task assignment")) return <Kanban />;
+  if (t.includes("wbs") || t.includes("work breakdown") || t.includes("breakdown structure")) return <Network />;
+  if (t.includes("mindmap") || t.includes("mind map") || t.includes("whiteboard") || t.includes("brainstorm")) return <BrainCircuit />;
+  if (t.includes("note") || t.includes("notes") || t.includes("scratchpad")) return <StickyNote />;
+  if (t.includes("daily site") || t.includes("site report") || t.includes("site log") || /\bsite\b/i.test(t)) return <HardHat />;
+  if (t.includes("subcontractor") || t.includes("sub-contractor") || t.includes("tradesman")) return <HardHat />;
+  if (t.includes("boq") || t.includes("bill of quantities") || t.includes("cost estimation") || t.includes("costing") || t.includes("cost control")) return <Calculator />;
+  if (t.includes("valuation") || t.includes("progress billing") || t.includes("client valuation")) return <CircleDollarSign />;
+  if (t.includes("payment application") || t.includes("interim payment") || t.includes("ipc")) return <BadgeDollarSign />;
+  if (t.includes("variation") || t.includes("change order") || t.includes("scope change")) return <GitCompare />;
+  if (t.includes("snag") || t.includes("punch list") || t.includes("defect list")) return <ListChecks />;
+  if (t.includes("quality control") || t.includes("qc") || t.includes("qa") || t.includes("qa/qc")) return <Award />;
+  if (t.includes("project closure") || t.includes("handover") || t.includes("commissioning")) return <CheckCircle2 />;
+  if (t.includes("final account")) return <Landmark />;
+  if (t.includes("payment claim") || t.includes("claims") || t.includes("dispute")) return <HandCoins />;
+  if (t.includes("risk management") || t.includes("risk register") || t.includes("risks")) return <ShieldAlert />;
+  if (t.includes("project plan") || t.includes("work plan") || t.includes("master plan")) return <Compass />;
+  if (t.includes("task execution") || t.includes("tasks") || t.includes("task list") || t.includes("my tasks")) return <ListTodo />;
+  if (t.includes("client order") || t.includes("client's order") || t.includes("project order") || t.includes("engagement") || t.includes("contract")) return <FileSignature />;
+  if (t.includes("project proposal") || t.includes("proposal") || t.includes("bidding") || t.includes("tender")) return <FileText />;
+  if (t.includes("project") || t.includes("projects") || t.includes("portfolio") || t.includes("charter")) return <FolderKanban />;
+
+  // 2. POS (Point of Sale), Retail & Cash Counter
+  if (t.includes("on-hold") || t.includes("hold sales") || t.includes("parked sale") || t.includes("suspended")) return <PauseCircle />;
+  if (t.includes("pos return") || t.includes("sales return") || t.includes("purchase return") || t.includes("return advice") || t.includes("return") || t.includes("refund")) return <RotateCcw />;
+  if (t.includes("direct purchase") || t.includes("direct procurement")) return <Zap />;
+  if (t.includes("store inventory") || t.includes("retail store") || /\bstore\b/i.test(t)) return <Store />;
+  if (t.includes("sales entry") || t.includes("quick sale") || t.includes("counter sale") || t.includes("pos entry")) return <ShoppingBag />;
+  if (t.includes("day management") || t.includes("business day") || t.includes("eod")) return <CalendarClock />;
+  if (t.includes("cash collection") || t.includes("cash drop") || t.includes("cash desk") || t.includes("till")) return <Coins />;
+  if (t.includes("post to finance") || t.includes("gl post") || t.includes("post gl")) return <Send />;
+  if (t.includes("sync reconciliation") || t.includes("reconcil") || t.includes("sync")) return <RefreshCw />;
+  if (t.includes("pos register") || t.includes("cash register")) return <Calculator />;
+  if (/\bpos\b/i.test(t) || t.includes("cashier") || t.includes("retail")) return <ShoppingBasket />;
+
+  // 3. Movement Velocity & Speed
+  if (t.includes("fast moving")) return <Zap />;
+  if (t.includes("slow moving")) return <Hourglass />;
+  if (t.includes("non moving") || t.includes("non-moving") || t.includes("dead stock")) return <PauseCircle />;
+
+  // 4. Barcodes, Scanning & Identification
+  if (t.includes("barcode") || t.includes("qr code") || t.includes("scanner") || t.includes("scan")) return <ScanBarcode />;
+
+  // 5. Batches, Lots, Serial Numbers & Layers
+  if (t.includes("batch") || t.includes("lot") || t.includes("serial")) return <Layers />;
+
+  // 6. Warehouses, Storage, Bins & Aisles
+  if (/\b(bin|bins|shelf|shelves|rack|racks|aisle|bay)\b/i.test(t) || t.includes("bin location")) return <MapPin />;
+  if (t.includes("warehouse") || t.includes("warehouses") || t.includes("stores")) return <Warehouse />;
+  if (t.includes("location") || t.includes("locations")) return <MapPin />;
+
+  // 7. Stock Operations, Balances, Adjustments & Physical Count
+  if (t.includes("aging") || t.includes("age analysis")) return <History />;
+  if (t.includes("stock value") || t.includes("asset value")) return <CircleDollarSign />;
+  if (t.includes("adjustment") || t.includes("adjustments") || t.includes("write-off")) return <SlidersHorizontal />;
+  if (t.includes("physical inventory") || t.includes("stock take") || t.includes("cycle count")) return <ClipboardCheck />;
+  if (t.includes("daily stock take")) return <CalendarCheck />;
+  if (t.includes("verification") || t.includes("verify") || t.includes("audit") || t.includes("inspect")) return <FileCheck />;
+  if (t.includes("updation")) return <RefreshCw />;
+  if (t.includes("upload") || t.includes("import grn") || t.includes("import purchase") || t.includes("bulk upload")) return <Upload />;
+  if (t.includes("stock journal") || t.includes("journal") || t.includes("ledger")) return <BookOpen />;
+  if (t.includes("unit conversion") || t.includes("conversion") || t.includes("uom")) return <Ruler />;
+  if (t.includes("debtors balance") || t.includes("trial balance") || t.includes("balance sheet") || t.includes("balance") || t.includes("scale") || t.includes("weight")) return <Scale />;
+  if (t.includes("classification") || t.includes("category") || t.includes("categories") || t.includes("catalog")) return <Tags />;
+
+  // 8. Transfers, Receipts, Requisitions & Issues
+  if (t.includes("transfer acceptance") || t.includes("acceptance")) return <PackageCheck />;
+  if (t.includes("transfer") || t.includes("movement") || t.includes("transit") || t.includes("relocation")) return <ArrowLeftRight />;
+  if (t.includes("material requisition") || t.includes("general requisition") || t.includes("purchase requisition") || t.includes("requisition")) return <ClipboardList />;
+  if (t.includes("material utilization") || t.includes("utilization") || t.includes("consumption")) return <Boxes />;
+  if (t.includes("issue to") || t.includes("stock issue") || t.includes("issue") || t.includes("dispatch")) return <PackageMinus />;
+  if (t.includes("local purchase grn") || t.includes("import purchase grn") || t.includes("receipt") || t.includes("grn") || t.includes("goods receipt") || t.includes("delivery note")) return <PackagePlus />;
+
+  // 9. Alerts, Hazards, HSE & Safety
+  if (t.includes("near miss") || t.includes("near-miss")) return <AlertOctagon />;
+  if (t.includes("hazard") || t.includes("biohazard")) return <Biohazard />;
+  if (t.includes("incident") || t.includes("defect") || t.includes("bug") || t.includes("violation") || t.includes("accident")) return <AlertTriangle />;
+  if (t.includes("alert") || t.includes("alarm") || t.includes("warning")) return <BellRing />;
+  if (t.includes("safety") || t.includes("security") || t.includes("compliance") || t.includes("statutory") || t.includes("hse") || t.includes("ppe")) return <ShieldCheck />;
+  if (t.includes("emergency") || t.includes("siren") || t.includes("fire drill")) return <Siren />;
+  if (t.includes("environment") || t.includes("sustainability") || t.includes("green") || t.includes("carbon")) return <Leaf />;
+  if (t.includes("disposal") || t.includes("scrap") || t.includes("waste")) return <Trash2 />;
+
+  // 10. HR, People, Staff, Recruitment & Leaves
+  if (t.includes("recruitment") || t.includes("hiring") || t.includes("applicant") || t.includes("job opening")) return <UserPlus />;
+  if (t.includes("onboard") || t.includes("induction")) return <UserCheck />;
+  if (t.includes("offboard") || t.includes("exit") || t.includes("termination") || t.includes("resignation")) return <UserMinus />;
+  if (t.includes("attendance") || t.includes("clock in") || t.includes("clock out") || t.includes("timesheet") || t.includes("time tracking")) return <Clock />;
+  if (t.includes("leave") || t.includes("holiday") || t.includes("vacation") || t.includes("calendar")) return <Calendar />;
+  if (t.includes("payroll") || t.includes("salary") || t.includes("payslip") || t.includes("remuneration") || t.includes("wage")) return <Banknote />;
+  if (t.includes("loan") || t.includes("advance")) return <HandCoins />;
+  if (t.includes("training") || t.includes("course") || t.includes("learning")) return <GraduationCap />;
+  if (t.includes("disciplinary") || t.includes("grievance") || t.includes("legal")) return <Gavel />;
+  if (t.includes("prospect") || t.includes("lead")) return <Target />;
+  if (t.includes("directory") || t.includes("employee") || t.includes("staff") || t.includes("customer") || t.includes("client") || t.includes("supplier") || t.includes("vendor") || t.includes("driver") || t.includes("people") || t.includes("users")) return <Users />;
+  if (t.includes("user account") || t.includes("user management") || t.includes("user")) return <UserCog />;
+
+  // 11. Finance, Banking, Vouchers, Tax & Ledger
+  if (t.includes("credit note") || t.includes("debit note") || t.includes("service bill") || t.includes("purchase bill") || t.includes("voucher") || t.includes("invoice") || t.includes("bill") || t.includes("billing")) return <Receipt />;
+  if (t.includes("payment voucher") || t.includes("payment") || t.includes("disburse") || t.includes("remittance") || t.includes("pdc") || t.includes("cheque")) return <CreditCard />;
+  if (t.includes("tax") || t.includes("vat") || t.includes("wht") || t.includes("withholding")) return <Percent />;
+  if (t.includes("discount") || t.includes("price") || t.includes("pricing") || t.includes("scheme")) return <Tag />;
+  if (t.includes("bank") || t.includes("cash") || t.includes("fund") || t.includes("financial") || t.includes("account")) return <Coins />;
+
+  // 12. Reports, Analytics, KPI & Performance
+  if (t.includes("overview") || t.includes("dashboard") || t.includes("bi dashboard")) return <LayoutDashboard />;
+  if (t.includes("profitability") || t.includes("sales trend") || t.includes("growth") || t.includes("revenue trend")) return <TrendingUp />;
+  if (t.includes("budget") || t.includes("budgeting")) return <PieChart />;
+  if (t.includes("analytic") || t.includes("performance") || t.includes("kpi") || t.includes("chart") || /\bbi\b/i.test(t)) return <BarChart3 />;
+  if (t.includes("report") || t.includes("register") || t.includes("summary") || t.includes("statement") || t.includes("log book") || t.includes("roster")) return <FileSpreadsheet />;
+
+  // 13. Sales, Orders & Marketing
+  if (t.includes("quotation") || t.includes("quote") || t.includes("rfq") || t.includes("estimate")) return <FileText />;
+  if (t.includes("order") || t.includes("lpo") || t.includes("ipo") || t.includes("purchase") || t.includes("procure") || t.includes("buy")) return <ShoppingCart />;
+  if (t.includes("campaign") || t.includes("promo") || t.includes("broadcast") || t.includes("announcement")) return <Sparkles />;
+
+  // 14. Transport, Fleet & Maintenance
+  if (t.includes("fuel") || t.includes("diesel") || t.includes("gasoline") || t.includes("mileage") || t.includes("odometer")) return <Fuel />;
+  if (t.includes("shipping advice") || t.includes("shipment") || t.includes("vessel")) return <Ship />;
+  if (t.includes("port clearance") || t.includes("customs") || t.includes("berth")) return <Anchor />;
+  if (t.includes("trip") || t.includes("route") || t.includes("route tracking")) return <RouteIcon />;
+  if (t.includes("vehicle") || t.includes("truck") || t.includes("fleet") || t.includes("transport")) return <Truck />;
+  if (t.includes("gps") || t.includes("navigation") || t.includes("tracking")) return <Navigation />;
+  if (t.includes("maintenance") || t.includes("repair") || t.includes("work order") || t.includes("technician") || t.includes("service job") || t.includes("servicing")) return <Wrench />;
+  if (t.includes("equipment log") || t.includes("equipment") || t.includes("machine") || t.includes("asset") || t.includes("tool") || t.includes("spares")) return <Boxes />;
+  if (t.includes("property") || t.includes("estate") || t.includes("facility") || t.includes("building") || t.includes("branch") || t.includes("company") || t.includes("tenant")) return <Building2 />;
+  if (t.includes("meter") || t.includes("utility") || t.includes("gauge")) return <Gauge />;
+  if (t.includes("factory") || t.includes("plant") || t.includes("production line") || t.includes("work center") || t.includes("bom") || t.includes("mrp") || t.includes("manufacturing")) return <Factory />;
+  if (t.includes("helpdesk") || t.includes("service request") || t.includes("ticket") || t.includes("service call")) return <Headset />;
+
+  // 15. Security, System, Settings, Access & Licenses
+  if (t.includes("override") || t.includes("exceptional") || t.includes("exception")) return <KeyRound />;
+  if (t.includes("permission") || t.includes("access control") || t.includes("security matrix")) return <Lock />;
+  if (t.includes("role") || t.includes("credential") || t.includes("privilege")) return <ShieldCheck />;
+  if (t.includes("license") || t.includes("package") || t.includes("subscription")) return <Key />;
+  if (t.includes("workflow") || t.includes("approval engine") || t.includes("configuration")) return <Workflow />;
+  if (t.includes("approved document") || t.includes("document review")) return <FileCheck2 />;
+  if (t.includes("audit report") || t.includes("activity log") || t.includes("system log")) return <Scroll />;
+  if (t.includes("diagnostic") || t.includes("system health") || t.includes("health check")) return <Stethoscope />;
+  if (t.includes("template") || t.includes("print format") || t.includes("document template")) return <Printer />;
+  if (t.includes("setting") || t.includes("config") || t.includes("setup") || t.includes("parameter") || t.includes("preference") || t.includes("admin")) return <Settings />;
+  if (t.includes("database") || t.includes("backup")) return <Database />;
+  if (t.includes("home")) return <Home />;
+  if (t.includes("item") || t.includes("stock") || t.includes("material") || t.includes("product")) return <Package />;
+
+  // --- Fallback based on featureKey / path ---
+  if (f.includes("report") || p.includes("report")) return <FileSpreadsheet />;
+  if (f.includes("setting") || p.includes("setting")) return <Settings />;
+  if (f.includes("dashboard") || p.includes("dashboard")) return <LayoutDashboard />;
+
+  // Explicit icon fallback if provided and valid
+  if (explicitIcon && typeof explicitIcon === "function") {
+    return React.createElement(explicitIcon, { className: "w-5 h-5 sm:w-6 sm:h-6 stroke-[2] text-white" });
+  }
+  if (explicitIcon && typeof explicitIcon === "object" && (explicitIcon.$typeof || explicitIcon.render)) {
+    return explicitIcon;
+  }
+
+  return <FileText />;
 }
 
 /**
@@ -543,6 +814,7 @@ export default function AppShell() {
     roleFeatures,
     permissions,
     isSuper,
+    sidebarDisplayMode: ctxSidebarDisplayMode,
   } = usePermission();
   const { theme } = useTheme();
   const isDark =
@@ -612,7 +884,21 @@ export default function AppShell() {
 
     // Prefer modules that have at least 1 assigned page
     const validModules = withPageCounts.filter((m) => m.pageCount > 0);
-    const candidates = validModules.length > 0 ? validModules : withPageCounts;
+    let candidates = [...validModules];
+
+    // Ensure at least 4 candidates in the window if accessible modules exist
+    if (candidates.length < 4 && withPageCounts.length >= 4) {
+      const existingKeys = new Set(candidates.map((m) => m.key));
+      for (const m of withPageCounts) {
+        if (!existingKeys.has(m.key)) {
+          candidates.push(m);
+          existingKeys.add(m.key);
+          if (candidates.length >= 4) break;
+        }
+      }
+    } else if (candidates.length === 0) {
+      candidates = [...withPageCounts];
+    }
 
     // Sort descending by number of assigned pages; tie-break by original index
     candidates.sort((a, b) => {
@@ -641,8 +927,140 @@ export default function AppShell() {
   const [expandedModules, setExpandedModules] = useState({});
   const moduleIconMap = useMemo(() => new Map(modules.map((m) => [m.key, m.icon])), []);
   const isUserId1 = Number(user?.sub || user?.id) === 1;
+  const [localSidebarDisplayMode, setLocalSidebarDisplayMode] = useState(() => {
+    try {
+      if (typeof localStorage !== "undefined") {
+        const cached = localStorage.getItem("omnisuite.sidebar_display_mode");
+        if (cached && ["MODULES", "SECTIONS", "PAGES"].includes(cached.toUpperCase())) {
+          return cached.toUpperCase();
+        }
+      }
+    } catch {}
+    return "MODULES";
+  });
+
+  useEffect(() => {
+    const handleSidebarDisplayModeChange = (e) => {
+      const next = e.detail?.mode;
+      if (next && ["MODULES", "SECTIONS", "PAGES"].includes(String(next).toUpperCase())) {
+        setLocalSidebarDisplayMode(String(next).toUpperCase());
+      }
+    };
+    window.addEventListener("sidebar-display-mode-changed", handleSidebarDisplayModeChange);
+    return () => window.removeEventListener("sidebar-display-mode-changed", handleSidebarDisplayModeChange);
+  }, []);
+
+  const activeSidebarDisplayMode = localSidebarDisplayMode || ctxSidebarDisplayMode || "MODULES";
+  const [expandedSections, setExpandedSections] = useState({});
+
+  const allMobileSections = useMemo(() => {
+    const list = [];
+    MODULE_HOME_SECTIONS.filter((mod) => {
+      if (mod.moduleKey === "system-configuration") {
+        return Number(user?.id) === 1 || Number(user?.id) === 2;
+      }
+      return canViewModule(mod.moduleKey);
+    }).forEach((mod) => {
+      (mod.sections || []).forEach((sec) => {
+        const targetPath = sec.path || `${mod.modulePath}?section=${encodeURIComponent(sec.title)}`;
+        const hasPerm = !sec.path || (canAccessPath && canAccessPath(sec.path));
+        if (hasPerm && sec.title) {
+          list.push({
+            key: `${mod.moduleKey}-${sec.key}`,
+            label: sec.title,
+            shortLabel: sec.title,
+            path: targetPath,
+            icon: getSectionIcon(sec.key, sec.title),
+          });
+        }
+      });
+    });
+    return list;
+  }, [user?.id, canViewModule, canAccessPath]);
+
+  const allMobilePages = useMemo(() => {
+    const list = [];
+    const seen = new Set();
+    const isUid1 = Number(user?.id) === 1 || Number(user?.id) === 2;
+
+    MODULE_HOME_SECTIONS.filter((mod) => {
+      if (mod.moduleKey === "system-configuration") {
+        return isUid1;
+      }
+      return isUid1 || isSuper || canViewModule(mod.moduleKey);
+    }).forEach((mod) => {
+      (mod.sections || []).forEach((sec) => {
+        (sec.items || []).forEach((item) => {
+          if (item.path && !seen.has(item.path)) {
+            const hasPerm =
+              isUid1 ||
+              isSuper ||
+              (canAccessPath && canAccessPath(item.path)) ||
+              (item.feature_key && canAccessFeatureKey(mod.moduleKey, item.feature_key));
+            if (hasPerm) {
+              seen.add(item.path);
+              list.push({
+                key: item.path,
+                label: item.title,
+                shortLabel: item.title,
+                path: item.path,
+                icon: getPageWhiteIcon(item.title, item.path, item.feature_key),
+              });
+            }
+          }
+        });
+      });
+    });
+    return list;
+  }, [user?.id, isSuper, canViewModule, canAccessFeatureKey, canAccessPath]);
+
+  const mobileNavItems = useMemo(() => {
+    if (activeSidebarDisplayMode === "PAGES") {
+      return allMobilePages.slice(0, 16);
+    }
+    if (activeSidebarDisplayMode === "SECTIONS") {
+      return allMobileSections.slice(0, 16);
+    }
+    return topMobileModules;
+  }, [activeSidebarDisplayMode, allMobilePages, allMobileSections, topMobileModules]);
   const lastChatToneAtRef = useRef(0);
   const listPageContentRef = useRef(null);
+  const mobileNavScrollRef = useRef(null);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [mobileMenuSearch, setMobileMenuSearch] = useState("");
+
+  useEffect(() => {
+    if (!sidebarOpen) {
+      setMobileMenuSearch("");
+    }
+  }, [sidebarOpen]);
+
+  const filteredMobilePages = useMemo(() => {
+    if (!mobileMenuSearch.trim()) return allMobilePages;
+    const q = mobileMenuSearch.toLowerCase().trim();
+    return allMobilePages.filter((p) => (p.label || "").toLowerCase().includes(q));
+  }, [allMobilePages, mobileMenuSearch]);
+
+  const filteredMobileSections = useMemo(() => {
+    if (!mobileMenuSearch.trim()) return allMobileSections;
+    const q = mobileMenuSearch.toLowerCase().trim();
+    return allMobileSections.filter((s) => (s.label || "").toLowerCase().includes(q));
+  }, [allMobileSections, mobileMenuSearch]);
+
+  const filteredMobileModules = useMemo(() => {
+    const allowed = modules.filter(
+      (m) => m.key !== "system-configuration" || Number(user?.id) === 1 || Number(user?.id) === 2
+    );
+    if (!mobileMenuSearch.trim()) return allowed;
+    const q = mobileMenuSearch.toLowerCase().trim();
+    return allowed.filter((m) => (m.label || "").toLowerCase().includes(q));
+  }, [user?.id, mobileMenuSearch]);
+
+  useEffect(() => {
+    if (mobileNavScrollRef.current) {
+      mobileNavScrollRef.current.scrollLeft = 0;
+    }
+  }, [activeSidebarDisplayMode]);
   useEffect(() => {
     if (lastEvent === "queued") {
       setSavedToast(true);
@@ -933,7 +1351,6 @@ export default function AppShell() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarTouchStart = useRef(null);
   const handleSidebarTouchStart = (e) => {
     sidebarTouchStart.current = {
@@ -959,6 +1376,16 @@ export default function AppShell() {
     return () => {
       document.body.style.overflow = "";
     };
+  }, [sidebarOpen]);
+
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape" && sidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
   }, [sidebarOpen]);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileRef = useRef(null);
@@ -1943,7 +2370,7 @@ export default function AppShell() {
             aria-label="Toggle navigation menu"
             data-rbac-exempt="true"
             onClick={() => setSidebarOpen((v) => !v)}
-            className="hidden md:inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors active:scale-95 shrink-0"
+            className="inline-flex items-center justify-center w-9 h-9 sm:w-10 sm:h-10 rounded-xl text-slate-500 hover:bg-slate-100 dark:text-slate-400 dark:hover:bg-slate-800 transition-colors active:scale-95 shrink-0"
           >
             <Menu className="w-5 h-5" />
           </button>
@@ -2555,313 +2982,468 @@ export default function AppShell() {
         </div>
       )}
 
-      <div
-        className={
-          "flex-1 relative z-10 " +
-          (sidebarOpen ? "grid md:grid-cols-[280px_1fr]" : "grid grid-cols-1")
-        }
-      >
+      <div className="flex-1 relative z-10 grid grid-cols-1 w-full">
+        {/* Mobile App Launcher 4-Column Grid Bottom Sheet (< 768px / Small Devices) */}
         {sidebarOpen && (
-          <button
-            type="button"
-            aria-label="Close navigation menu"
-            data-rbac-exempt="true"
-            onClick={() => setSidebarOpen(false)}
-            className="fixed inset-0 z-50 bg-black/40 md:hidden transition-opacity duration-300 animate-in fade-in"
-          />
+          <div className="md:hidden">
+            {/* Backdrop */}
+            <div
+              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Bottom Sheet Modal with 4-Column App Grid */}
+            <div
+              data-rbac-exempt="true"
+              onTouchStart={handleSidebarTouchStart}
+              onTouchEnd={handleSidebarTouchEnd}
+              className="fixed bottom-0 inset-x-0 z-[80] bg-[#061a22] text-white rounded-t-[28px] shadow-2xl border-t border-[#0e3646]/70 max-h-[85vh] overflow-y-auto pb-10 pt-3 px-4 animate-in slide-in-from-bottom duration-300 no-scrollbar"
+            >
+              {/* Drag Handle */}
+              <div className="w-12 h-1.5 bg-slate-600/70 rounded-full mx-auto mb-3" />
+
+              {/* Header Row */}
+              <div
+                data-sheet-header="true"
+                data-no-stack="true"
+                className="flex flex-row items-center justify-between gap-3 px-1 pb-2.5 mb-2.5 border-b border-[#0e3646]/70 w-full shrink-0"
+                style={{
+                  display: "flex",
+                  flexDirection: "row",
+                  alignItems: "center",
+                  justifyContent: "space-between",
+                  flexWrap: "nowrap",
+                  width: "100%",
+                }}
+              >
+                <div className="flex items-center gap-2 min-w-0" style={{ display: "flex", alignItems: "center", flexWrap: "nowrap" }}>
+                  <span className="text-xs font-bold uppercase tracking-wider text-white truncate">
+                    {activeSidebarDisplayMode === "PAGES"
+                      ? "Pages"
+                      : activeSidebarDisplayMode === "SECTIONS"
+                      ? "Module Sections"
+                      : "Modules"}
+                  </span>
+                </div>
+                <button
+                  type="button"
+                  aria-label="Close menu"
+                  onClick={() => setSidebarOpen(false)}
+                  className="rounded-full bg-[#0e3646] hover:bg-[#14475c] active:scale-95 flex items-center justify-center text-slate-300 hover:text-white transition-all cursor-pointer"
+                  style={{
+                    width: "32px",
+                    minWidth: "32px",
+                    maxWidth: "32px",
+                    height: "32px",
+                    minHeight: "32px",
+                    maxHeight: "32px",
+                    flex: "0 0 32px",
+                    padding: 0,
+                    borderRadius: "9999px",
+                  }}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Instant Search Bar for Small Devices */}
+              <div className="relative mb-3 w-full" style={{ width: "100%" }}>
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                <input
+                  type="text"
+                  data-menu-search-input="true"
+                  value={mobileMenuSearch}
+                  onChange={(e) => setMobileMenuSearch(e.target.value)}
+                  placeholder={`Search ${
+                    activeSidebarDisplayMode === "PAGES"
+                      ? `${allMobilePages.length} pages`
+                      : activeSidebarDisplayMode === "SECTIONS"
+                      ? `${allMobileSections.length} sections`
+                      : `${modules.length} modules`
+                  }...`}
+                  className="w-full text-xs rounded-xl pl-9 pr-8 py-2 border transition-all"
+                  style={{
+                    backgroundColor: "#0e3646",
+                    color: "#ffffff",
+                    WebkitTextFillColor: "#ffffff",
+                    caretColor: "#f8bc24",
+                    borderColor: "#14475c",
+                    boxSizing: "border-box",
+                  }}
+                />
+                {mobileMenuSearch && (
+                  <button
+                    type="button"
+                    aria-label="Clear search"
+                    onClick={() => setMobileMenuSearch("")}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"
+                    style={{ width: "24px", height: "24px", padding: 0 }}
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                )}
+              </div>
+
+              {/* 4-Column Grid Launcher matching reference image */}
+              <div
+                data-mobile-menu-grid="true"
+                className="w-full"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(4, minmax(0, 1fr))",
+                  gap: "10px 4px",
+                  width: "100%",
+                }}
+              >
+                {/* 1. Home Item */}
+                {(!mobileMenuSearch.trim() || "home".includes(mobileMenuSearch.toLowerCase().trim())) && (
+                  <NavLink
+                    to="/"
+                    end
+                    onClick={() => setSidebarOpen(false)}
+                    style={{ minWidth: 0, width: "100%" }}
+                    className={({ isActive }) =>
+                      `flex flex-col items-center justify-center px-1 py-1.5 rounded-2xl transition-all active:scale-95 text-center min-h-[82px] w-full min-w-0 ${
+                        isActive
+                          ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                          : "text-white hover:bg-white/10"
+                      }`
+                    }
+                  >
+                    <span className="w-8 h-8 flex items-center justify-center mb-1 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                      <Home />
+                    </span>
+                    <span className="text-[9.5px] sm:text-[10.5px] font-medium leading-tight w-full text-center text-white px-0.5 break-normal tracking-tight line-clamp-2">
+                      Home
+                    </span>
+                  </NavLink>
+                )}
+
+                {/* 2. Items depending on activeSidebarDisplayMode */}
+                {activeSidebarDisplayMode === "SECTIONS" ? (
+                  filteredMobileSections.length > 0 ? (
+                    filteredMobileSections.map((sec) => (
+                      <NavLink
+                        key={sec.key}
+                        to={sec.path}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{ minWidth: 0, width: "100%" }}
+                        className={({ isActive }) =>
+                          `flex flex-col items-center justify-center px-1 py-1.5 rounded-2xl transition-all active:scale-95 text-center min-h-[82px] w-full min-w-0 ${
+                            isActive
+                              ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                              : "text-white hover:bg-white/10"
+                          }`
+                        }
+                        title={sec.label}
+                      >
+                        <span className="w-8 h-8 flex items-center justify-center mb-1 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                          {sec.icon}
+                        </span>
+                        <span className="text-[9.5px] sm:text-[10.5px] font-medium leading-tight w-full text-center text-white px-0.5 break-normal tracking-tight line-clamp-2" title={sec.label}>
+                          {sec.label}
+                        </span>
+                      </NavLink>
+                    ))
+                  ) : (
+                    <div className="col-span-4 py-8 text-center text-xs text-slate-400">
+                      No sections matching &ldquo;{mobileMenuSearch}&rdquo;
+                    </div>
+                  )
+                ) : activeSidebarDisplayMode === "MODULES" ? (
+                  filteredMobileModules.length > 0 ? (
+                    filteredMobileModules.map((m) => (
+                      <NavLink
+                        key={m.key}
+                        to={m.path}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{ minWidth: 0, width: "100%" }}
+                        className={({ isActive }) =>
+                          `flex flex-col items-center justify-center px-1 py-1.5 rounded-2xl transition-all active:scale-95 text-center min-h-[82px] w-full min-w-0 ${
+                            isActive || (m.path !== "/" && location.pathname.startsWith(m.path))
+                              ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                              : "text-white hover:bg-white/10"
+                          }`
+                        }
+                        title={m.label}
+                      >
+                        <span className="w-8 h-8 flex items-center justify-center mb-1 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:stroke-white [&>svg]:text-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                          {m.icon}
+                        </span>
+                        <span className="text-[9.5px] sm:text-[10.5px] font-medium leading-tight w-full text-center text-white px-0.5 break-normal tracking-tight line-clamp-2" title={m.label}>
+                          {m.label}
+                        </span>
+                      </NavLink>
+                    ))
+                  ) : (
+                    <div className="col-span-4 py-8 text-center text-xs text-slate-400">
+                      No modules matching &ldquo;{mobileMenuSearch}&rdquo;
+                    </div>
+                  )
+                ) : (
+                  // Default / PAGES mode: Show ALL allocated pages for this user in 4 columns
+                  filteredMobilePages.length > 0 ? (
+                    filteredMobilePages.map((page) => (
+                      <NavLink
+                        key={page.key}
+                        to={page.path}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{ minWidth: 0, width: "100%" }}
+                        className={({ isActive }) =>
+                          `flex flex-col items-center justify-center px-1 py-1.5 rounded-2xl transition-all active:scale-95 text-center min-h-[82px] w-full min-w-0 ${
+                            isActive || location.pathname === page.path
+                              ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                              : "text-white hover:bg-white/10"
+                          }`
+                        }
+                        title={page.label}
+                      >
+                        <span className="w-8 h-8 flex items-center justify-center mb-1 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                          {page.icon}
+                        </span>
+                        <span className="text-[9.5px] sm:text-[10.5px] font-medium leading-tight w-full text-center text-white px-0.5 break-normal tracking-tight line-clamp-2" title={page.label}>
+                          {page.label}
+                        </span>
+                      </NavLink>
+                    ))
+                  ) : (
+                    <div className="col-span-4 py-8 text-center text-xs text-slate-400">
+                      No pages matching &ldquo;{mobileMenuSearch}&rdquo;
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
         )}
 
-        <aside
-          data-rbac-exempt="true"
-          onTouchStart={handleSidebarTouchStart}
-          onTouchEnd={handleSidebarTouchEnd}
-          className={
-            "md:sticky md:top-[56px] md:h-[calc(100vh-56px)] border-b md:border-b-0 md:border-r border-slate-800 dark:border-slate-800 p-5 bg-brand-950 dark:bg-slate-950 shadow-lg overflow-y-auto no-scrollbar z-[60] transition-all duration-300 ease-in-out " +
-            (sidebarOpen
-              ? "fixed inset-y-0 left-0 w-[280px] top-[56px] translate-x-0 md:static md:translate-x-0"
-              : "fixed inset-y-0 left-0 w-[280px] top-[56px] -translate-x-full md:static md:translate-x-0 md:hidden")
-          }
-        >
-          <nav className="space-y-1 pb-6">
-            <NavLink
-              to="/"
-              end
-              onClick={() => {
-                if (window.innerWidth < 768) setSidebarOpen(false);
+        {/* Medium & Large Devices: Floating Board with rounded edges, 80% opacity, 8 grid columns */}
+        {sidebarOpen && (
+          <div className="hidden md:block">
+            {/* Backdrop Overlay */}
+            <div
+              className="fixed inset-0 z-[70] bg-black/60 backdrop-blur-xs transition-opacity duration-300 animate-in fade-in"
+              onClick={() => setSidebarOpen(false)}
+              aria-hidden="true"
+            />
+
+            {/* Floating Board */}
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation Menu Board"
+              data-rbac-exempt="true"
+              className="fixed z-[80] inset-x-6 md:inset-x-8 lg:inset-x-12 xl:inset-x-16 top-[70px] max-h-[calc(100vh-90px)] overflow-y-auto no-scrollbar rounded-3xl p-6 lg:p-8 shadow-2xl border border-[#0e3646]/80 text-white animate-in zoom-in-95 fade-in duration-200"
+              style={{
+                backgroundColor: "rgba(6, 26, 34, 0.80)",
+                backdropFilter: "blur(20px)",
+                WebkitBackdropFilter: "blur(20px)",
               }}
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ` +
-                (isActive
-                  ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
-                  : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
-              }
             >
-              <span
-                className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity"
-                aria-hidden="true"
-              >
-                <Home />
-              </span>
-              <span>Home</span>
-            </NavLink>
-            {isUserId1 ? (
-              // Default module names menu bar for User ID = 1 (System Super Admin)
-              modules
-                .filter((m) => {
-                  if (m.key === "system-configuration") {
-                    return Number(user?.id) === 1 || Number(user?.id) === 2;
-                  }
-                  // Use PermissionContext to check if module should appear in sidebar
-                  return canViewModule(m.key);
-                })
-                .map((m) => (
-                  <React.Fragment key={m.key}>
-                    <NavLink
-                      key={m.key}
-                      to={m.path}
-                      onClick={() => {
-                        if (window.innerWidth < 768) setSidebarOpen(false);
-                      }}
-                      className={({ isActive }) =>
-                        `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group border-l-4 ` +
-                        (isActive
-                          ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
-                          : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
-                      }
+              {/* Floating Board Header */}
+              <div className="flex items-center justify-between pb-4 mb-6 border-b border-[#0e3646]/80">
+                <div className="flex items-center gap-3">
+                  <span className="text-base lg:text-lg font-bold uppercase tracking-wider text-white">
+                    {activeSidebarDisplayMode === "PAGES"
+                      ? "Pages"
+                      : activeSidebarDisplayMode === "SECTIONS"
+                      ? "Module Sections"
+                      : "Modules"}
+                  </span>
+                  <span className="text-xs px-2.5 py-1 rounded-full bg-[#0e3646] text-slate-300 font-medium">
+                    {activeSidebarDisplayMode === "PAGES"
+                      ? (mobileMenuSearch ? `${filteredMobilePages.length} of ${allMobilePages.length}` : `${allMobilePages.length + 1} items`)
+                      : activeSidebarDisplayMode === "SECTIONS"
+                      ? (mobileMenuSearch ? `${filteredMobileSections.length} of ${allMobileSections.length}` : `${allMobileSections.length + 1} items`)
+                      : (mobileMenuSearch ? `${filteredMobileModules.length} of ${modules.length}` : `${modules.filter((m) => m.key !== "system-configuration" || Number(user?.id) === 1 || Number(user?.id) === 2).length + 1} items`)}
+                  </span>
+                </div>
+
+                {/* Instant Search Bar for Desktop Floating Board */}
+                <div className="flex-1 max-w-sm mx-6 relative">
+                  <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 pointer-events-none" />
+                  <input
+                    type="text"
+                    data-menu-search-input="true"
+                    value={mobileMenuSearch}
+                    onChange={(e) => setMobileMenuSearch(e.target.value)}
+                    placeholder={`Search ${
+                      activeSidebarDisplayMode === "PAGES"
+                        ? `${allMobilePages.length} pages`
+                        : activeSidebarDisplayMode === "SECTIONS"
+                        ? `${allMobileSections.length} sections`
+                        : `${modules.length} modules`
+                    }...`}
+                    className="w-full text-xs rounded-xl pl-9 pr-8 py-2 border transition-all"
+                    style={{
+                      backgroundColor: "#0e3646",
+                      color: "#ffffff",
+                      WebkitTextFillColor: "#ffffff",
+                      caretColor: "#f8bc24",
+                      borderColor: "#14475c",
+                      boxSizing: "border-box",
+                    }}
+                  />
+                  {mobileMenuSearch && (
+                    <button
+                      type="button"
+                      aria-label="Clear search"
+                      onClick={() => setMobileMenuSearch("")}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-300 hover:text-white flex items-center justify-center cursor-pointer"
+                      style={{ width: "24px", height: "24px", padding: 0 }}
                     >
-                      <span
-                        className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity"
-                        aria-hidden="true"
-                      >
-                        {m.icon}
-                      </span>
-                      <span>{m.label}</span>
-                    </NavLink>
-                    {m.key === "project-management" && (
-                      <NavLink
-                        key="project-management-dashboard"
-                        to="/project-management/dashboard"
-                        onClick={() => {
-                          if (window.innerWidth < 768) setSidebarOpen(false);
-                        }}
-                        className={({ isActive }) =>
-                          `flex items-center gap-2.5 pl-9 pr-3.5 py-2 rounded-xl text-xs font-medium transition-all duration-150 group border-l-4 ` +
-                          (isActive
-                            ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
-                            : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent")
-                        }
-                      >
-                        <span
-                          className="w-4 h-4 flex items-center justify-center shrink-0 [&>svg]:w-[14px] [&>svg]:h-[14px] opacity-80 group-hover:opacity-100 transition-opacity"
-                          aria-hidden="true"
-                        >
-                          <LayoutDashboard />
-                        </span>
-                        <span>Project Dashboard</span>
-                      </NavLink>
-                    )}
-                  </React.Fragment>
-                ))
-            ) : (
-              // Replaced with sections / sub-modules where pages are grouped in module homes
-              <div className="space-y-4 pt-1">
-                {MODULE_HOME_SECTIONS.filter((mod) => {
-                  if (mod.moduleKey === "system-configuration") {
-                    return Number(user?.id) === 1 || Number(user?.id) === 2;
-                  }
-                  return canViewModule(mod.moduleKey);
-                }).map((mod) => {
-                  const accessibleSections = (mod.sections || [])
-                    .map((sec) => {
-                      const isSecDashboard =
-                        (sec.path && (sec.path.endsWith("/dashboard") || sec.path.endsWith("/dashboards"))) ||
-                        (sec.key && sec.key.toLowerCase().includes("dashboard"));
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
 
-                      if (isSecDashboard) {
-                        const isUid1 = Number(user?.id) === 1;
-                        const hasDbPerm =
-                          isUid1 ||
-                          canViewDashboardElement(mod.moduleKey, "dashboard", "dashboard") ||
-                          canViewDashboardElement(mod.moduleKey, "dashboard", sec.key) ||
-                          (canAccessPath && canAccessPath(sec.path));
-                        if (!hasDbPerm) {
-                          return { ...sec, visibleItems: [] };
-                        }
-                      }
-
-                      const visibleItems = (sec.items || []).filter((item) => {
-                        if (Number(user?.id) === 1) return true;
-
-                        const isItemDashboard =
-                          (item.path && (item.path.endsWith("/dashboard") || item.path.endsWith("/dashboards"))) ||
-                          item.feature_key === "dashboard";
-
-                        if (isItemDashboard) {
-                          const hasItemDbPerm =
-                            canViewDashboardElement(mod.moduleKey, "dashboard", "dashboard") ||
-                            canViewDashboardElement(mod.moduleKey, "dashboard", item.feature_key) ||
-                            (canAccessPath && canAccessPath(item.path));
-                          if (!hasItemDbPerm) return false;
-                        }
-
-                        if (
-                          item.feature_key &&
-                          item.feature_key !== "dashboard" &&
-                          !canAccessFeatureKey(mod.moduleKey, item.feature_key)
-                        ) {
-                          return false;
-                        }
-                        if (item.path && canAccessPath && !canAccessPath(item.path)) {
-                          return false;
-                        }
-                        return true;
-                      });
-                      return { ...sec, visibleItems };
-                    })
-                    .filter(
-                      (sec) =>
-                        sec.visibleItems.length > 0 ||
-                        ((sec.items || []).length === 0 && (!sec.path || (canAccessPath && canAccessPath(sec.path))))
-                    );
-
-                  if (accessibleSections.length === 0) return null;
-
-                  const isCurrentModule =
-                    location.pathname === mod.modulePath ||
-                    location.pathname.startsWith(`${mod.modulePath}/`);
-
-                  const isExpanded =
-                    expandedModules[mod.moduleKey] !== undefined
-                      ? !!expandedModules[mod.moduleKey]
-                      : isCurrentModule;
-
-                  const isModuleActive =
-                    location.pathname === mod.modulePath;
-
-                  return (
-                    <div key={mod.moduleKey} className="space-y-1">
-                      {/* Module Main Navigation Row with White Icon, Label & Collapsible Chevron */}
-                      <div className="flex items-center justify-between rounded-xl transition-all duration-150 group">
-                        <Link
-                          to={mod.modulePath}
-                          onClick={() => {
-                            setExpandedModules((prev) => ({ ...prev, [mod.moduleKey]: true }));
-                            if (window.innerWidth < 768) setSidebarOpen(false);
-                          }}
-                          className={`flex-1 flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 border-l-4 ${
-                            isModuleActive
-                              ? "bg-brand-900 text-white shadow-apple-xs dark:bg-white/15 dark:text-white border-[#FBBE23]"
-                              : isCurrentModule
-                              ? "text-white font-semibold hover:bg-white/10 border-transparent"
-                              : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent"
-                          }`}
-                          title={`Go to ${mod.moduleLabel} Home`}
-                        >
-                          <span
-                            className="w-5 h-5 flex items-center justify-center shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] opacity-80 group-hover:opacity-100 transition-opacity text-slate-300 dark:text-slate-400 group-hover:text-white"
-                            aria-hidden="true"
-                          >
-                            {moduleIconMap.get(mod.moduleKey) || <Blocks />}
-                          </span>
-                          <span className="truncate">{mod.moduleLabel}</span>
-                        </Link>
-
-                        {accessibleSections.length > 0 && (
-                          <button
-                            type="button"
-                            onClick={(e) => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              setExpandedModules((prev) => ({
-                                ...prev,
-                                [mod.moduleKey]: !isExpanded,
-                              }));
-                            }}
-                            className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors mr-1 shrink-0"
-                            aria-label={isExpanded ? `Collapse ${mod.moduleLabel}` : `Expand ${mod.moduleLabel}`}
-                            title={isExpanded ? "Collapse sections" : "Expand sections"}
-                          >
-                            <ChevronDown
-                              className={`w-4 h-4 transition-transform duration-200 ${
-                                isExpanded ? "rotate-180 text-white" : "rotate-0 text-slate-400"
-                              }`}
-                            />
-                          </button>
-                        )}
-                      </div>
-
-                      {/* Collapsible Sections Container (Hidden when collapsed) */}
-                      {isExpanded && accessibleSections.length > 0 && (
-                        <div className="pl-3.5 pr-1 py-0.5 space-y-1 border-l-2 border-slate-700/60 ml-5 mt-0.5">
-                          {accessibleSections.map((sec) => {
-                            const secKey = `${mod.moduleKey}-${sec.key}`;
-                            const sectionTargetUrl = sec.path || `${mod.modulePath}?section=${encodeURIComponent(
-                              sec.title
-                            )}`;
-
-                            const isChildActive = (sec.items || []).some(
-                              (item) =>
-                                item.path &&
-                                (location.pathname === item.path ||
-                                  location.pathname.startsWith(`${item.path}/`))
-                            );
-
-                            const isSectionHomeActive = (() => {
-                              if (sec.path && (location.pathname === sec.path || location.pathname.startsWith(`${sec.path}/`))) {
-                                return true;
-                              }
-                              if (location.pathname === mod.modulePath) {
-                                const searchParams = new URLSearchParams(
-                                  location.search || ""
-                                );
-                                const secParam = searchParams.get("section");
-                                if (secParam) {
-                                  return (
-                                    secParam.toLowerCase() ===
-                                      sec.title.toLowerCase() ||
-                                    secParam.toLowerCase() === sec.key.toLowerCase()
-                                  );
-                                }
-                              }
-                              return false;
-                            })();
-
-                            const isSectionActive =
-                              isChildActive || isSectionHomeActive;
-
-                            return (
-                              <Link
-                                key={secKey}
-                                to={sectionTargetUrl}
-                                onClick={() => {
-                                  if (window.innerWidth < 768) setSidebarOpen(false);
-                                }}
-                                className={`flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium transition-all duration-150 group border-l-2 ${
-                                  isSectionActive
-                                    ? "bg-brand-900/80 text-white border-[#FBBE23]"
-                                    : "text-slate-300 dark:text-slate-400 hover:bg-white/10 hover:text-white border-transparent"
-                                }`}
-                                title={sec.title}
-                              >
-                                <span
-                                  className="w-4 h-4 flex items-center justify-center shrink-0 [&>svg]:w-3.5 [&>svg]:h-3.5 opacity-80 group-hover:opacity-100 transition-opacity text-slate-300 dark:text-slate-300 group-hover:text-white"
-                                  aria-hidden="true"
-                                >
-                                  {getSectionIcon(sec.key, sec.title)}
-                                </span>
-                                <span className="truncate">{sec.title}</span>
-                              </Link>
-                            );
-                          })}
-                        </div>
-                      )}
-                    </div>
-                  );
-                })}
+                {/* Close Button */}
+                <button
+                  type="button"
+                  aria-label="Close menu board"
+                  onClick={() => setSidebarOpen(false)}
+                  className="w-8 h-8 rounded-full bg-[#0e3646] hover:bg-[#14475c] active:scale-95 flex items-center justify-center text-slate-300 hover:text-white transition-all shadow-sm"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
-            )}
-          </nav>
-        </aside>
+
+              {/* 8-Column Grid Launcher */}
+              <div
+                data-desktop-floating-board-grid="true"
+                className="w-full"
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "repeat(8, minmax(0, 1fr))",
+                  gap: "16px 12px",
+                  width: "100%",
+                }}
+              >
+                {/* 1. Home Item */}
+                {(!mobileMenuSearch.trim() || "home".includes(mobileMenuSearch.toLowerCase().trim())) && (
+                  <NavLink
+                    to="/"
+                    end
+                    onClick={() => setSidebarOpen(false)}
+                    style={{ minWidth: 0, width: "100%" }}
+                    className={({ isActive }) =>
+                      `flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 text-center min-h-[96px] w-full min-w-0 group border border-transparent hover:border-[#0e3646] ${
+                        isActive
+                          ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                          : "text-white hover:bg-white/10"
+                      }`
+                    }
+                  >
+                    <span className="w-9 h-9 flex items-center justify-center mb-1.5 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                      <Home />
+                    </span>
+                    <span className="text-xs font-medium leading-snug w-full text-center text-white px-1 break-words line-clamp-2">
+                      Home
+                    </span>
+                  </NavLink>
+                )}
+
+                {/* 2. Items depending on activeSidebarDisplayMode */}
+                {activeSidebarDisplayMode === "SECTIONS" ? (
+                  filteredMobileSections.length > 0 ? (
+                    filteredMobileSections.map((sec) => (
+                      <NavLink
+                        key={sec.key}
+                        to={sec.path}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{ minWidth: 0, width: "100%" }}
+                        className={({ isActive }) =>
+                          `flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 text-center min-h-[96px] w-full min-w-0 group border border-transparent hover:border-[#0e3646] ${
+                            isActive
+                              ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                              : "text-white hover:bg-white/10"
+                          }`
+                        }
+                        title={sec.label}
+                      >
+                        <span className="w-9 h-9 flex items-center justify-center mb-1.5 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                          {sec.icon}
+                        </span>
+                        <span className="text-xs font-medium leading-snug w-full text-center text-white px-1 break-words line-clamp-2">
+                          {sec.label}
+                        </span>
+                      </NavLink>
+                    ))
+                  ) : (
+                    <div className="col-span-8 py-8 text-center text-sm text-slate-400">
+                      No sections matching &ldquo;{mobileMenuSearch}&rdquo;
+                    </div>
+                  )
+                ) : activeSidebarDisplayMode === "MODULES" ? (
+                  filteredMobileModules.length > 0 ? (
+                    filteredMobileModules.map((m) => {
+                      const isModActive = location.pathname.startsWith(m.path);
+                      return (
+                        <NavLink
+                          key={m.key}
+                          to={m.path}
+                          onClick={() => setSidebarOpen(false)}
+                          style={{ minWidth: 0, width: "100%" }}
+                          className={({ isActive }) =>
+                            `flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 text-center min-h-[96px] w-full min-w-0 group border border-transparent hover:border-[#0e3646] ${
+                              isActive || isModActive
+                                ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                                : "text-white hover:bg-white/10"
+                            }`
+                          }
+                          title={m.label}
+                        >
+                          <span className="w-9 h-9 flex items-center justify-center mb-1.5 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                            {getPageWhiteIcon(m.label, m.path, m.key)}
+                          </span>
+                          <span className="text-xs font-medium leading-snug w-full text-center text-white px-1 break-words line-clamp-2">
+                            {m.label}
+                          </span>
+                        </NavLink>
+                      );
+                    })
+                  ) : (
+                    <div className="col-span-8 py-8 text-center text-sm text-slate-400">
+                      No modules matching &ldquo;{mobileMenuSearch}&rdquo;
+                    </div>
+                  )
+                ) : (
+                  // Default / PAGES mode: Show ALL allocated pages in 8-column grid
+                  filteredMobilePages.length > 0 ? (
+                    filteredMobilePages.map((page) => (
+                      <NavLink
+                        key={page.key}
+                        to={page.path}
+                        onClick={() => setSidebarOpen(false)}
+                        style={{ minWidth: 0, width: "100%" }}
+                        className={({ isActive }) =>
+                          `flex flex-col items-center justify-center p-3 rounded-2xl transition-all active:scale-95 text-center min-h-[96px] w-full min-w-0 group border border-transparent hover:border-[#0e3646] ${
+                            isActive || location.pathname === page.path
+                              ? "bg-[#0e3646] text-white shadow-lg ring-2 ring-[#f8bc24] font-bold"
+                              : "text-white hover:bg-white/10"
+                          }`
+                        }
+                        title={page.label}
+                      >
+                        <span className="w-9 h-9 flex items-center justify-center mb-1.5 text-white [&>svg]:w-6 [&>svg]:h-6 [&>svg]:text-white [&>svg]:stroke-white [&>svg]:fill-none shrink-0" aria-hidden="true">
+                          {page.icon}
+                        </span>
+                        <span className="text-xs font-medium leading-snug w-full text-center text-white px-1 break-words line-clamp-2">
+                          {page.label}
+                        </span>
+                      </NavLink>
+                    ))
+                  ) : (
+                    <div className="col-span-8 py-8 text-center text-sm text-slate-400">
+                      No pages matching &ldquo;{mobileMenuSearch}&rdquo;
+                    </div>
+                  )
+                )}
+              </div>
+            </div>
+          </div>
+        )}
 
         <main
           className={`flex-1 overflow-x-hidden min-w-0 relative min-h-[calc(100vh-56px)] pb-24 lg:pb-6 ${
@@ -2878,7 +3460,7 @@ export default function AppShell() {
               aria-hidden="true"
               className="fixed top-[56px] bottom-0 right-0 pointer-events-none z-0 transition-colors duration-300 ease-in-out"
               style={{
-                left: (sidebarOpen && typeof window !== "undefined" && window.innerWidth >= 768) ? "280px" : "0px",
+                left: "0px",
                 backgroundColor: resolvedBg.color,
               }}
             />
@@ -2887,7 +3469,7 @@ export default function AppShell() {
               aria-hidden="true"
               className="fixed top-[56px] bottom-0 right-0 pointer-events-none z-0 bg-cover bg-center bg-no-repeat transition-all duration-300 ease-in-out"
               style={{
-                left: (sidebarOpen && typeof window !== "undefined" && window.innerWidth >= 768) ? "280px" : "0px",
+                left: "0px",
                 backgroundImage: `url(${resolvedBg.url})`,
                 opacity: Math.max(
                   0,
@@ -2969,13 +3551,13 @@ export default function AppShell() {
       <nav
         aria-label="Mobile Navigation"
         data-rbac-exempt="true"
-        className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200/90 dark:border-slate-800 z-40 flex items-center px-2 shadow-apple-dock pb-[env(safe-area-inset-bottom)]"
+        className="lg:hidden fixed bottom-0 inset-x-0 h-16 bg-white/95 dark:bg-slate-950/95 backdrop-blur-lg border-t border-slate-200/90 dark:border-slate-800 z-40 flex items-center px-1 shadow-apple-dock pb-[env(safe-area-inset-bottom)]"
       >
         <NavLink
           to="/"
           end
           className={({ isActive }) =>
-            `flex flex-col items-center justify-center shrink-0 min-w-[54px] px-2 py-1 transition-all duration-150 active:scale-95 border-r border-slate-200/60 dark:border-slate-800/80 ${
+            `flex flex-col items-center justify-center shrink-0 w-[50px] sm:w-[54px] py-1 transition-all duration-150 active:scale-95 border-r border-slate-200/60 dark:border-slate-800/80 ${
               isActive
                 ? "text-brand-900 dark:text-brand-300 font-semibold"
                 : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -2983,24 +3565,29 @@ export default function AppShell() {
           }
         >
           <Home className="w-5 h-5 mb-0.5" />
-          <span className="text-[11px] leading-tight">Home</span>
+          <span className="text-[10.5px] sm:text-[11px] font-medium leading-tight">Home</span>
         </NavLink>
 
-        {/* Horizontally Slideable/Scrollable Module Icons for Small & Medium devices */}
+        {/* Middle items window: displays at least 4 items in the window */}
         <div 
-          className="flex-1 flex items-center gap-1 overflow-x-auto scrollbar-none no-scrollbar px-1.5 py-1"
+          ref={mobileNavScrollRef}
+          className="flex-1 h-full flex items-center overflow-x-auto scrollbar-none no-scrollbar snap-x snap-mandatory px-0.5"
           style={{
             WebkitOverflowScrolling: "touch",
             scrollbarWidth: "none",
             msOverflowStyle: "none",
           }}
         >
-          {topMobileModules.map((m) => (
+          {mobileNavItems.map((m) => (
             <NavLink
               key={m.key}
               to={m.path}
               className={({ isActive }) =>
-                `flex flex-col items-center justify-center shrink-0 min-w-[56px] px-2 py-1 rounded-xl transition-all duration-150 active:scale-95 ${
+                `flex flex-col items-center justify-center flex-none snap-start ${
+                  mobileNavItems.length <= 4
+                    ? "flex-1 min-w-0"
+                    : "basis-1/4 w-1/4 min-w-[25%] max-w-[25%]"
+                } h-full px-0.5 py-1 rounded-xl transition-all duration-150 active:scale-95 ${
                   isActive
                     ? "text-brand-900 dark:text-brand-300 font-semibold bg-brand-50/60 dark:bg-brand-950/50"
                     : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
@@ -3013,8 +3600,8 @@ export default function AppShell() {
               >
                 {m.icon}
               </span>
-              <span className="text-[11px] leading-tight truncate max-w-[68px] text-center">
-                {m.shortLabel || m.label}
+              <span className="text-[8.5px] sm:text-[9.5px] leading-tight line-clamp-2 break-normal tracking-tight w-full text-center px-0.5 font-medium" title={m.label}>
+                {m.label}
               </span>
             </NavLink>
           ))}
@@ -3025,14 +3612,14 @@ export default function AppShell() {
           aria-label="Toggle all modules menu"
           data-rbac-exempt="true"
           onClick={() => setSidebarOpen((v) => !v)}
-          className={`flex flex-col items-center justify-center shrink-0 min-w-[54px] px-2 py-1 border-l border-slate-200/60 dark:border-slate-800/80 transition-all duration-150 active:scale-95 ${
+          className={`flex flex-col items-center justify-center shrink-0 w-[50px] sm:w-[54px] py-1 border-l border-slate-200/60 dark:border-slate-800/80 transition-all duration-150 active:scale-95 ${
             sidebarOpen
               ? "text-brand-900 dark:text-brand-300 font-semibold"
               : "text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
           }`}
         >
           <Menu className="w-5 h-5 mb-0.5" />
-          <span className="text-[11px] leading-tight">Menu</span>
+          <span className="text-[10.5px] sm:text-[11px] font-medium leading-tight">Menu</span>
         </button>
       </nav>
     </div>

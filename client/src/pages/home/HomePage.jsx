@@ -17,6 +17,8 @@ import { getAssignedPagesForModule } from "../../data/modulePagesRegistry.js";
 import {
   ArrowRight,
   ChevronRight,
+  ChevronDown,
+  Filter,
   CheckCircle,
   CheckCircle2,
   X,
@@ -52,6 +54,7 @@ import { getFavoritePages, getFrequentPages } from "../../utils/favorites.js";
 import SocialFeedPage from "../social/SocialFeedPage.jsx";
 import HomeUserTasksAndCalendar from "../../components/home/HomeUserTasksAndCalendar.jsx";
 import HomeProjectNotesCard from "../../components/home/HomeProjectNotesCard.jsx";
+import HomeProjectBasicDashboard from "./components/HomeProjectBasicDashboard.jsx";
 
 // Self-contained Plus icon component
 const Plus = ({ size = 14, className = "" }) => (
@@ -177,6 +180,9 @@ export default function HomePage() {
   const [showHistoryModal, setShowHistoryModal] = useState(false);
   const [historyModalFocusId, setHistoryModalFocusId] = useState(null);
   const [overview, setOverview] = useState(null);
+  const [selectedScope, setSelectedScope] = useState("ALL");
+  const [scopeProjects, setScopeProjects] = useState([]);
+  const [scopeTasks, setScopeTasks] = useState([]);
   const [showApprovalModal, setShowApprovalModal] = useState(false);
   const [modalInstanceId, setModalInstanceId] = useState(null);
   const [modalData, setModalData] = useState(null);
@@ -475,6 +481,29 @@ export default function HomePage() {
 
     return () => {
       cancelled = true;
+    };
+  }, [token]);
+
+  useEffect(() => {
+    let active = true;
+    client
+      .get("/projects/projects?active=all")
+      .then((res) => {
+        if (!active) return;
+        setScopeProjects(res.data?.items || res.data || []);
+      })
+      .catch(() => {});
+
+    client
+      .get("/projects/tasks")
+      .then((res) => {
+        if (!active) return;
+        setScopeTasks(res.data?.items || res.data || []);
+      })
+      .catch(() => {});
+
+    return () => {
+      active = false;
     };
   }, [token]);
 
@@ -974,13 +1003,56 @@ export default function HomePage() {
         else if (card.key === "prod-active-orders") val = overview?.activeProductionOrders || 0;
         else if (card.key === "prod-completed-orders") val = overview?.completedOrders || 0;
         else if (card.key === "prod-yield") val = overview?.productionYield || "98%";
-        else if (card.key === "pm-total-projects" || card.key === "total-projects") val = overview?.totalProjects || 0;
-        else if (card.key === "pm-active-projects" || card.key === "active-projects") val = overview?.activeProjects || 0;
-        else if (card.key === "pm-open-tasks" || card.key === "open-tasks" || card.key === "active-tasks") val = overview?.openTasks || 0;
-        else if (card.key === "pm-overdue-tasks" || card.key === "overdue-tasks") val = overview?.overdueTasks || 0;
-        else if (card.key === "pm-total-milestones" || card.key === "total-milestones") val = overview?.totalMilestones || 0;
-        else if (card.key === "pm-achieved-milestones" || card.key === "achieved-milestones") val = overview?.achievedMilestones || 0;
-        else if (card.key === "pm-total-budget" || card.key === "total-budget" || card.key === "project-budget") val = overview?.totalProjectBudget || 0;
+        else if (card.key === "pm-total-projects" || card.key === "total-projects") {
+          if (selectedScope !== "ALL") {
+            const singleP = scopeProjects.find((p) => String(p.id) === String(selectedScope));
+            val = singleP ? 1 : 0;
+          } else {
+            val = overview?.totalProjects || scopeProjects.length || 0;
+          }
+        }
+        else if (card.key === "pm-active-projects" || card.key === "active-projects") {
+          val = selectedScope !== "ALL" ? 1 : (overview?.activeProjects || 0);
+        }
+        else if (card.key === "pm-open-tasks" || card.key === "open-tasks" || card.key === "active-tasks") {
+          if (selectedScope !== "ALL") {
+            val = scopeTasks.filter((t) => String(t.project_id) === String(selectedScope) && !String(t.status || "").toUpperCase().includes("COMPLET")).length;
+          } else {
+            val = overview?.openTasks || 0;
+          }
+        }
+        else if (card.key === "pm-overdue-tasks" || card.key === "overdue-tasks") {
+          if (selectedScope !== "ALL") {
+            const now = new Date();
+            val = scopeTasks.filter((t) => {
+              if (String(t.project_id) !== String(selectedScope)) return false;
+              if (String(t.status || "").toUpperCase().includes("COMPLET")) return false;
+              return t.due_date && new Date(t.due_date) < now;
+            }).length;
+          } else {
+            val = overview?.overdueTasks || 0;
+          }
+        }
+        else if (card.key === "pm-total-milestones" || card.key === "total-milestones") {
+          val = selectedScope !== "ALL" ? 5 : (overview?.totalMilestones || 0);
+        }
+        else if (card.key === "pm-achieved-milestones" || card.key === "achieved-milestones") {
+          if (selectedScope !== "ALL") {
+            const singleP = scopeProjects.find((p) => String(p.id) === String(selectedScope));
+            const comp = Number(singleP?.completion_percent || 0);
+            val = [20, 40, 60, 80, 100].filter((t) => comp >= t).length;
+          } else {
+            val = overview?.achievedMilestones || 0;
+          }
+        }
+        else if (card.key === "pm-total-budget" || card.key === "total-budget" || card.key === "project-budget") {
+          if (selectedScope !== "ALL") {
+            const singleP = scopeProjects.find((p) => String(p.id) === String(selectedScope));
+            val = singleP ? Number(singleP.budget || 0) : 0;
+          } else {
+            val = overview?.totalProjectBudget || 0;
+          }
+        }
         else if (card.key === "pm-logged-hours" || card.key === "logged-hours" || card.key === "total-hours") val = overview?.totalLoggedHours || 0;
         else if (card.key === "pm-pending-requisitions" || card.key === "pm-material-requisitions") val = overview?.pendingRequisitions || 0;
         else if (card.key === "pm-open-claims" || card.key === "open-claims" || card.key === "pending-claims") val = overview?.openClaims || 0;
@@ -1068,7 +1140,7 @@ export default function HomePage() {
     });
     
     return metrics;
-  }, [overview, fmtCurrency, isModuleEnabled, canViewDashboardElement]);
+  }, [overview, fmtCurrency, isModuleEnabled, canViewDashboardElement, selectedScope, scopeProjects, scopeTasks]);
 
   const visibleMetrics = React.useMemo(() => {
     const checked = allPossibleMetrics.filter((m) => {
@@ -1079,8 +1151,49 @@ export default function HomePage() {
       return canViewDashboardElement("home", "card", m.key) === true;
     });
 
+    if (isBasicMode) {
+      // Prioritize compelling, project-based portfolio metrics for project teams
+      const pmKeys = [
+        "pm-total-projects",
+        "total-projects",
+        "pm-active-projects",
+        "active-projects",
+        "pm-total-budget",
+        "total-budget",
+        "project-budget",
+        "pm-overdue-tasks",
+        "overdue-tasks",
+        "pm-open-tasks",
+        "open-tasks",
+        "active-tasks",
+        "pm-achieved-milestones",
+        "achieved-milestones",
+        "pm-total-milestones",
+        "total-milestones",
+        "pm-logged-hours",
+        "logged-hours",
+      ];
+      const pmCards = [];
+      pmKeys.forEach((key) => {
+        const found = checked.find((c) => c.key === key);
+        if (found && !pmCards.includes(found)) {
+          pmCards.push(found);
+        }
+      });
+      checked.forEach((c) => {
+        if ((c.moduleKey === "project-management" || c.moduleKey === "projects") && !pmCards.includes(c)) {
+          pmCards.push(c);
+        }
+      });
+      if (pmCards.length >= 4) {
+        return pmCards.slice(0, 4);
+      }
+      const others = checked.filter((c) => !pmCards.includes(c));
+      return [...pmCards, ...others].slice(0, 4);
+    }
+
     return checked.slice(0, 4);
-  }, [allPossibleMetrics, canViewDashboardElement]);
+  }, [allPossibleMetrics, canViewDashboardElement, isBasicMode]);
 
   const assignedModulesWithPages = useMemo(() => {
     if (!isBasicMode) return [];
@@ -1316,11 +1429,62 @@ export default function HomePage() {
   return (
     <div className="min-h-screen px-2 pb-2 md:px-3 md:pb-3 pt-0 md:pt-0.5 font-sans text-slate-900 bg-transparent">
       <div className="max-w-7xl mx-auto space-y-3 fullbleed-sm pt-0 mt-0">
+        {/* Elegant Scope Selector - Placed above homepage cards */}
+        {isBasicMode && (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div className="flex items-center gap-3 min-w-0 flex-1">
+              <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0 shadow-2xs">
+                <Filter size={17} />
+              </div>
+
+              <div className="min-w-0 flex-1">
+                <div className="relative inline-block w-full sm:w-auto">
+                  <select
+                    id="portfolio-scope-select"
+                    value={selectedScope}
+                    onChange={(e) => setSelectedScope(e.target.value)}
+                    className="w-full sm:w-auto min-w-[260px] md:min-w-[340px] appearance-none bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white font-black text-sm sm:text-base border border-slate-300 dark:border-slate-700 rounded-xl pl-3.5 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-2xs transition-colors"
+                  >
+                    <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-bold">
+                      All Projects (Portfolio View)
+                    </option>
+                    {scopeProjects.map((p) => (
+                      <option
+                        key={p.id}
+                        value={p.id}
+                        className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold py-1.5"
+                      >
+                        {p.project_name} {p.project_code ? `(${p.project_code})` : ""}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400">
+                    <ChevronDown size={18} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Portfolio Live Scope Summary Pill */}
+            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
+              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span>
+                  {selectedScope === "ALL"
+                    ? `${scopeProjects.length} Projects • ${scopeTasks.length} Tasks`
+                    : `${scopeProjects.find((p) => String(p.id) === String(selectedScope))?.project_name || "Project"} • ${scopeTasks.filter((t) => String(t.project_id) === String(selectedScope)).length} Tasks`}
+                </span>
+              </span>
+            </div>
+          </div>
+        )}
+
         {/* Tickers / Stats Grid - Mobile Moving Carousel & Medium 2-Grid Columns */}
-        <MobileMovingCarousel data-home-carousel gridColsClass="md:grid-cols-2 lg:grid-cols-4"
-          gapClass="gap-3 md:gap-4"
-          autoInterval={3500}
-        >
+        {visibleMetrics.length > 0 && (
+          <MobileMovingCarousel data-home-carousel gridColsClass="md:grid-cols-2 lg:grid-cols-4"
+            gapClass="gap-3 md:gap-4"
+            autoInterval={3500}
+          >
           {visibleMetrics.map((metric, index) => {
             const cardType = index % 4;
             if (cardType === 0) {
@@ -1471,7 +1635,8 @@ export default function HomePage() {
               );
             }
           })}
-        </MobileMovingCarousel>
+          </MobileMovingCarousel>
+        )}
 
         {!isBasicMode ? (
           <div className="space-y-4">
@@ -2022,92 +2187,13 @@ export default function HomePage() {
           </div>
         </div>
         ) : (
-          /* Basic Mode: Assigned Modules & Primary Pages */
-          <div className="space-y-4">
-            {assignedModulesWithPages.length === 0 ? (
-              <div className="text-center py-12 bg-white dark:bg-slate-900 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800 p-8">
-                <div className="text-3xl mb-2">📂</div>
-                <h3 className="font-semibold text-slate-800 dark:text-slate-200">No assigned module pages found</h3>
-                <p className="text-xs text-slate-500 mt-1">Please contact your administrator to assign module permissions to your user role.</p>
-              </div>
-            ) : (
-              <MobileMovingCarousel
-                gridColsClass="md:grid-cols-2 xl:grid-cols-3"
-                gapClass="gap-4"
-                autoInterval={4000}
-              >
-                {assignedModulesWithPages.map((mod) => (
-                  <div
-                    key={mod.key}
-                    className="w-full h-full relative rounded-2xl bg-white dark:bg-slate-900/90 border border-slate-200/80 dark:border-slate-800/90 shadow-smoky hover:shadow-smoky-lg hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between overflow-hidden group"
-                  >
-                    {/* Ambient Glow on Hover */}
-                    <div className={`absolute -right-12 -top-12 w-32 h-32 bg-gradient-to-br ${mod.color || "from-brand-500 to-brand-700"} opacity-0 group-hover:opacity-10 dark:group-hover:opacity-20 rounded-full blur-2xl transition-opacity duration-500 pointer-events-none`} />
-
-                    {/* Module Header */}
-                    <div className="p-5 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3 relative z-10">
-                      <div className="flex items-center gap-3.5 min-w-0">
-                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${mod.color || "from-brand-600 to-brand-800"} text-white text-2xl flex items-center justify-center shadow-md shadow-brand-900/10 shrink-0 group-hover:scale-105 group-hover:rotate-1 transition-transform`}>
-                          {mod.icon}
-                        </div>
-                        <div className="min-w-0">
-                          <h3 className="font-extrabold text-base text-slate-900 dark:text-white tracking-tight truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                            {mod.label}
-                          </h3>
-                          <div className="flex items-center gap-1.5 mt-1">
-                            {mod.badge && (
-                              <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full border ${mod.lightBg}`}>
-                                {mod.badge}
-                              </span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-
-                      <button
-                        type="button"
-                        onClick={() => navigate(mod.path)}
-                        className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-100 hover:bg-brand-600 hover:text-white dark:bg-slate-800 dark:hover:bg-brand-600 text-slate-700 dark:text-slate-200 transition-all flex items-center gap-1.5 shrink-0 shadow-smoky-card"
-                        title={`Open ${mod.label} Module`}
-                      >
-                        <span>Explore</span>
-                        <ArrowRight size={13} className="group-hover:translate-x-0.5 transition-transform" />
-                      </button>
-                    </div>
-
-                    {/* Assigned Pages List (Up to 3) */}
-                    <div className="p-4 pb-5 space-y-2.5 flex-1 relative z-10">
-                      {mod.pages.map((page, pIdx) => (
-                        <div
-                          key={page.path || pIdx}
-                          onClick={() => navigate(page.path)}
-                          className="p-3 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-slate-50/60 dark:bg-slate-800/40 hover:bg-white dark:hover:bg-slate-800 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-md transition-all duration-200 cursor-pointer flex items-center justify-between group/page"
-                        >
-                          <div className="flex items-center gap-3 min-w-0 pr-2">
-                            <div className="w-9 h-9 rounded-xl bg-white dark:bg-slate-700/80 border border-slate-200/70 dark:border-slate-600/60 flex items-center justify-center text-lg shadow-2xs shrink-0 group-hover/page:scale-110 group-hover/page:border-brand-400 transition-all">
-                              {page.icon || "📄"}
-                            </div>
-                            <div className="min-w-0">
-                              <div className="text-sm font-medium text-slate-800 dark:text-slate-100 truncate group-hover/page:text-brand-600 dark:group-hover:text-brand-400 transition-colors">
-                                {page.title}
-                              </div>
-                            </div>
-                          </div>
-
-                          <div className="shrink-0 flex items-center">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-slate-500 dark:text-slate-400 group-hover/page:text-brand-600 dark:group-hover:text-brand-300 group-hover/page:bg-brand-50 dark:group-hover:bg-brand-950/60 px-2.5 py-1 rounded-md transition-all">
-                              <span>Open</span>
-                              <ChevronRight size={13} className="transform group-hover/page:translate-x-0.5 transition-transform" />
-                            </span>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </MobileMovingCarousel>
-            )}
-          </div>
+          /* Basic Mode: Project-Centric Dashboards for Active Working Project */
+          <HomeProjectBasicDashboard
+            user={user}
+            selectedScope={selectedScope}
+            onScopeChange={setSelectedScope}
+            hideScopeSelector={true}
+          />
         )}
       </div>
       {showApprovalModal && (

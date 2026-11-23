@@ -9,6 +9,8 @@ import ExecutiveOverviewIsolationSection from "../../../components/ExecutiveOver
 import BiIsolationSection from "../../../components/BiIsolationSection.jsx";
 import PosDayControlSection from "../../../components/PosDayControlSection.jsx";
 import AppModeControlSection from "../../../components/AppModeControlSection.jsx";
+import SidebarDisplayControlSection from "../../../components/SidebarDisplayControlSection.jsx";
+import FloatingChatControlSection from "../../../components/FloatingChatControlSection.jsx";
 import AppBackgroundControlSection from "../../../components/AppBackgroundControlSection.jsx";
 import BiometricLocationSecuritySection from "../../../components/BiometricLocationSecuritySection.jsx";
 
@@ -61,6 +63,8 @@ export default function GeneralSettingsPage() {
   const [envSaving, setEnvSaving] = useState(false);
   
   const [googleMapsApiKey, setGoogleMapsApiKey] = useState("");
+  const [googleMapsConfigured, setGoogleMapsConfigured] = useState(false);
+  const [showGoogleMapsKey, setShowGoogleMapsKey] = useState(false);
   const [googleMapsLoading, setGoogleMapsLoading] = useState(false);
   const [googleMapsSaving, setGoogleMapsSaving] = useState(false);
 
@@ -308,7 +312,9 @@ export default function GeneralSettingsPage() {
         setGoogleMapsLoading(true);
         const res = await api.get("/admin/settings/google-maps");
         if (mounted && res?.data?.data?.api_key) {
-          setGoogleMapsApiKey(res.data.data.api_key);
+          setGoogleMapsConfigured(true);
+          // Security: do not populate googleMapsApiKey in frontend input to prevent raw key exposure
+          setGoogleMapsApiKey("");
         }
       } catch {} finally { if (mounted) setGoogleMapsLoading(false); }
     })();
@@ -775,14 +781,15 @@ export default function GeneralSettingsPage() {
   }
 
   async function saveGoogleMaps() {
+    if (!googleMapsApiKey.trim()) return;
     try {
       setGoogleMapsSaving(true);
-      await api.post("/admin/settings/google-maps", { api_key: googleMapsApiKey });
-      toast.success("Google Maps settings saved");
-      const res = await api.get("/admin/settings/google-maps");
-      if (res?.data?.data?.api_key) {
-        setGoogleMapsApiKey(res.data.data.api_key);
-      }
+      await api.post("/admin/settings/google-maps", { api_key: googleMapsApiKey.trim() });
+      toast.success("Google Maps settings saved securely");
+      setGoogleMapsConfigured(true);
+      // Immediately clear the raw API key from input to avoid displaying it in the frontend
+      setGoogleMapsApiKey("");
+      setShowGoogleMapsKey(false);
     } catch (e) {
       toast.error(e?.response?.data?.message || e?.message || "Failed to save settings");
     } finally { setGoogleMapsSaving(false); }
@@ -1684,25 +1691,102 @@ export default function GeneralSettingsPage() {
 
         <div className="card">
           <div className="card-body space-y-3">
-            <div>
-              <div className="text-lg font-semibold">Google Maps</div>
-              <div className="text-sm text-slate-500">Enter your Google Maps API Key to enable map features.</div>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div>
+                <div className="text-lg font-semibold flex items-center gap-2.5">
+                  <span>Google Maps</span>
+                  {googleMapsConfigured ? (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                      <span className="w-1.5 h-1.5 rounded-full bg-emerald-600 dark:bg-emerald-400" />
+                      Configured & Protected
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                      Not Configured
+                    </span>
+                  )}
+                </div>
+                <div className="text-sm text-slate-500">
+                  Enter your Google Maps API Key to enable map features. For security, active keys are protected and never displayed in plain text.
+                </div>
+              </div>
             </div>
-            {googleMapsLoading ? <div className="text-sm text-slate-500">Loading...</div> : (
+
+            {googleMapsLoading ? (
+              <div className="text-sm text-slate-500">Loading...</div>
+            ) : (
               <div className="max-w-md space-y-3">
                 <div>
-                  <label className="text-xs font-medium text-slate-700">API Key</label>
-                  <input type="text" className="input w-full" placeholder="AIzaSy..." value={googleMapsApiKey} onChange={e => setGoogleMapsApiKey(e.target.value)} disabled={googleMapsSaving} />
+                  <label className="text-xs font-medium text-slate-700 dark:text-slate-300">
+                    {googleMapsConfigured ? "Update API Key" : "API Key"}
+                  </label>
+                  <div className="relative mt-1">
+                    <input
+                      type={showGoogleMapsKey ? "text" : "password"}
+                      className="input w-full pr-10 text-xs font-mono"
+                      placeholder={
+                        googleMapsConfigured
+                          ? "•••••••••••••••••••••••••••••••• (Enter new key to replace)"
+                          : "AIzaSy..."
+                      }
+                      value={googleMapsApiKey}
+                      onChange={(e) => setGoogleMapsApiKey(e.target.value)}
+                      disabled={googleMapsSaving}
+                      autoComplete="new-password"
+                    />
+                    {googleMapsApiKey && (
+                      <button
+                        type="button"
+                        onClick={() => setShowGoogleMapsKey(!showGoogleMapsKey)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                        title={showGoogleMapsKey ? "Hide key" : "Show key"}
+                      >
+                        {showGoogleMapsKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                      </button>
+                    )}
+                  </div>
+                  {googleMapsConfigured && !googleMapsApiKey && (
+                    <p className="text-[11px] text-slate-500 mt-1 flex items-center gap-1">
+                      <ShieldCheck size={13} className="text-emerald-600" />
+                      An active API key is stored securely. Leave blank to keep existing key, or type a new key above to update.
+                    </p>
+                  )}
                 </div>
                 <div className="flex gap-2">
-                  <button type="button" className="btn-primary" disabled={googleMapsSaving} onClick={saveGoogleMaps}>
-                    {googleMapsSaving ? "Saving..." : "Save Google Maps Settings"}
+                  <button
+                    type="button"
+                    className="btn-primary"
+                    disabled={googleMapsSaving || !googleMapsApiKey.trim()}
+                    onClick={saveGoogleMaps}
+                  >
+                    {googleMapsSaving
+                      ? "Saving..."
+                      : googleMapsConfigured
+                      ? "Update Google Maps Key"
+                      : "Save Google Maps Settings"}
                   </button>
+                  {googleMapsApiKey && (
+                    <button
+                      type="button"
+                      className="btn-secondary text-xs"
+                      onClick={() => {
+                        setGoogleMapsApiKey("");
+                        setShowGoogleMapsKey(false);
+                      }}
+                      disabled={googleMapsSaving}
+                    >
+                      Cancel
+                    </button>
+                  )}
                 </div>
               </div>
             )}
           </div>
         </div>
+
+        <SidebarDisplayControlSection />
+
+        <FloatingChatControlSection />
 
         <AppModeControlSection />
 

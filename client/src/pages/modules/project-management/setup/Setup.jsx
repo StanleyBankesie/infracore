@@ -105,10 +105,11 @@ function CrudSection({
           </h3>
         </div>
         <button
+          type="button"
           onClick={onAdd}
-          className="btn btn-primary inline-flex items-center gap-1.5 text-sm py-1.5 px-3"
+          className="inline-flex items-center justify-center gap-1.5 h-8 px-3 text-xs font-semibold rounded-lg text-white bg-[#0E3646] hover:bg-[#154659] active:bg-[#092531] shadow-apple-xs transition-all duration-150 active:scale-[0.98] cursor-pointer whitespace-nowrap shrink-0 w-auto"
         >
-          <Plus size={14} /> Add
+          <Plus size={13} className="stroke-[2.5]" /> Add
         </button>
       </div>
       <div className="bg-white dark:bg-slate-900 rounded-xl shadow-sm overflow-hidden border border-slate-200 dark:border-slate-800">
