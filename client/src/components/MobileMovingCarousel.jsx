@@ -16,6 +16,7 @@ export default function MobileMovingCarousel({
   itemWidthClass = "w-[84vw] max-w-[88vw] sm:w-[65vw] md:w-[46vw] lg:w-full min-w-0 lg:max-w-none",
   className = "",
   containerClassName = "",
+  ...rest
 }) {
   const containerRef = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -124,7 +125,7 @@ export default function MobileMovingCarousel({
   if (count === 0) return null;
 
   return (
-    <div className={`relative w-full ${containerClassName}`}>
+    <div className={`relative w-full ${containerClassName}`} {...rest}>
       {/* Center Stop/Play Icon (Hidden by default, only visible when user clicks/taps carousel, opacity=50) */}
       {count > 1 && (
         <div
@@ -205,7 +206,7 @@ export default function MobileMovingCarousel({
           <div
             key={index}
             data-carousel-card
-            className={`snap-center shrink-0 flex-shrink-0 lg:shrink lg:flex-shrink min-w-0 overflow-visible p-1.5 lg:p-1 ${itemWidthClass} [&>*]:w-full [&>*]:max-w-full transition-all`}
+            className={`snap-center shrink-0 flex-shrink-0 lg:shrink lg:flex-shrink min-w-0 overflow-visible p-1.5 lg:p-1 ${itemWidthClass} [&>*]:w-full [&>*]:max-w-full [&_.rounded-full]:text-white transition-all`}
           >
             {child}
           </div>

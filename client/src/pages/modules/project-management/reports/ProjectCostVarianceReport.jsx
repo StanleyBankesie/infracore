@@ -252,7 +252,7 @@ export default function ProjectCostVarianceReport() {
                 {stat.val}
               </p>
             </div>
-            <div className={`p-3 rounded-full ${stat.color} shadow-sm`}>
+            <div className={`p-3 rounded-full text-white ${stat.color} shadow-sm`}>
               {stat.icon}
             </div>
           </div>

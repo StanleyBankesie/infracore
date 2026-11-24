@@ -207,7 +207,7 @@ export default function PrivacyPolicy() {
 
               {/* Security Callout */}
               <div className="bg-gradient-to-r from-slate-50 to-white border border-slate-200 rounded-2xl p-8 flex items-start gap-6 shadow-sm">
-                <div className="bg-amber-100 p-3 rounded-full shrink-0">
+                <div className="bg-amber-100 p-3 rounded-full text-white shrink-0">
                   <Lock className="w-8 h-8 text-amber-600" />
                 </div>
                 <div>

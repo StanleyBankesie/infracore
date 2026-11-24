@@ -80,6 +80,21 @@ export default {
           info: "#0E3646", // Brand
           pending: "#64748b", // Slate 500
         },
+        // Rich Plum / Mulberry Accent from user (#69274f)
+        plum: {
+          DEFAULT: "#69274f",
+          50: "#fbf3f7",
+          100: "#f6e6ef",
+          200: "#edd0df",
+          300: "#dfacc7",
+          400: "#cb7ea7",
+          500: "#b55989",
+          600: "#98416f",
+          700: "#7e325a",
+          800: "#69274f",
+          900: "#582444",
+          950: "#361027",
+        },
       },
       borderRadius: {
         "apple-xs": "6px",

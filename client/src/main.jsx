@@ -1,4 +1,5 @@
 import "./utils/toastSanitizer.js";
+import { initUniversalTableSorter } from "./utils/universalTableSorter.js";
 import React from "react";
 import ReactDOM from "react-dom/client";
 
@@ -119,6 +120,8 @@ if (import.meta.env.DEV) {
     };
   } catch {}
 }
+
+initUniversalTableSorter();
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>

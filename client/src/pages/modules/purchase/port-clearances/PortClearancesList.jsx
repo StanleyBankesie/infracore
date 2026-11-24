@@ -218,7 +218,7 @@ export default function PortClearancesList() {
                   {stat.val}
                 </p>
               </div>
-              <div className={`p-3 rounded-full ${colorClass} shadow-sm`}>
+              <div className={`p-3 rounded-full text-white ${colorClass} shadow-sm`}>
                 {stat.icon}
               </div>
             </div>

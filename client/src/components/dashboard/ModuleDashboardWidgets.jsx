@@ -204,9 +204,9 @@ export function MetricCard({
   );
 }
 
-export function SectionCard({ title, subtitle, children }) {
+export function SectionCard({ title, subtitle, children, className = "" }) {
   return (
-    <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-slate-800">
+    <div className={`rounded-3xl border border-slate-200/90 dark:border-slate-700/80 bg-white dark:bg-slate-800 p-5 shadow-smoky ${className}`}>
       <div className="mb-4 flex items-start justify-between gap-3">
         <div>
           <h2 className="text-lg font-semibold text-slate-900 dark:text-white">

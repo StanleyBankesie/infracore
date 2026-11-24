@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
 import { api } from "../../api/client.js";
 import { MODULES_REGISTRY } from "../../data/modulesRegistry.js";
-import { DASHBOARD_CARDS, getAllCardAliases } from "../../data/dashboardCards.js";
+import { DASHBOARD_CARDS, getAllCardAliases, HOMEPAGE_PROJECT_CHARTS } from "../../data/dashboardCards.js";
 import { useAuth } from "../../auth/AuthContext.jsx";
 import { usePermission } from "../../auth/PermissionContext.jsx";
 
@@ -416,9 +416,28 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
           const latest = aliasMatch[aliasMatch.length - 1];
           return Number(latest?.can_view) === 1;
         }
-      }
 
-      if (module_key === "home" && card_key) {
+        if (module_key === "home") {
+          return false;
+        }
+
+        // For module homes: if the user already has custom card permissions in perms for this module,
+        // unmentioned cards are unchecked (false)
+        const hasModuleCardConfig = perms.some(
+          (p) => String(p.module_key) === String(module_key) && p.card_key
+        );
+        if (hasModuleCardConfig) {
+          return false;
+        }
+
+        // Default for module homes with no custom config yet: first 4 cards checked
+        const modCards = KNOWN_CARDS[module_key] || [];
+        const cardIndex = modCards.findIndex(
+          (c) => c.key === card_key || aliases.includes(c.key)
+        );
+        if (cardIndex >= 0 && cardIndex < 4) {
+          return true;
+        }
         return false;
       }
 
@@ -525,17 +544,17 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
     }
   };
 
-  const handleRemoveHomeCard = async (cardKey) => {
+  const handleRemoveCard = async (moduleKey, cardKey) => {
     if (!selectedUserId) return;
     const aliases = getAllCardAliases(cardKey);
     const updates = {};
     const permsToSave = [];
     aliases.forEach((a) => {
-      const k = permKey("home", null, a, null);
+      const k = permKey(moduleKey, null, a, null);
       updates[k] = false;
-      setView("home", null, a, null, false);
+      setView(moduleKey, null, a, null, false);
       permsToSave.push({
-        module_key: "home",
+        module_key: moduleKey,
         dashboard_key: null,
         card_key: a,
         ticker_key: null,
@@ -552,24 +571,24 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
       try {
         window.dispatchEvent(new Event("rbac:changed"));
       } catch {}
-      toast.success("Card removed from Home");
+      toast.success("Card removed");
     } catch {
       toast.error("Failed to remove card");
     }
   };
 
-  const handleClearAllHomeCards = async (activeCards) => {
+  const handleClearAllCards = async (moduleKey, activeCards) => {
     if (!selectedUserId || !activeCards.length) return;
     const updates = {};
     const permsToSave = [];
     activeCards.forEach((c) => {
       const aliases = getAllCardAliases(c.key);
       aliases.forEach((a) => {
-        const k = permKey("home", null, a, null);
+        const k = permKey(moduleKey, null, a, null);
         updates[k] = false;
-        setView("home", null, a, null, false);
+        setView(moduleKey, null, a, null, false);
         permsToSave.push({
-          module_key: "home",
+          module_key: moduleKey,
           dashboard_key: null,
           card_key: a,
           ticker_key: null,
@@ -587,24 +606,27 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
       try {
         window.dispatchEvent(new Event("rbac:changed"));
       } catch {}
-      toast.success("All cards cleared from Home");
+      toast.success("All cards cleared");
     } catch {
       toast.error("Failed to clear cards");
     }
   };
 
+  const handleRemoveHomeCard = (cardKey) => handleRemoveCard("home", cardKey);
+  const handleClearAllHomeCards = (activeCards) => handleClearAllCards("home", activeCards);
+
   return (
     <div className={embedded ? "p-4 sm:p-6 space-y-6" : "p-6 space-y-6"}>
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-slate-900 dark:text-white">Dashboard Permissions</h1>
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Control which dashboards, cards, and tickers a user can view
+          <h1 className="text-xl font-bold text-slate-900 dark:text-white">Dashboard Permissions</h1>
+          <p className="text-xs text-slate-500 dark:text-slate-400">
+            Configure dashboard, card, and chart access per user
           </p>
         </div>
         {!embedded && (
           <button
-            className="btn btn-secondary"
+            className="btn btn-secondary btn-sm"
             onClick={() => {
               if (onBack) onBack();
               else navigate("/administration");
@@ -653,7 +675,9 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                     return homeCards.length > 0;
                   }
                   if (!isModuleAllowed(m.key)) return false;
-                  const cards = KNOWN_CARDS[m.key] || [];
+                  const cards = (KNOWN_CARDS[m.key] || []).filter(
+                    (c) => !HOMEPAGE_PROJECT_CHARTS.has(c.key) && !c.isHomepageChart
+                  );
                   const hasDashboards = m.dashboards.length > 0;
                   const hasCards = cards.length > 0;
                   return hasDashboards || hasCards;
@@ -661,12 +685,12 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
 
                 if (visibleModules.length === 0) {
                   return (
-                    <div className="p-8 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
-                      <p className="text-base font-semibold text-slate-700 dark:text-slate-300">
+                    <div className="p-6 text-center border border-dashed border-slate-300 dark:border-slate-700 rounded-xl bg-slate-50/50 dark:bg-slate-800/30">
+                      <p className="text-sm font-semibold text-slate-700 dark:text-slate-300">
                         No assigned or licensed modules found for this user
                       </p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-                        Only modules that are actively licensed for the company and assigned to the user can be configured here.
+                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                        Only modules licensed and assigned to the user can be configured.
                       </p>
                     </div>
                   );
@@ -676,6 +700,9 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                   let cards = KNOWN_CARDS[m.key] || [];
                   if (m.key === "home") {
                     cards = cards.filter((c) => isModuleAllowed(c.moduleGroup));
+                  } else {
+                    // Do not display Homepage Charts in module sections - only in Homepage!
+                    cards = cards.filter((c) => !HOMEPAGE_PROJECT_CHARTS.has(c.key) && !c.isHomepageChart);
                   }
                   const hasDashboards = m.dashboards.length > 0;
                   const hasCards = cards.length > 0;
@@ -683,16 +710,16 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                     return null;
 
                   return (
-                    <div key={m.key} className="border rounded-lg">
-                    <div className="px-4 py-3 bg-slate-50 border-b flex items-center justify-between">
-                      <div className="font-semibold">
-                        {m.icon} {m.name}
+                    <div key={m.key} className="border border-amber-300/80 dark:border-amber-500/30 rounded-xl overflow-hidden bg-white dark:bg-slate-900 shadow-2xs">
+                    <div className="px-4 py-3 bg-[#FBBE23] dark:bg-[#d49e1a] text-slate-950 border-b border-[#e5a812] dark:border-[#b88714] flex items-center justify-between">
+                      <div className="font-bold text-sm sm:text-base text-slate-950 flex items-center gap-2">
+                        <span className="text-base">{m.icon}</span> <span>{m.name}</span>
                       </div>
                       {(hasDashboards || hasCards) && m.key !== "home" && (
-                        <label className="flex items-center gap-2 text-sm">
+                        <label className="flex items-center gap-2 text-xs sm:text-sm text-slate-950 hover:text-black cursor-pointer select-none font-bold">
                           <input
                             type="checkbox"
-                            className="checkbox checkbox-sm"
+                            className="checkbox checkbox-sm border-slate-800/80 bg-white/70 checked:bg-slate-950 checked:border-slate-950"
                             checked={
                               (hasDashboards || hasCards) &&
                               (!hasDashboards ||
@@ -744,16 +771,17 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                                 });
                               }
 
-                              cards.forEach((c) => {
+                              cards.forEach((c, idx) => {
+                                const cardVal = val ? (idx < 4) : false;
                                 const k = permKey(m.key, null, c.key, null);
-                                updates[k] = val;
-                                setView(m.key, null, c.key, null, val);
+                                updates[k] = cardVal;
+                                setView(m.key, null, c.key, null, cardVal);
                                 permsList.push({
                                   module_key: m.key,
                                   dashboard_key: null,
                                   card_key: c.key,
                                   ticker_key: null,
-                                  can_view: val ? 1 : 0,
+                                  can_view: cardVal ? 1 : 0,
                                 });
                               });
                               setUserToggles((prev) => ({ ...prev, ...updates }));
@@ -773,8 +801,8 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                                       .replace(/-/g, " ")
                                       .replace(/\b\w/g, (c) => c.toUpperCase());
                                   toast.success(
-                                    `${val ? "✅" : "🚫"} ${label} — all permissions ${
-                                      val ? "enabled" : "disabled"
+                                    `${val ? "✅" : "🚫"} ${label} — ${
+                                      val && cards.length > 4 ? "first 4 cards enabled (4-card cap)" : val ? "all cards enabled" : "all cards disabled"
                                     }`,
                                     { autoClose: 2000 }
                                   );
@@ -784,7 +812,7 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                               }
                             }}
                           />
-                          <span>Select All</span>
+                          <span className="text-slate-950 font-bold">Select All</span>
                         </label>
                       )}
                     </div>
@@ -818,55 +846,65 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                               {/* Active Home Cards Summary Bar */}
                               {(() => {
                                 const activeHomeCards = cards.filter((c) => getView("home", null, c.key, null));
+                                const activeHomeKpis = activeHomeCards.filter((c) => c.type !== "chart");
+                                const activeHomeCharts = activeHomeCards.filter((c) => c.type === "chart");
                                 return (
-                                  <div className="p-4 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700">
-                                    <div className="flex flex-wrap items-center justify-between gap-3 mb-2.5">
-                                      <div>
-                                        <h4 className="text-sm font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                                          <span>🏠</span> Homepage Active Cards
-                                          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold border ${
-                                            activeHomeCards.length > 4 
-                                              ? "bg-rose-500/10 text-rose-600 border-rose-500/20"
-                                              : "bg-brand-500/10 text-brand-600 border-brand-500/20"
-                                          }`}>
-                                            {activeHomeCards.length} / 4 Selected
-                                          </span>
-                                        </h4>
-                                        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                                          Only the cards selected here will appear on the Homepage (maximum 4).
-                                        </p>
+                                  <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                          <span>🏠</span> Active on Homepage
+                                        </span>
+                                        <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                                          activeHomeKpis.length >= 4
+                                            ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                            : "bg-brand-500/10 text-brand-700 dark:text-brand-300 border-brand-500/20"
+                                        }`}>
+                                          {activeHomeKpis.length}/4 Metrics
+                                        </span>
+                                        <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                                          {activeHomeCharts.length} Charts
+                                        </span>
                                       </div>
                                       {activeHomeCards.length > 0 && (
                                         <button
                                           type="button"
                                           onClick={() => handleClearAllHomeCards(activeHomeCards)}
-                                          className="btn btn-xs btn-outline border-rose-300 text-rose-600 hover:bg-rose-50 hover:border-rose-400"
+                                          className="text-xs text-rose-600 hover:text-rose-700 font-medium hover:underline"
                                         >
-                                          Clear All Home Cards
+                                          Clear All
                                         </button>
                                       )}
                                     </div>
-                                    {activeHomeCards.length > 4 && (
-                                      <div className="mb-2.5 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-700 dark:text-amber-400 flex items-center gap-1.5 font-medium">
-                                        <span>⚠️</span>
-                                        <span>
-                                          Maximum 4 cards allowed for the Homepage. Please remove {activeHomeCards.length - 4} excess card{activeHomeCards.length - 4 > 1 ? "s" : ""} using the ✕ button below.
-                                        </span>
-                                      </div>
-                                    )}
                                     {activeHomeCards.length > 0 ? (
-                                      <div className="flex flex-wrap gap-2 pt-1">
-                                        {activeHomeCards.map((c) => (
+                                      <div className="flex flex-wrap gap-1.5">
+                                        {activeHomeKpis.map((c) => (
                                           <span
                                             key={c.key}
-                                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-medium bg-brand-50 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 border border-brand-200 dark:border-brand-700/50 shadow-sm"
+                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs"
                                           >
-                                            <span>{c.label}</span>
+                                            <span>📋 {c.label}</span>
                                             <button
                                               type="button"
-                                              title={`Remove ${c.label} from Home`}
+                                              title={`Remove ${c.label}`}
                                               onClick={() => handleRemoveHomeCard(c.key)}
-                                              className="hover:text-rose-600 font-bold ml-1"
+                                              className="hover:text-rose-600 font-bold ml-0.5"
+                                            >
+                                              ✕
+                                            </button>
+                                          </span>
+                                        ))}
+                                        {activeHomeCharts.map((c) => (
+                                          <span
+                                            key={c.key}
+                                            className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs"
+                                          >
+                                            <span>📈 {c.label}</span>
+                                            <button
+                                              type="button"
+                                              title={`Remove ${c.label}`}
+                                              onClick={() => handleRemoveHomeCard(c.key)}
+                                              className="hover:text-rose-600 font-bold ml-0.5"
                                             >
                                               ✕
                                             </button>
@@ -874,9 +912,7 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                                         ))}
                                       </div>
                                     ) : (
-                                      <p className="text-xs text-amber-600 dark:text-amber-400 italic">
-                                        No cards selected. Select up to 4 cards below to display on the Homepage.
-                                      </p>
+                                      <p className="text-xs text-slate-400 italic">No cards selected for Homepage</p>
                                     )}
                                   </div>
                                 );
@@ -885,68 +921,268 @@ export default function DashboardPermissions({ embedded = false, defaultCompanyI
                               {Array.from(new Set(cards.map((c) => c.moduleGroup))).map((modGroup) => {
                                 const groupCards = cards.filter((c) => c.moduleGroup === modGroup);
                                 if (groupCards.length === 0) return null;
+                                const kpiCards = groupCards.filter((c) => c.type !== "chart");
+                                const chartCards = groupCards.filter((c) => c.type === "chart");
+                                const isProjectGroup = modGroup.toLowerCase() === "projects" || modGroup.toLowerCase() === "project-management";
+                                const groupLabel = isProjectGroup ? "Projects" : modGroup;
                                 return (
-                                  <div key={modGroup} className="border-b border-slate-100 pb-3 last:border-0">
-                                    <h5 className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">
-                                      {modGroup}
-                                    </h5>
-                                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                                      {groupCards.map((c) => (
-                                        <label key={c.key} className="flex items-center gap-2">
-                                          <input
-                                            type="checkbox"
-                                            className="checkbox checkbox-sm"
-                                            checked={getView(m.key, null, c.key, null)}
-                                            onChange={(e) => {
-                                              const val = e.target.checked;
-                                              if (val) {
-                                                let checkedCount = 0;
-                                                cards.forEach((hc) => {
-                                                  if (getView("home", null, hc.key, null)) checkedCount++;
-                                                });
-                                                if (checkedCount >= 4) {
-                                                  toast.error(
-                                                    "You can only select up to 4 cards for the Home dashboard."
-                                                  );
-                                                  return;
-                                                }
-                                              }
-                                              const handler = makeToggleHandler(m.key, null, c.key, null, (newVal) => {
-                                                setView(m.key, null, c.key, null, newVal);
-                                                persistPermission(m.key, "card", c.key, newVal);
-                                              });
-                                              handler(e);
-                                            }}
-                                          />
-                                          <span className="text-sm">{c.label}</span>
-                                        </label>
-                                      ))}
+                                  <div key={modGroup} className="border-b border-slate-200/80 dark:border-slate-800 pb-4 last:border-0 space-y-3">
+                                    <div className="flex items-center justify-between">
+                                      <h5 className="text-xs font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                        <span>📁</span> {groupLabel}
+                                      </h5>
+                                      {kpiCards.length > 0 && (
+                                        <span className="text-[11px] text-slate-400">
+                                          {kpiCards.filter((c) => getView("home", null, c.key, null)).length}/{kpiCards.length} active
+                                        </span>
+                                      )}
                                     </div>
+
+                                    {/* Metric Cards */}
+                                    {kpiCards.length > 0 && (
+                                      <div className="space-y-1.5">
+                                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                                          <span>📋</span> Metric Cards ({kpiCards.length})
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                                          {kpiCards.map((c) => (
+                                            <label key={c.key} className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer">
+                                              <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-sm"
+                                                checked={getView(m.key, null, c.key, null)}
+                                                onChange={(e) => {
+                                                  const val = e.target.checked;
+                                                  if (val) {
+                                                    let checkedKpiCount = 0;
+                                                    cards.forEach((hc) => {
+                                                      if (hc.type !== "chart" && getView("home", null, hc.key, null)) {
+                                                        checkedKpiCount++;
+                                                      }
+                                                    });
+                                                    if (checkedKpiCount >= 4) {
+                                                      toast.error("You can only select up to 4 metric cards for the Homepage.");
+                                                      return;
+                                                    }
+                                                  }
+                                                  const handler = makeToggleHandler(m.key, null, c.key, null, (newVal) => {
+                                                    setView(m.key, null, c.key, null, newVal);
+                                                    persistPermission(m.key, "card", c.key, newVal);
+                                                  });
+                                                  handler(e);
+                                                }}
+                                              />
+                                              <span className="text-xs text-slate-800 dark:text-slate-200">
+                                                {c.label}
+                                              </span>
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {/* Homepage Charts */}
+                                    {chartCards.length > 0 && (
+                                      <div className="space-y-1.5 pt-2">
+                                        <div className="text-[11px] font-bold uppercase tracking-wider text-blue-700 dark:text-blue-400 flex items-center gap-1.5">
+                                          <span>📈</span> Homepage Charts ({chartCards.length})
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                                          {chartCards.map((c) => {
+                                            const isChecked = getView(m.key, null, c.key, null);
+                                            return (
+                                              <label
+                                                key={c.key}
+                                                className={`flex items-start gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                                                  isChecked
+                                                    ? "bg-blue-50/70 dark:bg-blue-950/30 border-blue-300 dark:border-blue-800 shadow-smoky-card"
+                                                    : "bg-white dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 hover:border-slate-300 hover:shadow-smoky-card"
+                                                }`}
+                                              >
+                                                <input
+                                                  type="checkbox"
+                                                  className="checkbox checkbox-sm checkbox-primary mt-0.5 shrink-0"
+                                                  checked={isChecked}
+                                                  onChange={makeToggleHandler(m.key, null, c.key, null, (newVal) => {
+                                                    setView(m.key, null, c.key, null, newVal);
+                                                    persistPermission(m.key, "card", c.key, newVal);
+                                                  })}
+                                                />
+                                                <span className="text-xs font-medium text-slate-800 dark:text-slate-200 leading-snug">
+                                                  {c.label}
+                                                </span>
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
                                   </div>
                                 );
                               })}
                             </div>
                           ) : (
-                            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
-                              {cards.map((c) => (
-                                <label
-                                  key={c.key}
-                                  className="flex items-center gap-2"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    className="checkbox checkbox-sm"
-                                    checked={getView(m.key, null, c.key, null)}
-                                    onChange={makeToggleHandler(m.key, null, c.key, null, (val) => {
-                                      setView(m.key, null, c.key, null, val);
-                                      persistPermission(m.key, "card", c.key, val);
-                                    })}
-                                  />
-                                  <span className="text-sm">
-                                    {c.label}
-                                  </span>
-                                </label>
-                              ))}
+                            <div className="space-y-4">
+                              {(() => {
+                                const activeModuleCards = cards.filter((c) => getView(m.key, null, c.key, null));
+                                const kpiCards = cards.filter((c) => c.type !== "chart");
+                                const chartCards = cards.filter((c) => c.type === "chart");
+                                const activeModuleKpis = kpiCards.filter((c) => getView(m.key, null, c.key, null));
+                                const activeModuleCharts = chartCards.filter((c) => getView(m.key, null, c.key, null));
+                                const moduleName = m.name || m.label || "Module";
+                                return (
+                                  <>
+                                    {/* Active Module Cards Summary Bar */}
+                                    <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2">
+                                      <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5">
+                                            <span>📋</span> Active Cards
+                                          </span>
+                                          <span className={`text-[11px] px-2 py-0.5 rounded-full font-semibold border ${
+                                            activeModuleKpis.length >= 4
+                                              ? "bg-amber-500/10 text-amber-600 border-amber-500/20"
+                                              : "bg-brand-500/10 text-brand-700 dark:text-brand-300 border-brand-500/20"
+                                          }`}>
+                                            {activeModuleKpis.length}/4 Stat Cards
+                                          </span>
+                                          {chartCards.length > 0 && (
+                                            <span className="text-[11px] px-2 py-0.5 rounded-full font-semibold bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20">
+                                              {activeModuleCharts.length} Charts
+                                            </span>
+                                          )}
+                                        </div>
+                                        {activeModuleCards.length > 0 && (
+                                          <button
+                                            type="button"
+                                            onClick={() => handleClearAllCards(m.key, activeModuleCards)}
+                                            className="text-xs text-rose-600 hover:text-rose-700 font-medium hover:underline"
+                                          >
+                                            Clear All
+                                          </button>
+                                        )}
+                                      </div>
+                                      {activeModuleCards.length > 0 ? (
+                                        <div className="flex flex-wrap gap-1.5">
+                                          {activeModuleKpis.map((c) => (
+                                            <span
+                                              key={c.key}
+                                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 shadow-2xs"
+                                            >
+                                              <span>📋 {c.label}</span>
+                                              <button
+                                                type="button"
+                                                title={`Remove ${c.label}`}
+                                                onClick={() => handleRemoveCard(m.key, c.key)}
+                                                className="hover:text-rose-600 font-bold ml-0.5"
+                                              >
+                                                ✕
+                                              </button>
+                                            </span>
+                                          ))}
+                                          {activeModuleCharts.map((c) => (
+                                            <span
+                                              key={c.key}
+                                              className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shadow-2xs"
+                                            >
+                                              <span>📈 {c.label}</span>
+                                              <button
+                                                type="button"
+                                                title={`Remove ${c.label}`}
+                                                onClick={() => handleRemoveCard(m.key, c.key)}
+                                                className="hover:text-rose-600 font-bold ml-0.5"
+                                              >
+                                                ✕
+                                              </button>
+                                            </span>
+                                          ))}
+                                        </div>
+                                      ) : (
+                                        <p className="text-xs text-slate-400 italic">No cards selected (defaults to first 4)</p>
+                                      )}
+                                    </div>
+
+                                    {kpiCards.length > 0 && (
+                                      <div>
+                                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400 mb-1.5">
+                                          KPI & Stat Cards ({kpiCards.length})
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                                          {kpiCards.map((c) => (
+                                            <label
+                                              key={c.key}
+                                              className="flex items-center gap-2 p-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800/40 transition-colors cursor-pointer"
+                                            >
+                                              <input
+                                                type="checkbox"
+                                                className="checkbox checkbox-sm"
+                                                checked={getView(m.key, null, c.key, null)}
+                                                onChange={(e) => {
+                                                  const val = e.target.checked;
+                                                  if (val) {
+                                                    let checkedCount = 0;
+                                                    kpiCards.forEach((mc) => {
+                                                      if (getView(m.key, null, mc.key, null)) checkedCount++;
+                                                    });
+                                                    if (checkedCount >= 4) {
+                                                      toast.error(`You can only select up to 4 stat cards for ${moduleName}.`);
+                                                      return;
+                                                    }
+                                                  }
+                                                  const handler = makeToggleHandler(m.key, null, c.key, null, (newVal) => {
+                                                    setView(m.key, null, c.key, null, newVal);
+                                                    persistPermission(m.key, "card", c.key, newVal);
+                                                  });
+                                                  handler(e);
+                                                }}
+                                              />
+                                              <span className="text-xs text-slate-800 dark:text-slate-200">
+                                                {c.label}
+                                              </span>
+                                            </label>
+                                          ))}
+                                        </div>
+                                      </div>
+                                    )}
+
+                                    {chartCards.length > 0 && (
+                                      <div className="pt-2 border-t border-slate-200 dark:border-slate-800 space-y-1.5">
+                                        <div className="text-[11px] font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                                          Module Charts ({chartCards.length})
+                                        </div>
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+                                          {chartCards.map((c) => {
+                                            const isChecked = getView(m.key, null, c.key, null);
+                                            return (
+                                              <label
+                                                key={c.key}
+                                                className={`flex items-start gap-2 p-2 rounded-lg border transition-all cursor-pointer ${
+                                                  isChecked
+                                                    ? "bg-slate-50 dark:bg-slate-800/60 border-slate-300 dark:border-slate-700 shadow-2xs"
+                                                    : "bg-white dark:bg-slate-900/40 border-slate-200 dark:border-slate-800 hover:border-slate-300"
+                                                }`}
+                                              >
+                                                <input
+                                                  type="checkbox"
+                                                  className="checkbox checkbox-sm mt-0.5 shrink-0"
+                                                  checked={isChecked}
+                                                  onChange={makeToggleHandler(m.key, null, c.key, null, (newVal) => {
+                                                    setView(m.key, null, c.key, null, newVal);
+                                                    persistPermission(m.key, "card", c.key, newVal);
+                                                  })}
+                                                />
+                                                <span className="text-xs font-medium text-slate-800 dark:text-slate-200 leading-snug">
+                                                  {c.label}
+                                                </span>
+                                              </label>
+                                            );
+                                          })}
+                                        </div>
+                                      </div>
+                                    )}
+                                  </>
+                                );
+                              })()}
                             </div>
                           )}
                         </div>

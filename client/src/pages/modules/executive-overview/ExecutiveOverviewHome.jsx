@@ -559,7 +559,7 @@ export default function ExecutiveOverviewHome() {
                 const val = card.kpiKey ? kpis[card.kpiKey] : null;
                 const hasValue = val !== null && val !== undefined;
                 const badgeText = card.badgeKey ? kpis.badges?.[card.badgeKey] : "";
-                const cardType = i % 4;
+                const cardType = i % 5;
 
                 const formattedVal = hasValue
                   ? card.format === "count"
@@ -657,8 +657,38 @@ export default function ExecutiveOverviewHome() {
                       <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
                     </button>
                   );
+                } else if (cardType === 3) {
+                  // Card 4: Rich Plum / Mulberry (#69274f)
+                  return (
+                    <button
+                      key={i}
+                      onClick={() => navigate(card.path)}
+                      className="group relative overflow-hidden rounded-[24px] lg:rounded-2xl p-5 lg:p-3.5 lg:py-3 shadow-[0_15px_30px_-5px_rgba(105,39,79,0.25)] dark:shadow-[0_15px_30px_-5px_rgba(0,0,0,0.4)] border border-white/10 hover:border-white/20 hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-[0_25px_50px_-12px_rgba(105,39,79,0.4)] active:scale-[0.98] transition-all duration-300 ease-out text-left focus:outline-none focus:ring-2 focus:ring-pink-700 bg-[#69274f] text-white flex flex-col justify-between min-h-[160px] lg:min-h-[112px] lg:h-[112px] lg:max-h-[112px]"
+                    >
+                      <div className="flex justify-between items-start min-h-[22px] lg:min-h-[18px]">
+                        <p className="text-[10px] text-white/70 uppercase tracking-widest font-bold leading-none truncate max-w-[70%]">{card.desc}</p>
+                        {badgeText ? (
+                          <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white/95 border border-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] leading-none flex items-center">
+                            {badgeText}
+                          </span>
+                        ) : null}
+                      </div>
+                      <div className="mt-4 lg:mt-1">
+                        <div 
+                          className="text-2xl lg:text-xl font-extrabold text-white tracking-tight drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)]"
+                          style={{ textShadow: "0 0 12px rgba(255, 255, 255, 0.45)" }}
+                        >
+                          {formattedVal}
+                        </div>
+                        <div className="mt-2 lg:mt-0.5 text-xs font-bold text-white/80 uppercase tracking-wider leading-none truncate">
+                          {card.label}
+                        </div>
+                      </div>
+                      <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
+                    </button>
+                  );
                 } else {
-                  // Card 4: Carbon Black
+                  // Card 5: Carbon Black
                   return (
                     <button
                       key={i}

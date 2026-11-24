@@ -434,7 +434,7 @@ export default function TrainingHistory() {
               </div>
             ) : filteredRecords.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16">
-                <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-700 mb-3">
+                <div className="p-3 rounded-full text-white bg-slate-100 dark:bg-slate-700 mb-3">
                   <BookOpen className="w-8 h-8 text-slate-400" />
                 </div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No training records found</p>
@@ -553,7 +553,7 @@ export default function TrainingHistory() {
               </div>
             ) : certifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12">
-                <div className="p-3 rounded-full bg-slate-100 dark:bg-slate-700 mb-3">
+                <div className="p-3 rounded-full text-white bg-slate-100 dark:bg-slate-700 mb-3">
                   <Award className="w-8 h-8 text-slate-400" />
                 </div>
                 <p className="text-sm font-medium text-slate-600 dark:text-slate-300">No certifications yet</p>

@@ -942,7 +942,7 @@ export default function RiskManagementPage() {
                   {card.val}
                 </p>
               </div>
-              <div className={`p-3 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${card.badgeColor}`}>
+              <div className={`p-3 rounded-full text-white flex items-center justify-center text-white shadow-sm shrink-0 ${card.badgeColor}`}>
                 <Icon size={20} className="stroke-[2.5]" />
               </div>
             </div>

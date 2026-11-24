@@ -14,18 +14,51 @@ import { DASHBOARD_CARDS, getCardModule, getAllCardAliases } from "../data/dashb
 const MODULE_CANONICAL_MAP = {
   projects: "project-management",
   "project-management": "projects",
+  pm: "project-management",
   hr: "human-resources",
   "human-resources": "hr",
   bi: "business-intelligence",
   "business-intelligence": "bi",
   service: "service-management",
+  sm: "service-management",
   "service-management": "service",
   admin: "administration",
   administration: "admin",
   executive: "executive-overview",
+  exec: "executive-overview",
   "executive-overview": "executive",
   system: "system-configuration",
+  sys: "system-configuration",
   "system-configuration": "system",
+};
+
+const ALL_MODULE_VARIANTS_MAP = {
+  projects: ["projects", "pm", "project-management"],
+  pm: ["projects", "pm", "project-management"],
+  "project-management": ["projects", "pm", "project-management"],
+  hr: ["hr", "human-resources"],
+  "human-resources": ["hr", "human-resources"],
+  bi: ["bi", "business-intelligence"],
+  "business-intelligence": ["bi", "business-intelligence"],
+  service: ["service", "sm", "service-management"],
+  sm: ["service", "sm", "service-management"],
+  "service-management": ["service", "sm", "service-management"],
+  admin: ["admin", "administration"],
+  administration: ["admin", "administration"],
+  executive: ["executive", "exec", "executive-overview"],
+  exec: ["executive", "exec", "executive-overview"],
+  "executive-overview": ["executive", "exec", "executive-overview"],
+  system: ["system", "sys", "system-configuration"],
+  sys: ["system", "sys", "system-configuration"],
+  "system-configuration": ["system", "sys", "system-configuration"],
+  purchase: ["purchase", "procurement"],
+  procurement: ["purchase", "procurement"],
+  trans: ["trans", "transport"],
+  transport: ["trans", "transport"],
+  maint: ["maint", "maintenance"],
+  maintenance: ["maint", "maintenance"],
+  prod: ["prod", "production"],
+  production: ["prod", "production"],
 };
 
 function getModuleKeyVariants(modKey) {
@@ -33,6 +66,10 @@ function getModuleKeyVariants(modKey) {
   const set = new Set([k]);
   const alias = MODULE_CANONICAL_MAP[k];
   if (alias) set.add(alias);
+  const variants = ALL_MODULE_VARIANTS_MAP[k];
+  if (Array.isArray(variants)) {
+    variants.forEach((v) => set.add(v));
+  }
   return Array.from(set);
 }
 
@@ -698,6 +735,44 @@ export const PermissionProvider = ({ children }) => {
           byModule.set(modVar, set);
         }
       }
+
+      // Second pass: link enabled cards across home <-> parent module if not explicitly configured
+      for (const it of items) {
+        if (!it.card_key || Number(it.can_view) !== 1) continue;
+        const mk = String(it.module_key || "");
+        const rawKey = String(it.card_key || "");
+        const normKey = rawKey
+          .toLowerCase()
+          .trim()
+          .replace(/\s+/g, "-")
+          .replace(/[^a-z0-9-]/g, "");
+        const aliases = getAllCardAliases(rawKey);
+
+        if (mk === "home") {
+          const parentMod = getCardModule(normKey);
+          if (parentMod) {
+            const parentVariants = getModuleKeyVariants(parentMod);
+            for (const pMod of parentVariants) {
+              if (!m.has(`${pMod}|card|${normKey}`)) {
+                m.set(`${pMod}|card|${rawKey}`, true);
+                m.set(`${pMod}|card|${normKey}`, true);
+                for (const alias of aliases) {
+                  m.set(`${pMod}|card|${alias}`, true);
+                }
+              }
+            }
+          }
+        } else {
+          if (!m.has(`home|card|${normKey}`)) {
+            m.set(`home|card|${rawKey}`, true);
+            m.set(`home|card|${normKey}`, true);
+            for (const alias of aliases) {
+              m.set(`home|card|${alias}`, true);
+            }
+          }
+        }
+      }
+
       setDashboardViewMap(m);
       setDashboardViewLoaded(true);
       dashboardPermVersionRef.current = extractDashboardPermVersion(items);
@@ -1096,16 +1171,16 @@ export const PermissionProvider = ({ children }) => {
     const uid = Number(user?.id || user?.sub || 0);
     const mk = String(moduleKey || "");
     const t = String(type || "");
-    // User ID = 1 is the Master Super Admin with unconditional access, EXCEPT for curated Home cards
+    // User ID = 1 is the Master Super Admin with unconditional access, EXCEPT for curated cards (Home or module cards)
     // which must strictly respect the user's specific selection (up to 4 cards)
-    if (uid === 1 && !(mk === "home" && t === "card")) return true;
+    if (uid === 1 && t !== "card") return true;
     const rawKey = String(key || "");
     const normKey = rawKey
       .toLowerCase()
       .trim()
       .replace(/\s+/g, "-")
       .replace(/[^a-z0-9-]/g, "");
-    if (!dashboardViewLoaded) return uid === 1 && !(mk === "home" && t === "card");
+    if (!dashboardViewLoaded) return uid === 1 && t !== "card";
 
     const mkVariants = getModuleKeyVariants(mk);
 
@@ -1129,30 +1204,39 @@ export const PermissionProvider = ({ children }) => {
 
     // Special handling for Home cards
     if (mk === "home" && t === "card") {
-      // 1. If explicitly disabled in Home: strictly false
+      // 1. If explicitly enabled in Home: strictly true (explicit Home choice wins)
+      for (const c of candidates) {
+        if (dashboardViewMap.get(`home|card|${c}`) === true) {
+          return true;
+        }
+      }
+
+      // 2. If explicitly disabled in Home: strictly false
       for (const c of candidates) {
         if (dashboardViewMap.get(`home|card|${c}`) === false) {
           return false;
         }
       }
 
-      // 2. If explicitly disabled in its parent module: strictly false
+      // 3. Check parent module configuration
       const parentMod = getCardModule(normKey);
       if (parentMod) {
         const parentVariants = getModuleKeyVariants(parentMod);
+        // If explicitly enabled in its parent module: strictly true
+        for (const pMod of parentVariants) {
+          for (const c of candidates) {
+            if (dashboardViewMap.get(`${pMod}|card|${c}`) === true) {
+              return true;
+            }
+          }
+        }
+        // If explicitly disabled in its parent module: strictly false
         for (const pMod of parentVariants) {
           for (const c of candidates) {
             if (dashboardViewMap.get(`${pMod}|card|${c}`) === false) {
               return false;
             }
           }
-        }
-      }
-
-      // 3. If explicitly enabled in Home: strictly true
-      for (const c of candidates) {
-        if (dashboardViewMap.get(`home|card|${c}`) === true) {
-          return true;
         }
       }
 
@@ -1170,7 +1254,41 @@ export const PermissionProvider = ({ children }) => {
       }
     }
 
-    // 2. No explicit config for this element:
+    // 2. If a card was explicitly enabled under Home and not explicitly disabled in this module: allow it!
+    if (t === "card") {
+      for (const c of candidates) {
+        if (dashboardViewMap.get(`home|card|${c}`) === true) {
+          return true;
+        }
+      }
+
+      // Check if user has ANY custom card permission configured for this module
+      let hasCustomModuleCardConfig = false;
+      for (const modVar of mkVariants) {
+        for (const [k] of dashboardViewMap.entries()) {
+          if (k.startsWith(`${modVar}|card|`)) {
+            hasCustomModuleCardConfig = true;
+            break;
+          }
+        }
+        if (hasCustomModuleCardConfig) break;
+      }
+      if (hasCustomModuleCardConfig) {
+        return false;
+      }
+
+      // If no custom card config exists for this module, default to the first 4 cards of the module!
+      const defaultModCards = DASHBOARD_CARDS[mk] || [];
+      const cardIdx = defaultModCards.findIndex((dc) =>
+        candidates.has(dc.key) || (dc.aliases && dc.aliases.some((a) => candidates.has(a)))
+      );
+      if (cardIdx >= 0 && cardIdx < 4) {
+        return true;
+      }
+      return false;
+    }
+
+    // 3. No explicit config for this element:
     // By default, dashboard permissions are disabled/unchecked unless explicitly granted
     if (t === "dashboard") {
       return false;

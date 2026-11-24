@@ -83,16 +83,16 @@
     box-shadow: 0 22px 52px 4px rgba(0, 0, 0, 0.88), 0 8px 24px 2px rgba(0, 0, 0, 0.70) !important;
   }
   .shadow-smoky-card {
-    box-shadow: 0 12px 30px 2px rgba(15, 23, 42, 0.16), 0 4px 12px 0 rgba(15, 23, 42, 0.10), 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    box-shadow: 0 3px 10px -2px rgba(15, 23, 42, 0.08), 0 1px 4px -1px rgba(15, 23, 42, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.04) !important;
   }
   .dark .shadow-smoky-card {
-    box-shadow: 0 14px 36px 2px rgba(0, 0, 0, 0.75), 0 5px 16px 0 rgba(0, 0, 0, 0.55) !important;
+    box-shadow: 0 3px 12px -2px rgba(0, 0, 0, 0.45), 0 1px 5px -1px rgba(0, 0, 0, 0.35) !important;
   }
   .shadow-smoky-card:hover {
-    box-shadow: 0 20px 48px 4px rgba(15, 23, 42, 0.28), 0 8px 20px 1px rgba(15, 23, 42, 0.18) !important;
+    box-shadow: 0 6px 14px -2px rgba(15, 23, 42, 0.12), 0 2px 6px -1px rgba(15, 23, 42, 0.07) !important;
   }
   .dark .shadow-smoky-card:hover {
-    box-shadow: 0 24px 56px 4px rgba(0, 0, 0, 0.92), 0 10px 28px 2px rgba(0, 0, 0, 0.78) !important;
+    box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.60), 0 2px 6px -1px rgba(0, 0, 0, 0.45) !important;
   }
 }
 
@@ -246,7 +246,6 @@
   .module-card,
   .table-card,
   .shadow-card,
-  .shadow-smoky-card,
   .card.shadow-sm,
   .card.shadow-md,
   .stat-card.shadow-sm,
@@ -260,7 +259,6 @@
   .dark .module-card,
   .dark .table-card,
   .dark .shadow-card,
-  .dark .shadow-smoky-card,
   .dark .card.shadow-sm,
   .dark .card.shadow-md,
   .dark .stat-card.shadow-sm,
@@ -278,6 +276,41 @@
   .dark [data-module-carousel] [data-carousel-card] > div,
   .dark [data-carousel-card] > div {
     box-shadow: 0 14px 36px 2px rgba(0, 0, 0, 0.75), 0 5px 16px 0 rgba(0, 0, 0, 0.55) !important;
+  }
+
+  /* Page Cards & Stat Cards: Bright White Icons inside Circular Badges */
+  [data-page-carousel] [data-carousel-card] div.rounded-full,
+  [data-page-carousel] div.rounded-full,
+  [data-page-carousel] .card div.rounded-full,
+  .stat-card div.rounded-full,
+  .page-metric-card div.rounded-full,
+  .card div.rounded-full.p-3,
+  .card div.rounded-full.p-2\.5,
+  .card div.rounded-full.p-2,
+  .card div.rounded-full.p-4 {
+    color: #ffffff !important;
+  }
+
+  [data-page-carousel] [data-carousel-card] div.rounded-full svg,
+  [data-page-carousel] div.rounded-full svg,
+  [data-page-carousel] .card div.rounded-full svg,
+  .stat-card div.rounded-full svg,
+  .page-metric-card div.rounded-full svg,
+  .card div.rounded-full.p-3 svg,
+  .card div.rounded-full.p-2\.5 svg,
+  .card div.rounded-full.p-2 svg,
+  .card div.rounded-full.p-4 svg,
+  [data-page-carousel] [data-carousel-card] div.rounded-full .lucide,
+  [data-page-carousel] div.rounded-full .lucide,
+  [data-page-carousel] .card div.rounded-full .lucide,
+  .stat-card div.rounded-full .lucide,
+  .page-metric-card div.rounded-full .lucide,
+  .card div.rounded-full.p-3 .lucide,
+  .card div.rounded-full.p-2\.5 .lucide,
+  .card div.rounded-full.p-2 .lucide,
+  .card div.rounded-full.p-4 .lucide {
+    color: #ffffff !important;
+    stroke: #ffffff !important;
   }
 
   /* Refined, ambient shadow on homepage metric cards to eliminate harsh contrast against adjacent sections */
@@ -298,7 +331,6 @@
   .stat-card:hover,
   .dashboard-card:hover,
   .module-card:hover,
-  .shadow-smoky-card:hover,
   .card.shadow-sm:hover,
   .card.shadow-md:hover,
   [data-carousel-card] > div:hover {
@@ -308,11 +340,75 @@
   .dark .stat-card:hover,
   .dark .dashboard-card:hover,
   .dark .module-card:hover,
-  .dark .shadow-smoky-card:hover,
   .dark .card.shadow-sm:hover,
   .dark .card.shadow-md:hover,
   .dark [data-carousel-card] > div:hover {
     box-shadow: 0 22px 50px -8px rgba(0, 0, 0, 0.90), 0 10px 24px -4px rgba(0, 0, 0, 0.75) !important;
+  }
+
+  /* ── Homepage Standard Mode: Remove Smoky Shadows from Cards & All Sections ── */
+  .homepage-standard-mode [data-carousel-card] > div,
+  .homepage-standard-mode [data-home-carousel] [data-carousel-card] > div,
+  .homepage-standard-mode .shadow-smoky,
+  .homepage-standard-mode .shadow-smoky-card,
+  .homepage-standard-mode .shadow-smoky-lg,
+  .homepage-standard-mode .card,
+  .homepage-standard-mode .stat-card,
+  .homepage-standard-mode .dashboard-card,
+  [data-layout-mode="standard"] [data-carousel-card] > div,
+  [data-layout-mode="standard"] [data-home-carousel] [data-carousel-card] > div,
+  [data-layout-mode="standard"] .shadow-smoky,
+  [data-layout-mode="standard"] .shadow-smoky-card,
+  [data-layout-mode="standard"] .shadow-smoky-lg,
+  [data-layout-mode="standard"] .card,
+  [data-layout-mode="standard"] .stat-card,
+  [data-layout-mode="standard"] .dashboard-card,
+  [data-app-mode="STANDARD"] .homepage-standard-mode .shadow-smoky,
+  [data-app-mode="STANDARD"] .homepage-standard-mode .shadow-smoky-card,
+  [data-app-mode="STANDARD"] .homepage-standard-mode [data-carousel-card] > div,
+  .dark .homepage-standard-mode [data-carousel-card] > div,
+  .dark .homepage-standard-mode [data-home-carousel] [data-carousel-card] > div,
+  .dark .homepage-standard-mode .shadow-smoky,
+  .dark .homepage-standard-mode .shadow-smoky-card,
+  .dark .homepage-standard-mode .shadow-smoky-lg,
+  .dark .homepage-standard-mode .card,
+  .dark .homepage-standard-mode .stat-card,
+  .dark .homepage-standard-mode .dashboard-card,
+  .dark [data-layout-mode="standard"] [data-carousel-card] > div,
+  .dark [data-layout-mode="standard"] [data-home-carousel] [data-carousel-card] > div,
+  .dark [data-layout-mode="standard"] .shadow-smoky,
+  .dark [data-layout-mode="standard"] .shadow-smoky-card,
+  .dark [data-layout-mode="standard"] .shadow-smoky-lg,
+  .dark [data-layout-mode="standard"] .card,
+  .dark [data-layout-mode="standard"] .stat-card,
+  .dark [data-layout-mode="standard"] .dashboard-card {
+    box-shadow: none !important;
+  }
+
+  .homepage-standard-mode [data-carousel-card] > div:hover,
+  .homepage-standard-mode [data-home-carousel] [data-carousel-card] > div:hover,
+  [data-layout-mode="standard"] [data-carousel-card] > div:hover,
+  [data-layout-mode="standard"] [data-home-carousel] [data-carousel-card] > div:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06) !important;
+  }
+  .dark .homepage-standard-mode [data-carousel-card] > div:hover,
+  .dark .homepage-standard-mode [data-home-carousel] [data-carousel-card] > div:hover,
+  .dark [data-layout-mode="standard"] [data-carousel-card] > div:hover,
+  .dark [data-layout-mode="standard"] [data-home-carousel] [data-carousel-card] > div:hover {
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.4) !important;
+  }
+
+  .homepage-standard-mode .shadow-smoky:hover,
+  .homepage-standard-mode .shadow-smoky-card:hover,
+  [data-layout-mode="standard"] .shadow-smoky:hover,
+  [data-layout-mode="standard"] .shadow-smoky-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05) !important;
+  }
+  .dark .homepage-standard-mode .shadow-smoky:hover,
+  .dark .homepage-standard-mode .shadow-smoky-card:hover,
+  .dark [data-layout-mode="standard"] .shadow-smoky:hover,
+  .dark [data-layout-mode="standard"] .shadow-smoky-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.35) !important;
   }
 
   .card-header {
@@ -456,31 +552,102 @@
   }
 
   /* ── ERP Table Styles ──────────────────────────────── */
+  /* Scroll containment for sticky table headings across the application */
+  .overflow-x-auto:has(table),
+  .table-container,
+  .table-responsive {
+    max-height: min(76vh, calc(100vh - 200px));
+    overflow-y: auto;
+    overflow-x: auto;
+    position: relative;
+    scrollbar-width: thin;
+  }
+
+  /* Constrain table height inside modals/dialogs */
+  .modal .overflow-x-auto:has(table),
+  .modal-box .overflow-x-auto:has(table),
+  [role="dialog"] .overflow-x-auto:has(table) {
+    max-height: min(55vh, 480px);
+  }
+
   .table {
     @apply w-full border-collapse;
   }
 
   .table thead {
-    @apply bg-slate-50 dark:bg-slate-800/50 border-b border-slate-200 dark:border-slate-700;
+    @apply bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700;
   }
 
+  /* Locked sticky table headings */
+  table thead th,
+  .table thead th,
   .table th {
-    @apply px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-300 tracking-normal;
+    @apply px-4 py-3 text-left text-xs font-semibold text-slate-700 dark:text-slate-200 tracking-normal;
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    background-color: #f8fafc;
+    box-shadow: inset 0 -1px 0 #e2e8f0;
   }
 
   .table td {
     @apply px-4 py-3 border-b border-slate-200 dark:border-slate-700 text-sm text-slate-900 dark:text-slate-100;
   }
 
-  /* Global override to ensure all table headings in the application match the invoice list in dark mode */
+  /* Global override to ensure table headings are sticky, opaque, and matched in dark mode */
   .dark thead {
-    background-color: rgba(30, 41, 59, 0.5) !important;
+    background-color: #0f172a !important;
     border-bottom: 1px solid #334155 !important;
   }
 
-  .dark thead th, .dark thead th * {
+  .dark table thead th,
+  .dark .table thead th,
+  .dark .table th {
     color: #f1f5f9 !important;
-    background-color: transparent !important;
+    background-color: #0f172a !important;
+    box-shadow: inset 0 -1px 0 #334155;
+  }
+
+  /* Universal Table Sorter Styles */
+  .universal-sort-th {
+    cursor: pointer !important;
+    user-select: none !important;
+    transition: background-color 0.15s ease;
+  }
+
+  .universal-sort-th:hover {
+    background-color: #f1f5f9 !important;
+  }
+
+  .dark .universal-sort-th:hover {
+    background-color: #1e293b !important;
+  }
+
+  .universal-sort-indicator {
+    display: inline-flex;
+    align-items: center;
+    margin-left: 0.35rem;
+    vertical-align: middle;
+    font-size: 0.85rem;
+    line-height: 1;
+    color: #94a3b8;
+    opacity: 0.7;
+    transition: all 0.15s ease;
+  }
+
+  .universal-sort-th:hover .universal-sort-indicator {
+    opacity: 1;
+    color: #0284c7;
+  }
+
+  .universal-sort-indicator.active {
+    opacity: 1;
+    color: #0284c7;
+    font-weight: 700;
+  }
+
+  .dark .universal-sort-indicator.active {
+    color: #38bdf8;
   }
 
   /* Voucher Posting Lines shared widths */
@@ -2249,3 +2416,15 @@ input[data-menu-search-input]:focus,
 .dark .ant-modal .ant-modal-title {
   color: #ffffff !important;
 }
+
+/* User-defined Rich Plum / Mulberry Palette (#69274f) */
+:root {
+  --color-plum: #69274f;
+  --color-plum-light: #fbf3f7;
+}
+
+.bg-plum { background-color: #69274f !important; }
+.text-plum { color: #69274f !important; }
+.border-plum { border-color: #69274f !important; }
+.shadow-plum { box-shadow: 0 4px 14px 0 rgba(105, 39, 79, 0.3) !important; }
+

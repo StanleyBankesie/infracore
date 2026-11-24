@@ -4490,6 +4490,7 @@ router.get("/settings/env", requireAuth, async (req, res, next) => {
       TEMPLATE_SERVICE_ORDER: getVal("TEMPLATE_SERVICE_ORDER") || "Dear {customer_name},\n\nYour Service Order {document_no} for {amount} has been {status}.\n\nThank you!",
       TEMPLATE_MAINTENANCE_JOB: getVal("TEMPLATE_MAINTENANCE_JOB") || "Dear {customer_name},\n\nYour Maintenance Job {document_no} has been {status}.\n\nThank you!",
       TEMPLATE_PAYMENT_VOUCHER: getVal("TEMPLATE_PAYMENT_VOUCHER") || "Dear {customer_name},\n\nYour Payment Voucher {document_no} for {amount} has been {status}.\n\nThank you!",
+      TEMPLATE_TASK_ASSIGNED: getVal("TEMPLATE_TASK_ASSIGNED") || "Hello {assigned_to},\n\nYou have been assigned a new task: \"{task_title}\" on project \"{project_name}\".\nPriority: {priority}\nDue Date: {due_date}\nAssigned by: {assigned_by}\n\nPlease check your workspace to get started.\n\nThank you!",
     });
   } catch (err) {
     next(err);
@@ -4510,7 +4511,7 @@ router.post("/settings/env", requireAuth, async (req, res, next) => {
       "GOOGLE_MAPS_API_KEY", "GROQ_API_KEY", "ARKESEL_API_KEY", "ARKESEL_SENDER_ID", "GREEN_API_ID_INSTANCE", "GREEN_API_TOKEN_INSTANCE",
       "SMTP_HOST", "SMTP_PORT", "SMTP_USER", "SMTP_PASS", "SMTP_FROM", "SMTP_SECURE",
       "TEMPLATE_SALES_ORDER", "TEMPLATE_PURCHASE_ORDER", "TEMPLATE_SERVICE_ORDER", 
-      "TEMPLATE_MAINTENANCE_JOB", "TEMPLATE_PAYMENT_VOUCHER"
+      "TEMPLATE_MAINTENANCE_JOB", "TEMPLATE_PAYMENT_VOUCHER", "TEMPLATE_TASK_ASSIGNED"
     ];
 
     for (const key of allowedKeys) {

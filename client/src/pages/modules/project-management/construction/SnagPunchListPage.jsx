@@ -822,7 +822,7 @@ export default function SnagPunchListPage({ embedded = false }) {
                 </div>
               </div>
               <div
-                className={`p-3 rounded-full flex items-center justify-center text-white shadow-sm shrink-0 ${card.badgeColor}`}
+                className={`p-3 rounded-full text-white flex items-center justify-center text-white shadow-sm shrink-0 ${card.badgeColor}`}
               >
                 <Icon size={20} className="stroke-[2.5]" />
               </div>

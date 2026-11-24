@@ -56,6 +56,7 @@ export default function GeneralSettingsPage() {
     TEMPLATE_SERVICE_ORDER: "",
     TEMPLATE_MAINTENANCE_JOB: "",
     TEMPLATE_PAYMENT_VOUCHER: "",
+    TEMPLATE_TASK_ASSIGNED: "",
   });
   const [announcements, setAnnouncements] = useState("");
   const [announcementsSaving, setAnnouncementsSaving] = useState(false);
@@ -299,6 +300,7 @@ export default function GeneralSettingsPage() {
           TEMPLATE_SERVICE_ORDER: res.data.TEMPLATE_SERVICE_ORDER || "",
           TEMPLATE_MAINTENANCE_JOB: res.data.TEMPLATE_MAINTENANCE_JOB || "",
           TEMPLATE_PAYMENT_VOUCHER: res.data.TEMPLATE_PAYMENT_VOUCHER || "",
+          TEMPLATE_TASK_ASSIGNED: res.data.TEMPLATE_TASK_ASSIGNED || "",
         });
       } catch (err) {
         console.warn("Could not load environment variables:", err?.response?.data?.message || err.message);
@@ -1228,6 +1230,22 @@ export default function GeneralSettingsPage() {
                   <div>
                     <label className="text-xs font-medium text-slate-700">Payment Voucher Template</label>
                     <textarea className="input w-full h-24 resize-none" value={envVars.TEMPLATE_PAYMENT_VOUCHER} onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_PAYMENT_VOUCHER: e.target.value }))} disabled={envSaving}></textarea>
+                  </div>
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-xs font-semibold text-slate-700">Assigned Task Notification Template (Email, SMS, WhatsApp & Push)</label>
+                      <span className="text-[11px] text-slate-500">Variables: {'{assigned_to}'}, {'{task_title}'}, {'{project_name}'}, {'{priority}'}, {'{due_date}'}, {'{start_date}'}, {'{assigned_by}'}</span>
+                    </div>
+                    <textarea 
+                      className="input w-full h-28 resize-none font-mono text-xs" 
+                      value={envVars.TEMPLATE_TASK_ASSIGNED} 
+                      onChange={e => setEnvVars(p => ({ ...p, TEMPLATE_TASK_ASSIGNED: e.target.value }))} 
+                      placeholder="Hello {assigned_to}, you have been assigned task '{task_title}' for project '{project_name}' (Priority: {priority}). Due: {due_date}. Assigned by {assigned_by}."
+                      disabled={envSaving}
+                    ></textarea>
+                    <div className="text-[11px] text-slate-400 mt-0.5">
+                      Used when tasks are assigned or reassigned in Project Management. Notifications dispatch via permitted channels configured under Administration Settings.
+                    </div>
                   </div>
                 </div>
               </div>

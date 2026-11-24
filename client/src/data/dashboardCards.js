@@ -65,6 +65,16 @@ export const DASHBOARD_CARDS = {
     { key: "pm-open-claims", label: "Open Payment Claims", aliases: ["open-claims", "pending-claims"] },
     { key: "pm-active-variations", label: "Active Variations", aliases: ["active-variations", "change-orders"] },
     { key: "pm-open-snags", label: "Open Snags & Issues", aliases: ["open-snags", "snags", "defects"] },
+    // Project Management Charts & Graphs (found on Homepage and PM Dashboard)
+    { key: "pm-milestone-matrix", label: "Milestone Achievement Matrix", type: "chart", isHomepageChart: true, aliases: ["milestone-matrix", "pm-chart-milestone-matrix", "milestone-achievement-matrix"] },
+    { key: "pm-profitability-pl", label: "Project Profitability & P&L", type: "chart", isHomepageChart: true, aliases: ["profitability-pl", "pm-chart-profitability", "project-profitability-pl"] },
+    { key: "pm-project-execution", label: "Project Execution & Work Delivery", type: "chart", isHomepageChart: true, aliases: ["project-execution", "pm-chart-execution", "project-execution-work-delivery"] },
+    { key: "pm-delivery-health", label: "Portfolio Delivery Health & Risk", type: "chart", isHomepageChart: true, aliases: ["delivery-health", "pm-chart-delivery-health", "portfolio-delivery-health-risk"] },
+    { key: "pm-cost-variance", label: "Cost & Budget Variance", type: "chart", isHomepageChart: true, aliases: ["cost-variance", "pm-chart-cost-variance", "cost-budget-variance"] },
+    { key: "pm-subcontractor-contracts", label: "Subcontractor Contracts & Payment Balances", type: "chart", isHomepageChart: true, aliases: ["subcontractor-contracts", "pm-chart-subcontractors", "subcontractor-contracts-payment-balances"] },
+    { key: "pm-schedule-forecast", label: "Schedule Forecast & Completion Projection", type: "chart", isHomepageChart: true, aliases: ["schedule-forecast", "pm-chart-schedule-forecast", "schedule-forecast-completion-projection"] },
+    { key: "pm-earned-value", label: "Earned Value Efficiency Matrix (CPI vs. SPI)", type: "chart", isHomepageChart: true, aliases: ["earned-value", "pm-chart-earned-value", "earned-value-efficiency-matrix"] },
+    { key: "pm-task-distribution", label: "Task Distribution", type: "chart", isHomepageChart: false, aliases: ["task-distribution", "pm-chart-task-distribution"] },
   ],
   pos: [
     { key: "pos-today-sales", label: "Today Sales", aliases: ["today-sales"] },
@@ -172,3 +182,18 @@ export function getAllCardAliases(cardKey) {
   }
   return Array.from(set);
 }
+
+/**
+ * General Project Charts entitled to the Homepage (Basic Mode).
+ */
+export const HOMEPAGE_PROJECT_CHARTS = new Set([
+  "pm-milestone-matrix",
+  "pm-profitability-pl",
+  "pm-project-execution",
+  "pm-delivery-health",
+  "pm-cost-variance",
+  "pm-subcontractor-contracts",
+  "pm-schedule-forecast",
+  "pm-earned-value",
+]);
+

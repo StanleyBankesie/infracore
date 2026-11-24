@@ -450,7 +450,7 @@ export default function StockBalancesPage() {
 
           </div>
 
-          <div className="p-3 rounded-full bg-sky-600 dark:bg-sky-500 text-white shadow-sm">
+          <div className="p-3 rounded-full text-white bg-sky-600 dark:bg-sky-500 text-white shadow-sm">
 
             <Package size={20} className="stroke-[2.5]" />
 
@@ -474,7 +474,7 @@ export default function StockBalancesPage() {
 
           </div>
 
-          <div className="p-3 rounded-full bg-indigo-600 text-white shadow-sm">
+          <div className="p-3 rounded-full text-white bg-indigo-600 text-white shadow-sm">
 
             <Layers size={20} className="stroke-[2.5]" />
 
@@ -498,7 +498,7 @@ export default function StockBalancesPage() {
 
           </div>
 
-          <div className="p-3 rounded-full bg-amber-500 text-white shadow-sm">
+          <div className="p-3 rounded-full text-white bg-amber-500 text-white shadow-sm">
 
             <DollarSign size={20} className="stroke-[2.5]" />
 
@@ -518,7 +518,7 @@ export default function StockBalancesPage() {
 
           </div>
 
-          <div className="p-3 rounded-full bg-emerald-600 text-white shadow-sm">
+          <div className="p-3 rounded-full text-white bg-emerald-600 text-white shadow-sm">
 
             <AlertTriangle size={20} className="stroke-[2.5]" />
 

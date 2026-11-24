@@ -11,6 +11,7 @@ import { ensureConstructionTables } from "../utils/constructionTables.js";
 import { sendPushToUser } from "../routes/push.routes.js";
 import { syncProjectStatusFromTasks } from "./projects.controller.js";
 import { ensureSupplierFinAccountIdTx } from "./finance.controller.js";
+import { notifyTaskAssigned } from "../services/notifications/taskNotification.js";
 
 function toNumber(v, fallback = null) {
   const n = Number(v);
@@ -2396,6 +2397,22 @@ export const createScheduleActivity = async (req, res, next) => {
 
     const taskId = taskResult.insertId;
 
+    if (b.assigned_to_id) {
+      notifyTaskAssigned({
+        taskId,
+        taskTitle: b.task_title || null,
+        projectId,
+        assignedToId: toNumber(b.assigned_to_id),
+        assignedToName: b.assigned_to_name || null,
+        priority: b.priority || "NORMAL",
+        startDate,
+        dueDate: endDate,
+        companyId: targetCompId,
+        assignedById: req.user?.sub || req.user?.id || null,
+        req,
+      }).catch((err) => console.warn("[ConstructionController] Schedule activity assignment notify error:", err.message));
+    }
+
     // Insert predecessor dependencies if provided
     if (Array.isArray(b.predecessors)) {
       for (const p of b.predecessors) {
@@ -2435,7 +2452,7 @@ export const updateScheduleActivity = async (req, res, next) => {
     await ensureConstructionTables();
 
     const existing = await query(
-      `SELECT id, company_id, branch_id FROM pm_tasks WHERE id = :taskId AND project_id = :projectId LIMIT 1`,
+      `SELECT id, company_id, branch_id, project_id, assigned_to_id, task_title, priority, end_date FROM pm_tasks WHERE id = :taskId AND project_id = :projectId LIMIT 1`,
       { taskId, projectId },
     );
     if (!existing.length)
@@ -2516,6 +2533,25 @@ export const updateScheduleActivity = async (req, res, next) => {
     if (existing[0]?.project_id || projectId) {
       await syncProjectStatusFromTasks(projectId || existing[0]?.project_id);
     }
+
+    const newAssignedId = toNumber(b.assigned_to_id);
+    const prevAssignedId = toNumber(existing[0]?.assigned_to_id);
+    if (newAssignedId && newAssignedId !== prevAssignedId) {
+      notifyTaskAssigned({
+        taskId,
+        taskTitle: b.task_title || existing[0]?.task_title || null,
+        projectId: projectId || existing[0]?.project_id,
+        assignedToId: newAssignedId,
+        assignedToName: b.assigned_to_name || null,
+        priority: b.priority || existing[0]?.priority || "NORMAL",
+        startDate: b.start_date || null,
+        dueDate: b.end_date || existing[0]?.end_date || null,
+        companyId: existing[0]?.company_id || companyId,
+        assignedById: req.user?.sub || req.user?.id || null,
+        req,
+      }).catch((err) => console.warn("[ConstructionController] Schedule activity update assignment notify error:", err.message));
+    }
+
     res.json({ id: taskId, message: "Activity updated successfully" });
   } catch (err) {
     next(err);

@@ -3,6 +3,7 @@ import { httpError } from "../utils/httpError.js";
 import { pool } from "../db/pool.js";
 import { recordMovementTx } from "../services/stock.service.js";
 import { syncProjectGroupChat } from "../services/projectChat.service.js";
+import { notifyTaskAssigned } from "../services/notifications/taskNotification.js";
 
 function toNumber(v, fallback = null) {
   const n = Number(v);
@@ -1804,6 +1805,24 @@ export const createOrUpdateTask = async (req, res, next) => {
           },
         );
         createdIds.push(r.insertId);
+
+        // Dispatch task assignment notification if assigned
+        const bulkAssignedId = toNumber(t.assigned_to_id || t.assignedToId);
+        if (bulkAssignedId) {
+          notifyTaskAssigned({
+            taskId: r.insertId,
+            taskTitle: taskTitle,
+            projectId: b.project_id || t.project_id || null,
+            assignedToId: bulkAssignedId,
+            assignedToName: t.assigned_to_name || t.assignedToName || null,
+            priority: t.priority || b.priority || "NORMAL",
+            startDate: t.start_date || b.start_date || null,
+            dueDate: t.end_date || b.end_date || null,
+            companyId,
+            assignedById: req.user?.sub || req.user?.id || null,
+            req,
+          }).catch((err) => console.warn("[ProjectsController] Bulk task assignment notify error:", err.message));
+        }
       }
       for (const pid of projectIdsToSync) {
         await syncProjectStatusFromTasks(pid);
@@ -1819,10 +1838,20 @@ export const createOrUpdateTask = async (req, res, next) => {
     }
 
     let targetProjectId = b.project_id ? toNumber(b.project_id) : null;
-    if (taskId && !targetProjectId) {
+    let existingAssigneeId = null;
+    let existingTaskTitle = null;
+    let existingTaskPriority = null;
+    let existingDueDate = null;
+    if (taskId) {
       try {
-        const rows = await query(`SELECT project_id FROM pm_tasks WHERE id = :taskId LIMIT 1`, { taskId });
-        if (rows && rows[0]) targetProjectId = toNumber(rows[0].project_id);
+        const rows = await query(`SELECT project_id, assigned_to_id, task_title, priority, end_date FROM pm_tasks WHERE id = :taskId LIMIT 1`, { taskId });
+        if (rows && rows[0]) {
+          if (!targetProjectId) targetProjectId = toNumber(rows[0].project_id);
+          existingAssigneeId = toNumber(rows[0].assigned_to_id);
+          existingTaskTitle = rows[0].task_title;
+          existingTaskPriority = rows[0].priority;
+          existingDueDate = rows[0].end_date;
+        }
       } catch {}
     }
 
@@ -1934,6 +1963,23 @@ export const createOrUpdateTask = async (req, res, next) => {
         }
       }
 
+      const newAssigneeId = toNumber(b.assigned_to_id);
+      if (newAssigneeId && newAssigneeId !== existingAssigneeId) {
+        notifyTaskAssigned({
+          taskId,
+          taskTitle: b.task_title || existingTaskTitle || "Task",
+          projectId: targetProjectId,
+          assignedToId: newAssigneeId,
+          assignedToName: b.assigned_to_name || null,
+          priority: b.priority || existingTaskPriority || "NORMAL",
+          startDate: b.start_date || null,
+          dueDate: b.end_date || existingDueDate || null,
+          companyId,
+          assignedById: req.user?.sub || req.user?.id || null,
+          req,
+        }).catch((err) => console.warn("[ProjectsController] Task update assignment notify error:", err.message));
+      }
+
       res.json({ ok: true });
     } else {
       const r = await query(
@@ -1988,6 +2034,23 @@ export const createOrUpdateTask = async (req, res, next) => {
         } catch (chatErr) {
           console.warn("[ProjectsController] Auto group chat sync warning on task create:", chatErr.message);
         }
+      }
+
+      const assignedId = toNumber(b.assigned_to_id);
+      if (newId && assignedId) {
+        notifyTaskAssigned({
+          taskId: newId,
+          taskTitle: b.task_title || null,
+          projectId: taskPid,
+          assignedToId: assignedId,
+          assignedToName: b.assigned_to_name || null,
+          priority: b.priority || "NORMAL",
+          startDate: b.start_date || null,
+          dueDate: b.end_date || null,
+          companyId,
+          assignedById: req.user?.sub || req.user?.id || null,
+          req,
+        }).catch((err) => console.warn("[ProjectsController] Task create assignment notify error:", err.message));
       }
 
       res.status(201).json({ id: newId });

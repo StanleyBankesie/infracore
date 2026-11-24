@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { usePermission } from "../../../auth/PermissionContext.jsx";
 import {
   Briefcase,
   ChevronDown,
@@ -22,6 +23,7 @@ import {
   Calendar,
   Flag,
   AlertTriangle,
+  Search,
 } from "lucide-react";
 import { api } from "../../../api/client.js";
 import {
@@ -46,6 +48,14 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
     let critical = 0;
     let completed = 0;
 
+    const lists = {
+      ON_TRACK: [],
+      IN_PROGRESS: [],
+      WARNING: [],
+      CRITICAL: [],
+      COMPLETED: [],
+    };
+
     const today = new Date();
 
     if (isAll) {
@@ -56,43 +66,76 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
         const isPastDue = p.end_date && new Date(p.end_date) < today && comp < 100;
         const isOverBudget = spent > budget && budget > 0;
 
+        let key = "IN_PROGRESS";
         if (comp >= 100 || (p.project_status || "").toUpperCase() === "COMPLETED") {
+          key = "COMPLETED";
           completed++;
         } else if (isPastDue || isOverBudget) {
+          key = "CRITICAL";
           critical++;
         } else if (budget > 0 && (spent / budget) * 100 > comp + 20) {
+          key = "WARNING";
           warning++;
         } else if (comp >= 50) {
+          key = "ON_TRACK";
           healthy++;
         } else {
+          key = "IN_PROGRESS";
           inProgress++;
         }
+
+        lists[key].push({
+          id: p.id,
+          name: p.project_name || p.name || `Project ${p.id}`,
+          code: p.project_code || p.code || "",
+          completion: comp,
+          budget,
+          spent,
+          isOverBudget,
+          isPastDue,
+          status: p.project_status || (comp >= 100 ? "Completed" : "Active"),
+        });
       });
     } else {
       tasks.forEach((t) => {
         const st = String(t.status || "").toUpperCase();
         const isPastDue = t.end_date && new Date(t.end_date) < today && !st.includes("COMPLET");
 
+        let key = "IN_PROGRESS";
         if (st.includes("COMPLET")) {
+          key = "COMPLETED";
           completed++;
         } else if (st.includes("BLOCK") || isPastDue) {
+          key = "CRITICAL";
           critical++;
         } else if (st.includes("PROGRESS") || st.includes("ACTIVE")) {
+          key = "ON_TRACK";
           healthy++;
         } else if (t.priority === "HIGH" || t.priority === "URGENT") {
+          key = "WARNING";
           warning++;
         } else {
+          key = "IN_PROGRESS";
           inProgress++;
         }
+
+        lists[key].push({
+          id: t.id,
+          name: t.task_name || t.name || t.title || `Task ${t.id}`,
+          code: t.task_code || t.code || "",
+          priority: t.priority,
+          status: t.status,
+          isPastDue,
+        });
       });
     }
 
     const raw = [
-      { key: "ON_TRACK", label: "On Track / Healthy", count: healthy, color: "#10b981", badge: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300" },
-      { key: "IN_PROGRESS", label: "In Progress / Active", count: inProgress, color: "#3b82f6", badge: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" },
-      { key: "WARNING", label: "At Risk / Attention", count: warning, color: "#f59e0b", badge: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300" },
-      { key: "CRITICAL", label: "Critical / Overdue", count: critical, color: "#ef4444", badge: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300" },
-      { key: "COMPLETED", label: "Completed / Delivered", count: completed, color: "#8b5cf6", badge: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300" },
+      { key: "ON_TRACK", label: "On Track / Healthy", count: healthy, color: "#10b981", badge: "bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300", items: lists.ON_TRACK },
+      { key: "IN_PROGRESS", label: "In Progress / Active", count: inProgress, color: "#3b82f6", badge: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300", items: lists.IN_PROGRESS },
+      { key: "WARNING", label: "At Risk / Attention", count: warning, color: "#f59e0b", badge: "bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300", items: lists.WARNING },
+      { key: "CRITICAL", label: "Critical / Overdue", count: critical, color: "#ef4444", badge: "bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300", items: lists.CRITICAL },
+      { key: "COMPLETED", label: "Completed / Delivered", count: completed, color: "#8b5cf6", badge: "bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300", items: lists.COMPLETED },
     ].filter((s) => s.count > 0);
 
     const totalEvaluated = (healthy + inProgress + warning + critical + completed) || 1;
@@ -131,9 +174,10 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
   const circumference = 2 * Math.PI * radius;
 
   let strokeOffset = 0;
+  const hoveredSeg = hoveredSlice ? healthData.segments.find((s) => s.key === hoveredSlice) : null;
 
   return (
-    <div className="flex flex-col md:flex-row items-center justify-between gap-6 p-2">
+    <div className="relative flex flex-col sm:flex-row items-center justify-center sm:justify-start gap-6 sm:gap-8 lg:gap-6 xl:gap-8 p-1 sm:p-2 min-h-[250px]">
       {/* SVG Donut Circle */}
       <div className="relative flex items-center justify-center shrink-0">
         <svg width={size} height={size} className="overflow-visible transform -rotate-90">
@@ -166,6 +210,7 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
                 strokeDashoffset={currentOffset}
                 onMouseEnter={() => setHoveredSlice(seg.key)}
                 onMouseLeave={() => setHoveredSlice(null)}
+                opacity={hoveredSlice && !isHovered ? 0.35 : 1}
                 className="transition-all duration-300 cursor-pointer"
                 strokeLinecap="round"
               />
@@ -174,21 +219,37 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
         </svg>
 
         {/* Center Text KPI */}
-        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none">
-          <span className="text-3xl font-black text-slate-900 dark:text-slate-100">
-            {healthData.onTrackPct}%
-          </span>
-          <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
-            Health Rating
-          </span>
-          <span className="text-[10px] text-slate-500 font-medium">
-            {healthData.healthyCount} on track
-          </span>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center pointer-events-none transition-all duration-200">
+          {hoveredSeg ? (
+            <>
+              <span className="text-3xl font-black transition-all" style={{ color: hoveredSeg.color }}>
+                {hoveredSeg.count}
+              </span>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+                {hoveredSeg.pct}%
+              </span>
+              <span className="text-[10px] font-semibold text-slate-600 dark:text-slate-300 truncate max-w-[100px] px-1">
+                {hoveredSeg.label.split("/")[0].trim()}
+              </span>
+            </>
+          ) : (
+            <>
+              <span className="text-3xl font-black text-slate-900 dark:text-slate-100">
+                {healthData.onTrackPct}%
+              </span>
+              <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-wider">
+                Health Rating
+              </span>
+              <span className="text-[10px] text-slate-500 font-medium">
+                {healthData.healthyCount} on track
+              </span>
+            </>
+          )}
         </div>
       </div>
 
       {/* Legend & Breakdown Pills */}
-      <div className="flex-1 w-full space-y-2">
+      <div className="w-full min-w-0 sm:flex-1 space-y-2">
         {healthData.segments.map((seg) => {
           const isHovered = hoveredSlice === seg.key;
           return (
@@ -200,15 +261,15 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
                 isHovered
                   ? "bg-slate-50 dark:bg-slate-800/80 border-slate-300 dark:border-slate-600 shadow-xs"
                   : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800/80"
-              }`}
+              } ${hoveredSlice && !isHovered ? "opacity-40" : "opacity-100"}`}
             >
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: seg.color }}></span>
-                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: seg.color }}></span>
+                <span className="text-xs font-semibold text-slate-700 dark:text-slate-300 truncate">
                   {seg.label}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-1.5 shrink-0">
                 <span className="text-xs font-bold text-slate-900 dark:text-slate-100">
                   {seg.count}
                 </span>
@@ -224,6 +285,83 @@ export function PortfolioDeliveryHealthDonutChart({ projects = [], tasks = [], i
           </div>
         )}
       </div>
+
+      {/* Floating Tooltip Card (Display all projects in hovered health state - Cost & Budget Variance Style) */}
+      {hoveredSeg && (
+        <div className="absolute top-2 right-4 bg-slate-900 text-white rounded-xl shadow-xl p-3 text-xs pointer-events-none z-20 border border-slate-700/60 max-w-xs w-full animate-in fade-in">
+          <div className="flex items-center justify-between gap-3 pb-2 border-b border-slate-800">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: hoveredSeg.color }} />
+              <span className="font-bold text-sm text-slate-100 truncate">{hoveredSeg.label}</span>
+            </div>
+            <span className="text-[10px] font-mono text-slate-300 bg-slate-800 px-2 py-0.5 rounded-full shrink-0">
+              {hoveredSeg.count} {isAll ? (hoveredSeg.count === 1 ? "Project" : "Projects") : (hoveredSeg.count === 1 ? "Task" : "Tasks")} ({hoveredSeg.pct}%)
+            </span>
+          </div>
+
+          <div className="mt-2 space-y-2 max-h-56 overflow-y-auto pr-0.5">
+            {hoveredSeg.items && hoveredSeg.items.length > 0 ? (
+              hoveredSeg.items.map((item, idx) => (
+                <div
+                  key={item.id || idx}
+                  className="p-2 rounded-lg bg-slate-800/80 border border-slate-700/50 space-y-1"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <span className="font-semibold text-slate-100 text-xs line-clamp-1">
+                      {item.name}
+                    </span>
+                    {isAll ? (
+                      <span className="text-[11px] font-bold text-emerald-400 shrink-0">
+                        {item.completion}%
+                      </span>
+                    ) : (
+                      <span className="text-[10px] text-slate-300 font-medium shrink-0">
+                        {item.priority || item.status}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center justify-between text-[10px] text-slate-400 font-mono">
+                    <span className="truncate">{item.code || `ID: ${item.id}`}</span>
+                    {isAll && (
+                      <span className="text-slate-300 shrink-0">
+                        Budget: {formatCurrency(item.budget)}
+                      </span>
+                    )}
+                  </div>
+
+                  {isAll && (
+                    <div className="flex items-center justify-between text-[10px] pt-0.5">
+                      <span className="text-slate-400">
+                        Spent:{" "}
+                        <span className={item.isOverBudget ? "text-rose-400 font-semibold" : "text-slate-200"}>
+                          {formatCurrency(item.spent)}
+                        </span>
+                      </span>
+                      <div className="flex items-center gap-1">
+                        {item.isPastDue && (
+                          <span className="text-rose-400 font-medium text-[9px] bg-rose-950/60 px-1.5 py-0.2 rounded border border-rose-800/40">
+                            Past Due
+                          </span>
+                        )}
+                        {item.isOverBudget && (
+                          <span className="text-amber-400 font-medium text-[9px] bg-amber-950/60 px-1.5 py-0.2 rounded border border-amber-800/40">
+                            Over Budget
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </div>
+              ))
+            ) : (
+              <div className="text-xs text-slate-400 py-2 text-center">
+                No items in this status.
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -763,16 +901,58 @@ export function EarnedValueEfficiencyBubbleChart({ projects = [], height = 320 }
 // ─────────────────────────────────────────────────────────────
 // 4. PROJECT PROFITABILITY & P&L CHART (EXPENSE, INCOME, PROFIT)
 // ─────────────────────────────────────────────────────────────
-export function ProjectProfitabilityChart({ data = [], height = 290 }) {
+export function ProjectProfitabilityChart({ data = [], height = 290, selectedProjectId = null, onProjectSelect = null }) {
   const [hovered, setHovered] = useState(null);
+  const [internalSelectedId, setInternalSelectedId] = useState(null);
+
+  const activeSelectedId = selectedProjectId !== undefined && selectedProjectId !== "ALL" && selectedProjectId !== null
+    ? selectedProjectId
+    : internalSelectedId;
+
+  const activeItem = useMemo(() => {
+    if (!activeSelectedId) return null;
+    return data.find((d) => String(d.id) === String(activeSelectedId) || String(d.code) === String(activeSelectedId) || String(d.shortName) === String(activeSelectedId)) || null;
+  }, [data, activeSelectedId]);
 
   const summary = useMemo(() => {
+    if (activeItem) {
+      const totalIncome = Number(activeItem.income || 0);
+      const totalExpense = Number(activeItem.expense || 0);
+      const totalProfit = Number(activeItem.profit !== undefined ? activeItem.profit : totalIncome - totalExpense);
+      const margin = activeItem.margin !== undefined
+        ? Number(activeItem.margin)
+        : (totalIncome > 0 ? (totalProfit / totalIncome) * 100 : 0);
+      return {
+        totalIncome,
+        totalExpense,
+        totalProfit,
+        margin,
+        isSingle: true,
+        projectName: activeItem.name,
+        projectCode: activeItem.code || activeItem.shortName,
+      };
+    }
     const totalIncome = data.reduce((s, d) => s + Number(d.income || 0), 0);
     const totalExpense = data.reduce((s, d) => s + Number(d.expense || 0), 0);
     const totalProfit = totalIncome - totalExpense;
     const margin = totalIncome > 0 ? (totalProfit / totalIncome) * 100 : 0;
-    return { totalIncome, totalExpense, totalProfit, margin };
-  }, [data]);
+    return {
+      totalIncome,
+      totalExpense,
+      totalProfit,
+      margin,
+      isSingle: false,
+    };
+  }, [data, activeItem]);
+
+  const handleToggleSelect = (item) => {
+    const isAlreadySelected = String(activeSelectedId) === String(item.id);
+    const nextId = isAlreadySelected ? null : item.id;
+    setInternalSelectedId(nextId);
+    if (typeof onProjectSelect === "function") {
+      onProjectSelect(nextId || "ALL");
+    }
+  };
 
   // Dimensions
   const svgWidth = 650;
@@ -792,11 +972,17 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
   return (
     <div className="space-y-4">
       {/* Financial KPI Summary Bar */}
-      <div className="grid grid-cols-3 gap-2.5 p-3 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/80 text-xs">
+      <div
+        className={`grid grid-cols-3 gap-2.5 p-3 rounded-xl border text-xs shadow-smoky-card transition-all ${
+          summary.isSingle
+            ? "bg-brand-50/30 dark:bg-brand-950/30 border-brand-400/80 dark:border-brand-500/80 ring-2 ring-brand-500/20"
+            : "bg-transparent dark:bg-transparent border-slate-200/80 dark:border-slate-700/80"
+        }`}
+      >
         <div className="space-y-0.5 min-w-0">
           <div className="flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
             <TrendingUp size={13} className="shrink-0" />
-            <span className="truncate">Total Income</span>
+            <span className="truncate">{summary.isSingle ? "Project Income" : "Total Income"}</span>
           </div>
           <div className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
             {formatCurrency(summary.totalIncome)}
@@ -806,7 +992,7 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
         <div className="space-y-0.5 min-w-0">
           <div className="flex items-center gap-1 text-[11px] font-semibold text-rose-600 dark:text-rose-400">
             <CreditCard size={13} className="shrink-0" />
-            <span className="truncate">Total Expense</span>
+            <span className="truncate">{summary.isSingle ? "Project Expense" : "Total Expense"}</span>
           </div>
           <div className="text-sm font-extrabold text-slate-900 dark:text-white truncate">
             {formatCurrency(summary.totalExpense)}
@@ -816,7 +1002,7 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
         <div className="space-y-0.5 min-w-0">
           <div className="flex items-center gap-1 text-[11px] font-semibold text-brand-600 dark:text-brand-400">
             <Wallet size={13} className="shrink-0" />
-            <span className="truncate">Net Profit</span>
+            <span className="truncate">{summary.isSingle ? "Project Profit" : "Net Profit"}</span>
           </div>
           <div className="flex items-center gap-1.5 flex-wrap">
             <span
@@ -840,6 +1026,25 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
           </div>
         </div>
       </div>
+
+      {/* Selected Project Filter Badge */}
+      {summary.isSingle && (
+        <div className="flex items-center justify-between px-3 py-1.5 rounded-lg bg-brand-50/80 dark:bg-brand-950/40 text-brand-800 dark:text-brand-200 border border-brand-200/80 dark:border-brand-800/80 text-xs animate-in fade-in">
+          <div className="flex items-center gap-1.5 truncate">
+            <span className="w-2 h-2 rounded-full bg-brand-500 animate-pulse shrink-0"></span>
+            <span className="font-semibold text-slate-600 dark:text-slate-300">Selected:</span>
+            <span className="font-extrabold truncate text-brand-900 dark:text-white">{summary.projectName}</span>
+            <span className="font-mono text-[10px] text-brand-700 dark:text-brand-300 shrink-0">({summary.projectCode})</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => handleToggleSelect(activeItem)}
+            className="text-[11px] font-bold text-brand-700 hover:text-brand-900 dark:text-brand-300 dark:hover:text-white underline ml-2 shrink-0 cursor-pointer"
+          >
+            Show All Projects
+          </button>
+        </div>
+      )}
 
       {/* Legend */}
       <div className="flex flex-wrap items-center justify-between gap-2 text-xs border-b border-slate-100 dark:border-slate-800 pb-2">
@@ -908,16 +1113,36 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
             const profY = padding.top + plotHeight - profH;
 
             const isHovered = hovered?.id === item.id;
+            const isSelected = activeItem?.id === item.id;
             const isProfit = Number(item.profit || 0) >= 0;
+
+            const groupOpacity = activeItem
+              ? (isSelected ? 1 : 0.35)
+              : (hovered && !isHovered ? 0.45 : 1);
 
             return (
               <g
                 key={item.id || idx}
+                onClick={() => handleToggleSelect(item)}
                 onMouseEnter={() => setHovered(item)}
                 onMouseLeave={() => setHovered(null)}
-                className="cursor-pointer transition-opacity duration-150"
-                opacity={hovered && !isHovered ? 0.45 : 1}
+                className="cursor-pointer transition-all duration-200"
+                opacity={groupOpacity}
               >
+                {/* Background Selection Highlight Hit Box */}
+                <rect
+                  x={groupX - 5}
+                  y={padding.top}
+                  width={barWidth * 3 + 16}
+                  height={plotHeight + 36}
+                  rx="6"
+                  className={`transition-colors ${
+                    isSelected
+                      ? "fill-brand-500/10 stroke-brand-500/40 stroke-1"
+                      : "fill-transparent hover:fill-slate-500/5"
+                  }`}
+                />
+
                 {/* Income Bar (Emerald) */}
                 <rect
                   x={groupX}
@@ -925,7 +1150,9 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
                   width={barWidth}
                   height={incH}
                   rx="3"
-                  className="fill-emerald-500 transition-all hover:brightness-110"
+                  className={`fill-emerald-500 transition-all hover:brightness-110 ${
+                    isSelected ? "stroke-white dark:stroke-slate-900 stroke-1" : ""
+                  }`}
                 />
 
                 {/* Expense Bar (Rose) */}
@@ -935,7 +1162,9 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
                   width={barWidth}
                   height={expH}
                   rx="3"
-                  className="fill-rose-500 transition-all hover:brightness-110"
+                  className={`fill-rose-500 transition-all hover:brightness-110 ${
+                    isSelected ? "stroke-white dark:stroke-slate-900 stroke-1" : ""
+                  }`}
                 />
 
                 {/* Net Profit Bar (Indigo if profit, Deep Red if deficit) */}
@@ -947,7 +1176,9 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
                   rx="3"
                   className={`${
                     isProfit ? "fill-indigo-500 dark:fill-indigo-400" : "fill-red-700"
-                  } transition-all hover:brightness-110`}
+                  } transition-all hover:brightness-110 ${
+                    isSelected ? "stroke-white dark:stroke-slate-900 stroke-1" : ""
+                  }`}
                 />
 
                 {/* Project Short Name on X-Axis */}
@@ -955,7 +1186,11 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
                   x={groupX + (barWidth + 3) * 1.5 - 1.5}
                   y={padding.top + plotHeight + 16}
                   textAnchor="middle"
-                  className="text-[10px] font-bold fill-slate-700 dark:fill-slate-300"
+                  className={`text-[10px] transition-all cursor-pointer ${
+                    isSelected
+                      ? "font-black fill-brand-600 dark:fill-brand-400 underline"
+                      : "font-bold fill-slate-700 dark:fill-slate-300 hover:fill-brand-500"
+                  }`}
                 >
                   {item.shortName}
                 </text>
@@ -965,9 +1200,9 @@ export function ProjectProfitabilityChart({ data = [], height = 290 }) {
                   x={groupX + (barWidth + 3) * 1.5 - 1.5}
                   y={padding.top + plotHeight + 28}
                   textAnchor="middle"
-                  className={`text-[9px] font-mono font-bold ${
+                  className={`text-[9px] font-mono font-bold transition-all cursor-pointer ${
                     isProfit ? "fill-emerald-600 dark:fill-emerald-400" : "fill-rose-600 dark:fill-rose-400"
-                  }`}
+                  } ${isSelected ? "font-black" : ""}`}
                 >
                   {isProfit ? `+${item.margin.toFixed(0)}%` : `${item.margin.toFixed(0)}%`}
                 </text>
@@ -1044,7 +1279,7 @@ export function MilestoneAchievementDashboard({ milestoneData }) {
   return (
     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-center">
       {/* LEFT: MASTER COMBINED BIG DONUT */}
-      <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-100 dark:border-slate-800">
+      <div className="lg:col-span-5 flex flex-col items-center justify-center p-4 rounded-2xl bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 shadow-smoky-card">
         <div className="text-center mb-3">
           <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400">
             Portfolio Milestone Progress
@@ -1149,10 +1384,10 @@ export function MilestoneAchievementDashboard({ milestoneData }) {
                 key={p.id}
                 onMouseEnter={() => setHoveredProject(p.id)}
                 onMouseLeave={() => setHoveredProject(null)}
-                className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 ${
+                className={`p-3 rounded-xl border transition-all flex items-center justify-between gap-3 shadow-smoky-card ${
                   isHovered
-                    ? "bg-slate-50 dark:bg-slate-800/80 border-brand-300 dark:border-brand-700 shadow-xs"
-                    : "bg-white dark:bg-slate-900 border-slate-100 dark:border-slate-800"
+                    ? "bg-slate-50 dark:bg-slate-800/80 border-brand-300 dark:border-brand-700"
+                    : "bg-white dark:bg-slate-900 border-slate-200/80 dark:border-slate-800"
                 }`}
               >
                 {/* Mini Donut */}
@@ -1330,7 +1565,7 @@ function SingleProjectForecastCard({ forecast }) {
   };
 
   return (
-    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-2xs space-y-3">
+    <div className="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-smoky-card transition-all space-y-3">
       {/* Card Header */}
       <div className="flex items-center justify-between gap-2">
         <div className="min-w-0">
@@ -1524,6 +1759,9 @@ function SingleProjectForecastCard({ forecast }) {
 // ─────────────────────────────────────────────────────────────
 export function SubcontractorContractsChart({ subcontracts = [], valuations = [], selectedProjectName = null }) {
   const [hoveredIndex, setHoveredIndex] = useState(null);
+  const [selectedSubId, setSelectedSubId] = useState(null);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [statusFilter, setStatusFilter] = useState("ALL"); // "ALL", "WITH_BALANCE", "PAID"
 
   // Compute financial totals and per-subcontract breakdown
   const processedData = useMemo(() => {
@@ -1574,6 +1812,35 @@ export function SubcontractorContractsChart({ subcontracts = [], valuations = []
     };
   }, [processedData]);
 
+  // Selected subcontractor (when a user clicks on the chart or disbursement card)
+  const activeSub = useMemo(() => {
+    return selectedSubId ? processedData.find((d) => d.id === selectedSubId) : null;
+  }, [selectedSubId, processedData]);
+
+  // Filtered disbursement list for adaptive clear view
+  const filteredDisbursementData = useMemo(() => {
+    let list = processedData;
+    if (searchTerm.trim()) {
+      const q = searchTerm.toLowerCase();
+      list = list.filter(
+        (item) =>
+          item.name.toLowerCase().includes(q) ||
+          item.trade.toLowerCase().includes(q) ||
+          item.projectName.toLowerCase().includes(q) ||
+          item.number.toLowerCase().includes(q)
+      );
+    }
+    if (statusFilter === "WITH_BALANCE") {
+      list = list.filter((item) => item.balance > 0);
+    } else if (statusFilter === "PAID") {
+      list = list.filter((item) => item.balance === 0 || item.paidPct >= 100);
+    }
+    return list;
+  }, [processedData, searchTerm, statusFilter]);
+
+  const withBalanceCount = useMemo(() => processedData.filter((i) => i.balance > 0).length, [processedData]);
+  const fullyPaidCount = useMemo(() => processedData.filter((i) => i.balance === 0 || i.paidPct >= 100).length, [processedData]);
+
   const chartHeight = 240;
   const maxVal = Math.max(
     ...processedData.map((d) => Math.max(d.contractSum, d.totalPaid, d.balance)),
@@ -1603,57 +1870,101 @@ export function SubcontractorContractsChart({ subcontracts = [], valuations = []
   }
 
   return (
-    <div className="space-y-5">
-      {/* 3 Summary Cards */}
+    <div className="space-y-4">
+      {/* Active Subcontractor Filter Banner */}
+      {activeSub && (
+        <div className="flex items-center justify-between bg-blue-50 dark:bg-blue-950/50 border border-blue-200/80 dark:border-blue-850 px-3.5 py-2 rounded-xl text-xs shadow-xs animate-in fade-in">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="w-2 h-2 rounded-full bg-blue-600 shrink-0"></span>
+            <span className="text-slate-500 dark:text-slate-400 shrink-0">Filtered Subcontractor:</span>
+            <span className="font-bold text-blue-950 dark:text-blue-100 truncate">{activeSub.name}</span>
+            <span className="hidden sm:inline-block text-[10px] font-mono bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 px-1.5 py-0.5 rounded shrink-0">
+              {activeSub.trade}
+            </span>
+          </div>
+          <button
+            onClick={() => setSelectedSubId(null)}
+            className="text-xs font-bold text-blue-700 dark:text-blue-300 hover:text-blue-900 dark:hover:text-blue-100 underline cursor-pointer shrink-0 ml-2"
+          >
+            Show All Subcontractors ✕
+          </button>
+        </div>
+      )}
+
+      {/* 3 Summary Cards - Dynamic auto-update on subcontractor selection */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <div className="p-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40">
+        {/* Card 1: Contract Sum with Cedi symbol (GH₵) */}
+        <div className={`p-3.5 rounded-xl transition-all shadow-smoky-card ${
+          activeSub
+            ? "bg-blue-100/70 dark:bg-blue-950/60 border-2 border-blue-500/80"
+            : "bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200/60 dark:border-blue-900/40"
+        }`}>
           <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-400 font-bold mb-1">
             <span className="flex items-center gap-1.5">
-              <DollarSign size={14} /> Total Contract Sums
+              <span className="inline-flex items-center justify-center font-black text-xs leading-none">GH₵</span>
+              <span>{activeSub ? "Sub Contract Sum" : "Total Contract Sums"}</span>
             </span>
-            <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono">
-              {summary.count} Subs
+            <span className="text-[10px] bg-blue-100 dark:bg-blue-900/60 px-1.5 py-0.5 rounded font-mono truncate max-w-[110px]">
+              {activeSub ? (activeSub.number || activeSub.trade) : `${summary.count} Subs`}
             </span>
           </div>
           <div className="text-lg font-black text-blue-950 dark:text-blue-100">
-            {formatCurrency(summary.totalContractSum)}
+            {formatCurrency(activeSub ? activeSub.contractSum : summary.totalContractSum)}
           </div>
-          <div className="text-[11px] text-blue-600/80 dark:text-blue-300/80 mt-0.5">
-            Total contracted value awarded across portfolio
+          <div className="text-[11px] text-blue-600/80 dark:text-blue-300/80 mt-0.5 truncate">
+            {activeSub
+              ? `${activeSub.name} • ${activeSub.projectName}`
+              : "Total contracted value awarded across portfolio"}
           </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40">
+        {/* Card 2: Amount Paid */}
+        <div className={`p-3.5 rounded-xl transition-all shadow-smoky-card ${
+          activeSub
+            ? "bg-emerald-100/70 dark:bg-emerald-950/60 border-2 border-emerald-500/80"
+            : "bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200/60 dark:border-emerald-900/40"
+        }`}>
           <div className="flex items-center justify-between text-xs text-emerald-700 dark:text-emerald-400 font-bold mb-1">
             <span className="flex items-center gap-1.5">
-              <CreditCard size={14} /> Amount Paid to Subs
+              <CreditCard size={14} />
+              <span>{activeSub ? "Amount Paid to Sub" : "Amount Paid to Subs"}</span>
             </span>
             <span className="text-[10px] bg-emerald-100 dark:bg-emerald-900/60 px-1.5 py-0.5 rounded font-mono">
-              {summary.overallPaidPct.toFixed(1)}% Disbursed
+              {(activeSub ? activeSub.paidPct : summary.overallPaidPct).toFixed(1)}% Disbursed
             </span>
           </div>
           <div className="text-lg font-black text-emerald-950 dark:text-emerald-100">
-            {formatCurrency(summary.totalPaid)}
+            {formatCurrency(activeSub ? activeSub.totalPaid : summary.totalPaid)}
           </div>
-          <div className="text-[11px] text-emerald-600/80 dark:text-emerald-300/80 mt-0.5">
-            Advances + certified interim payments
+          <div className="text-[11px] text-emerald-600/80 dark:text-emerald-300/80 mt-0.5 truncate">
+            {activeSub
+              ? `Advance: ${formatCurrency(activeSub.advancePaid)} | Certified: ${formatCurrency(activeSub.valuationsTotal)}`
+              : "Advances + certified interim payments"}
           </div>
         </div>
 
-        <div className="p-3.5 rounded-xl bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40">
+        {/* Card 3: Outstanding Balance */}
+        <div className={`p-3.5 rounded-xl transition-all shadow-smoky-card ${
+          activeSub
+            ? "bg-amber-100/70 dark:bg-amber-950/60 border-2 border-amber-500/80"
+            : "bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/60 dark:border-amber-900/40"
+        }`}>
           <div className="flex items-center justify-between text-xs text-amber-700 dark:text-amber-400 font-bold mb-1">
             <span className="flex items-center gap-1.5">
-              <Wallet size={14} /> Outstanding Balance
+              <Wallet size={14} />
+              <span>{activeSub ? "Sub Remaining Balance" : "Outstanding Balance"}</span>
             </span>
             <span className="text-[10px] bg-amber-100 dark:bg-amber-900/60 px-1.5 py-0.5 rounded font-mono">
-              {(100 - summary.overallPaidPct).toFixed(1)}% Remaining
+              {(100 - (activeSub ? activeSub.paidPct : summary.overallPaidPct)).toFixed(1)}% Remaining
             </span>
           </div>
           <div className="text-lg font-black text-amber-950 dark:text-amber-100">
-            {formatCurrency(summary.totalBalance)}
+            {formatCurrency(activeSub ? activeSub.balance : summary.totalBalance)}
           </div>
-          <div className="text-[11px] text-amber-600/80 dark:text-amber-300/80 mt-0.5">
-            Payable upon milestone completion
+          <div className="text-[11px] text-amber-600/80 dark:text-amber-300/80 mt-0.5 truncate">
+            {activeSub
+              ? (activeSub.balance === 0 ? "Fully settled • No outstanding balance" : "Payable upon milestone completion / retention release")
+              : "Payable upon milestone completion"}
           </div>
         </div>
       </div>
@@ -1673,6 +1984,9 @@ export function SubcontractorContractsChart({ subcontracts = [], valuations = []
             <span className="w-2.5 h-2.5 rounded-xs bg-amber-500"></span>
             <span className="text-slate-600 dark:text-slate-400 font-medium">Balance</span>
           </div>
+          <span className="hidden md:inline text-[10px] text-slate-400 italic">
+            • Click any bar to inspect subcontractor
+          </span>
         </div>
 
         <Link
@@ -1734,23 +2048,26 @@ export function SubcontractorContractsChart({ subcontracts = [], valuations = []
             const balY = plotH - balHeight + 10;
 
             const isHovered = hoveredIndex === idx;
+            const isSelected = selectedSubId === d.id;
 
             return (
               <g
                 key={d.id}
+                onClick={() => setSelectedSubId((prev) => (prev === d.id ? null : d.id))}
                 onMouseEnter={() => setHoveredIndex(idx)}
                 onMouseLeave={() => setHoveredIndex(null)}
-                className="cursor-pointer"
+                className="cursor-pointer transition-opacity duration-200"
+                opacity={selectedSubId && !isSelected ? 0.35 : 1}
               >
-                {/* Hover Backdrop Pill */}
-                {isHovered && (
+                {/* Selection or Hover Backdrop Pill */}
+                {(isHovered || isSelected) && (
                   <rect
                     x={startX - 8}
                     y="5"
                     width={groupWidth + 16}
                     height={plotH + 40}
                     rx="10"
-                    className="fill-slate-100/60 dark:fill-slate-800/40"
+                    className={isSelected ? "fill-brand-500/15 stroke-brand-500/50 stroke-1" : "fill-slate-100/60 dark:fill-slate-800/40"}
                   />
                 )}
 
@@ -1789,7 +2106,11 @@ export function SubcontractorContractsChart({ subcontracts = [], valuations = []
                   x={startX + (groupWidth / 2) - 10}
                   y={plotH + 26}
                   textAnchor="middle"
-                  className="text-[10px] font-semibold fill-slate-700 dark:fill-slate-300"
+                  className={`text-[10px] transition-all ${
+                    isSelected
+                      ? "font-bold fill-brand-600 dark:fill-brand-400 underline"
+                      : "font-semibold fill-slate-700 dark:fill-slate-300"
+                  }`}
                 >
                   {d.name.length > 11 ? `${d.name.slice(0, 10)}…` : d.name}
                 </text>
@@ -1839,61 +2160,164 @@ export function SubcontractorContractsChart({ subcontracts = [], valuations = []
         )}
       </div>
 
-      {/* Subcontractor Detailed Breakdown Rows */}
-      <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
-        <div className="text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-2">
-          Subcontractor Disbursement Status
-        </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-2.5">
-          {processedData.slice(0, 6).map((item) => (
-            <div
-              key={item.id}
-              className="p-3 rounded-xl border border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900/60 shadow-2xs space-y-2"
-            >
-              <div className="flex items-center justify-between text-xs">
-                <div className="min-w-0 pr-2">
-                  <span className="font-bold text-slate-900 dark:text-slate-100 truncate block">
-                    {item.name}
-                  </span>
-                  <span className="text-[10px] text-slate-400 font-mono">
-                    {item.trade} • {item.projectName}
-                  </span>
-                </div>
-                <div className="text-right shrink-0">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
-                    {item.paidPct.toFixed(0)}% Paid
-                  </span>
-                </div>
-              </div>
+      {/* Adaptive Subcontractor Disbursement Status Section */}
+      <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div className="flex items-center gap-2">
+            <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
+              Subcontractor Disbursement Status
+            </h4>
+            <span className="text-[11px] font-mono text-slate-400 px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-800">
+              {filteredDisbursementData.length} of {processedData.length}
+            </span>
+          </div>
 
-              {/* Progress bar */}
-              <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden flex">
-                <div
-                  className="h-full bg-emerald-500 transition-all duration-500"
-                  style={{ width: `${item.paidPct}%` }}
-                  title={`Paid: ${formatCurrency(item.totalPaid)}`}
-                />
-                <div
-                  className="h-full bg-amber-400/80 transition-all duration-500"
-                  style={{ width: `${100 - item.paidPct}%` }}
-                  title={`Balance: ${formatCurrency(item.balance)}`}
-                />
-              </div>
-
-              <div className="flex items-center justify-between text-[11px] pt-0.5">
-                <span className="text-slate-500 dark:text-slate-400">
-                  Sum: <strong className="text-slate-800 dark:text-slate-200">{formatCurrency(item.contractSum)}</strong>
-                </span>
-                <span className="text-emerald-600 dark:text-emerald-400">
-                  Paid: <strong>{formatCurrency(item.totalPaid)}</strong>
-                </span>
-                <span className="text-amber-600 dark:text-amber-400">
-                  Bal: <strong>{formatCurrency(item.balance)}</strong>
-                </span>
-              </div>
+          {/* Adaptive Filter & Search Controls */}
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Quick Filter Tabs */}
+            <div className="inline-flex rounded-lg border border-slate-200 dark:border-slate-700 p-0.5 bg-slate-50 dark:bg-slate-900/80 text-[11px]">
+              <button
+                type="button"
+                onClick={() => setStatusFilter("ALL")}
+                className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                  statusFilter === "ALL"
+                    ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-white shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                All ({processedData.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("WITH_BALANCE")}
+                className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                  statusFilter === "WITH_BALANCE"
+                    ? "bg-white dark:bg-slate-800 text-amber-600 dark:text-amber-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                Pending ({withBalanceCount})
+              </button>
+              <button
+                type="button"
+                onClick={() => setStatusFilter("PAID")}
+                className={`px-2 py-0.5 rounded-md font-semibold transition-all cursor-pointer ${
+                  statusFilter === "PAID"
+                    ? "bg-white dark:bg-slate-800 text-emerald-600 dark:text-emerald-400 shadow-xs"
+                    : "text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
+                }`}
+              >
+                Settled ({fullyPaidCount})
+              </button>
             </div>
-          ))}
+
+            {/* Compact Search Box */}
+            {processedData.length > 2 && (
+              <div className="relative w-full sm:w-auto min-w-[140px] max-w-[200px]">
+                <Search size={12} className="absolute left-2.5 top-2 text-slate-400 pointer-events-none" />
+                <input
+                  type="text"
+                  placeholder="Search sub..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-7 pr-2.5 py-1 text-xs rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-brand-500"
+                />
+                {searchTerm && (
+                  <button
+                    onClick={() => setSearchTerm("")}
+                    className="absolute right-2 top-1 text-slate-400 hover:text-slate-600 text-xs"
+                  >
+                    ✕
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Adaptive Responsive Cards Grid with Scrollable Container */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-84 overflow-y-auto pr-1">
+          {filteredDisbursementData.map((item) => {
+            const isSelected = selectedSubId === item.id;
+            return (
+              <div
+                key={item.id}
+                onClick={() => setSelectedSubId((prev) => (prev === item.id ? null : item.id))}
+                className={`p-3 rounded-xl border transition-all cursor-pointer space-y-2 select-none ${
+                  isSelected
+                    ? "border-brand-500 ring-2 ring-brand-500/30 bg-brand-50/20 dark:bg-brand-950/40 shadow-xs"
+                    : "border-slate-200/80 dark:border-slate-800 bg-white dark:bg-slate-900/60 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs"
+                }`}
+              >
+                <div className="flex items-start justify-between text-xs gap-2">
+                  <div className="min-w-0 flex-1">
+                    <span className={`font-bold truncate block ${isSelected ? "text-brand-900 dark:text-brand-300" : "text-slate-900 dark:text-slate-100"}`}>
+                      {item.name}
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-mono truncate block">
+                      {item.trade} • {item.projectName}
+                    </span>
+                  </div>
+                  <div className="text-right shrink-0">
+                    <span
+                      className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                        item.paidPct >= 100
+                          ? "bg-emerald-100 dark:bg-emerald-950/70 text-emerald-700 dark:text-emerald-300"
+                          : item.paidPct > 0
+                          ? "bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300"
+                          : "bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400"
+                      }`}
+                    >
+                      {item.paidPct >= 100 ? "100% Paid" : `${item.paidPct.toFixed(0)}% Paid`}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full bg-slate-100 dark:bg-slate-800 h-2 rounded-full overflow-hidden flex">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${item.paidPct}%` }}
+                    title={`Paid: ${formatCurrency(item.totalPaid)}`}
+                  />
+                  <div
+                    className="h-full bg-amber-400/80 transition-all duration-500"
+                    style={{ width: `${100 - item.paidPct}%` }}
+                    title={`Balance: ${formatCurrency(item.balance)}`}
+                  />
+                </div>
+
+                {/* Financial breakdown */}
+                <div className="grid grid-cols-3 gap-1 text-[11px] pt-1 border-t border-slate-100 dark:border-slate-800/80">
+                  <div className="truncate">
+                    <span className="text-slate-400 block text-[9px] uppercase">Sum</span>
+                    <strong className="text-slate-800 dark:text-slate-200 font-semibold">{formatCurrency(item.contractSum)}</strong>
+                  </div>
+                  <div className="truncate">
+                    <span className="text-emerald-500 dark:text-emerald-400 block text-[9px] uppercase">Paid</span>
+                    <strong className="text-emerald-600 dark:text-emerald-400 font-semibold">{formatCurrency(item.totalPaid)}</strong>
+                  </div>
+                  <div className="truncate text-right">
+                    <span className="text-amber-500 dark:text-amber-400 block text-[9px] uppercase">Balance</span>
+                    <strong className="text-amber-600 dark:text-amber-400 font-semibold">{formatCurrency(item.balance)}</strong>
+                  </div>
+                </div>
+
+                {isSelected && (
+                  <div className="text-[10px] font-bold text-brand-600 dark:text-brand-400 pt-0.5 text-center bg-brand-50/50 dark:bg-brand-900/30 rounded py-0.5">
+                    ✓ Selected (KPIs updated above)
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        {filteredDisbursementData.length === 0 && (
+          <div className="text-center py-6 text-xs text-slate-400 bg-slate-50 dark:bg-slate-800/30 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">
+            No subcontractors match your search or filter.
+          </div>
+        )}
       </div>
     </div>
   );
@@ -1908,6 +2332,16 @@ export default function HomeProjectBasicDashboard({
   onScopeChange,
   hideScopeSelector = false,
 }) {
+  const { canViewDashboardElement } = usePermission();
+
+  const canViewChart = (key) => {
+    if (canViewDashboardElement("home", "card", key) === false) return false;
+    if (canViewDashboardElement("home", "card", key) === true) return true;
+    if (canViewDashboardElement("project-management", "card", key) === false) return false;
+    if (canViewDashboardElement("projects", "card", key) === false) return false;
+    return true;
+  };
+
   const [loading, setLoading] = useState(true);
   const [internalScope, setInternalScope] = useState("ALL");
   const selectedScope = propScope !== undefined ? propScope : internalScope;
@@ -1998,8 +2432,12 @@ export default function HomeProjectBasicDashboard({
     const totalComp = filteredProjects.reduce((acc, p) => acc + Number(p.completion_percent || 0), 0);
     const portfolioAvg = filteredProjects.length > 0 ? totalComp / filteredProjects.length : 0;
 
-    // Cost series for CostBarChart
-    const costSeries = filteredBudgetRows.map((b) => ({
+    // Capped projects for sections limited to maximum 4 projects (excluding Portfolio Health, Earned Value, and Subcontracts)
+    const cappedProjects = isAll ? filteredProjects.slice(0, 4) : filteredProjects;
+    const cappedBudgetRows = isAll ? filteredBudgetRows.slice(0, 4) : filteredBudgetRows;
+
+    // Cost series for CostBarChart (Capped to max 4 projects)
+    const costSeries = cappedBudgetRows.map((b) => ({
       id: b.id,
       name: b.project_name,
       code: b.project_code,
@@ -2008,11 +2446,11 @@ export default function HomeProjectBasicDashboard({
       spent: Number(b.total_spent || b.total_expense || 0),
     }));
 
-    // Financial Series for ProjectProfitabilityChart (Income, Expense, Profit)
+    // Financial Series for ProjectProfitabilityChart (Income, Expense, Profit - Capped to max 4 projects)
     const projectSummaries = financialReports?.projectSummary || [];
     const invItems = Array.isArray(invoices) ? invoices : [];
 
-    const financialSeries = filteredProjects.map((p) => {
+    const financialSeries = cappedProjects.map((p) => {
       const bRow = filteredBudgetRows.find((b) => Number(b.id) === Number(p.id));
       const pSum = projectSummaries.find((s) => Number(s.id) === Number(p.id));
       const pInvoices = invItems.filter((inv) => Number(inv.project_id) === Number(p.id));
@@ -2052,8 +2490,8 @@ export default function HomeProjectBasicDashboard({
       };
     });
 
-    // 1. Milestone Achievement Data (Master combined + per-project)
-    const projectMilestones = filteredProjects.map((p) => {
+    // 1. Milestone Achievement Data (Master combined + per-project, capped to max 4 projects)
+    const projectMilestones = cappedProjects.map((p) => {
       const pReal = (milestones || []).filter((m) => Number(m.project_id) === Number(p.id));
       if (pReal.length > 0) {
         const achieved = pReal.filter(
@@ -2101,9 +2539,9 @@ export default function HomeProjectBasicDashboard({
       projectMilestones,
     };
 
-    // 2. Schedule Forecasting Data (Planned date vs. Projected date per project)
+    // 2. Schedule Forecasting Data (Planned date vs. Projected date per project, capped to max 4 projects)
     const today = new Date();
-    const forecastData = filteredProjects.map((p) => {
+    const forecastData = cappedProjects.map((p) => {
       let startDate = p.start_date ? new Date(p.start_date) : new Date(today.getTime() - 60 * 24 * 60 * 60 * 1000);
       let plannedEndDate = p.end_date ? new Date(p.end_date) : new Date(today.getTime() + 120 * 24 * 60 * 60 * 1000);
 
@@ -2146,7 +2584,8 @@ export default function HomeProjectBasicDashboard({
     return {
       isAll,
       singleProj,
-      projects: filteredProjects,
+      projects: cappedProjects,
+      allProjects: filteredProjects,
       tasks: filteredTasks,
       taskCounts,
       budgetRows: filteredBudgetRows,
@@ -2197,172 +2636,191 @@ export default function HomeProjectBasicDashboard({
     <div className="space-y-6">
       {/* 1. ELEGANT PORTFOLIO SCOPE SELECTOR */}
       {!hideScopeSelector && (
-        <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <div className="flex items-center gap-3 min-w-0 flex-1">
-            <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0 shadow-2xs">
-              <Filter size={17} />
-            </div>
-
-            <div className="min-w-0 flex-1">
-              <div className="relative inline-block w-full sm:w-auto">
-                <select
-                  id="portfolio-scope-select"
-                  value={selectedScope}
-                  onChange={(e) => setSelectedScope(e.target.value)}
-                  className="w-full sm:w-auto min-w-[260px] md:min-w-[340px] appearance-none bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white font-black text-sm sm:text-base border border-slate-300 dark:border-slate-700 rounded-xl pl-3.5 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-2xs transition-colors"
+        <div className="flex items-center justify-start pt-1 pb-0.5">
+          <div className="relative inline-block w-full sm:w-auto">
+            <select
+              id="portfolio-scope-select"
+              value={selectedScope}
+              onChange={(e) => setSelectedScope(e.target.value)}
+              className="w-full sm:w-auto min-w-[260px] md:min-w-[340px] appearance-none bg-white hover:bg-slate-50 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white font-bold text-sm sm:text-base border border-slate-200 dark:border-slate-700 rounded-xl pl-3.5 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-xs transition-colors"
+            >
+              <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-bold">
+                All Projects
+              </option>
+              {projects.map((p) => (
+                <option
+                  key={p.id}
+                  value={p.id}
+                  className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold py-1.5"
                 >
-                  <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-bold">
-                    All Projects (Portfolio View)
-                  </option>
-                  {projects.map((p) => (
-                    <option
-                      key={p.id}
-                      value={p.id}
-                      className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold py-1.5"
-                    >
-                      {p.project_name} {p.project_code ? `(${p.project_code})` : ""}
-                    </option>
-                  ))}
-                </select>
-                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400">
-                  <ChevronDown size={18} />
-                </div>
-              </div>
+                  {p.project_name} {p.project_code ? `(${p.project_code})` : ""}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400">
+              <ChevronDown size={18} />
             </div>
-          </div>
-
-          {/* Portfolio Live Scope Summary Pill */}
-          <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-            <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-              <span>
-                {scopedData.isAll
-                  ? `${projects.length} Projects • ${tasks.length} Tasks`
-                  : `${scopedData.singleProj?.project_name || "Project"} • ${scopedData.tasks.length} Tasks`}
-              </span>
-            </span>
           </div>
         </div>
       )}
 
-      {/* 2. ROW 1: PROJECT PROFITABILITY & PROJECT EXECUTION */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Profitability: Expense, Income & Profit per Project */}
+      {/* 1. TOP SECTION: MILESTONE ACHIEVEMENT MATRIX */}
+      {canViewChart("pm-milestone-matrix") && (
         <SectionCard
-          title="Project Profitability & P&L"
+          title="Milestone Achievement Matrix"
           subtitle={
             scopedData.isAll
-              ? `Comparative revenue, expenses, and net profit margins across ${projects.length} projects`
-              : `Income, expenditure, and net operating margin for ${scopedData.singleProj?.project_name}`
+              ? `Portfolio milestone delivery (${scopedData.milestoneData?.totalAchieved || 0} of ${scopedData.milestoneData?.grandTotal || 0} achieved) with per-project breakdown`
+              : `Milestone delivery status for ${scopedData.singleProj?.project_name}`
           }
         >
-          <ProjectProfitabilityChart
-            data={scopedData.financialSeries}
-            height={290}
-          />
-        </SectionCard>
-
-        {/* Project Execution & Work Velocity (Replaces Resource Workload) */}
-        <SectionCard
-          title="Project Execution & Work Delivery"
-          subtitle={
-            scopedData.isAll
-              ? `Delivery progress & task velocity across ${projects.length} projects`
-              : `Delivery breakdown by work package for ${scopedData.singleProj?.project_name}`
-          }
-        >
-          <ProjectExecutionHorizontalBarChart
-            projects={scopedData.projects}
-            tasks={scopedData.tasks}
+          <MilestoneAchievementDashboard
+            milestoneData={scopedData.milestoneData}
             isAll={scopedData.isAll}
           />
         </SectionCard>
-      </div>
+      )}
 
-      {/* 3. ROW 2: PORTFOLIO DELIVERY HEALTH & RISK */}
-      <SectionCard
-        title="Portfolio Delivery Health & Risk"
-        subtitle={
-          scopedData.isAll
-            ? `Delivery confidence and schedule/budget risk rating across ${projects.length} projects`
-            : `Delivery confidence & task risk for ${scopedData.singleProj?.project_name}`
-        }
-      >
-        <PortfolioDeliveryHealthDonutChart
-          projects={scopedData.budgetRows}
-          tasks={scopedData.tasks}
-          isAll={scopedData.isAll}
-        />
-      </SectionCard>
+      {/* 2. ROW 2: PROJECT PROFITABILITY & PROJECT EXECUTION */}
+      {(() => {
+        const showProfitability = canViewChart("pm-profitability-pl");
+        const showExecution = canViewChart("pm-project-execution");
+        if (!showProfitability && !showExecution) return null;
 
-      {/* 4. ROW 3: MILESTONE ACHIEVEMENT MATRIX (MASTER DONUT & PER-PROJECT MINI-DONUTS) */}
-      <SectionCard
-        title="Milestone Achievement Matrix"
-        subtitle={
-          scopedData.isAll
-            ? `Portfolio milestone delivery (${scopedData.milestoneData?.totalAchieved || 0} of ${scopedData.milestoneData?.grandTotal || 0} achieved) with per-project breakdown`
-            : `Milestone delivery status for ${scopedData.singleProj?.project_name}`
-        }
-      >
-        <MilestoneAchievementDashboard
-          milestoneData={scopedData.milestoneData}
-          isAll={scopedData.isAll}
-        />
-      </SectionCard>
+        const gridCols = showProfitability && showExecution ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1";
 
-      {/* 5. ROW 4: SCHEDULE FORECASTING & PROJECTED COMPLETION (PER-PROJECT DOUBLE LINE GRAPH) */}
-      <SectionCard
-        title="Schedule Forecast & Completion Projection"
-        subtitle={
-          scopedData.isAll
-            ? "Projected completion dates vs. contract end dates per project based on delivery velocity"
-            : `Projected completion date vs. contract end date for ${scopedData.singleProj?.project_name}`
-        }
-      >
-        <ProjectScheduleForecastSection
-          forecasts={scopedData.forecastData}
-          isAll={scopedData.isAll}
-        />
-      </SectionCard>
+        return (
+          <div className={`grid ${gridCols} gap-6`}>
+            {/* Project Profitability: Expense, Income & Profit per Project */}
+            {showProfitability && (
+              <SectionCard
+                title="Project Profitability & P&L"
+                subtitle={
+                  scopedData.isAll
+                    ? `Comparative revenue, expenses, and net profit margins across ${scopedData.projects.length} projects`
+                    : `Income, expenditure, and net operating margin for ${scopedData.singleProj?.project_name}`
+                }
+              >
+                <ProjectProfitabilityChart
+                  data={scopedData.financialSeries}
+                  height={290}
+                />
+              </SectionCard>
+            )}
 
-      {/* 6. ROW 5: COST & BUDGET VARIANCE (COMPARATIVE BAR CHART) */}
-      <SectionCard
-        title="Cost & Budget Variance"
-        subtitle={
-          scopedData.isAll
-            ? "Approved budget vs. actual expenditure across all projects"
-            : `Cost variance for ${scopedData.singleProj?.project_name}`
-        }
-      >
-        <CostBarChart data={scopedData.costSeries} height={290} />
-      </SectionCard>
+            {/* Project Execution & Work Velocity (Replaces Resource Workload) */}
+            {showExecution && (
+              <SectionCard
+                title="Project Execution & Work Delivery"
+                subtitle={
+                  scopedData.isAll
+                    ? `Delivery progress & task velocity across ${scopedData.projects.length} projects`
+                    : `Delivery breakdown by work package for ${scopedData.singleProj?.project_name}`
+                }
+              >
+                <ProjectExecutionHorizontalBarChart
+                  projects={scopedData.projects}
+                  tasks={scopedData.tasks}
+                  isAll={scopedData.isAll}
+                />
+              </SectionCard>
+            )}
+          </div>
+        );
+      })()}
 
-      {/* 7. ROW 6: SUBCONTRACTOR CONTRACTS & PAYMENT BALANCES */}
-      <SectionCard
-        title="Subcontractor Contracts & Payment Balances"
-        subtitle={
-          scopedData.isAll
-            ? "Contract sums, amount paid, and outstanding balances across all subcontractors"
-            : `Subcontractor contracts for ${scopedData.singleProj?.project_name}`
-        }
-      >
-        <SubcontractorContractsChart
-          subcontracts={scopedData.subcontracts}
-          valuations={scopedData.valuations}
-          selectedProjectName={scopedData.singleProj?.project_name}
-        />
-      </SectionCard>
+      {/* 3. ROW 3: PORTFOLIO DELIVERY HEALTH & RISK and COST & BUDGET VARIANCE (SIDE BY SIDE) */}
+      {(() => {
+        const showHealth = canViewChart("pm-delivery-health");
+        const showCost = canViewChart("pm-cost-variance");
+        if (!showHealth && !showCost) return null;
 
-      {/* 8. ROW 7: EARNED VALUE EFFICIENCY MATRIX (CPI vs. SPI) - BOTTOM OF HOMEPAGE */}
-      <SectionCard
-        title="Earned Value Efficiency Matrix (CPI vs. SPI)"
-        subtitle="Cost Performance Index (CPI) vs. Schedule Performance Index (SPI)"
-      >
-        <EarnedValueEfficiencyBubbleChart
-          projects={scopedData.budgetRows}
-          height={320}
-        />
-      </SectionCard>
+        const gridCols = showHealth && showCost ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1";
+
+        return (
+          <div className={`grid ${gridCols} gap-6`}>
+            {/* Portfolio Delivery Health & Risk */}
+            {showHealth && (
+              <SectionCard
+                title="Portfolio Delivery Health & Risk"
+                subtitle={
+                  scopedData.isAll
+                    ? `Delivery confidence and schedule/budget risk rating across ${projects.length} projects`
+                    : `Delivery confidence & task risk for ${scopedData.singleProj?.project_name}`
+                }
+              >
+                <PortfolioDeliveryHealthDonutChart
+                  projects={scopedData.budgetRows}
+                  tasks={scopedData.tasks}
+                  isAll={scopedData.isAll}
+                />
+              </SectionCard>
+            )}
+
+            {/* Cost & Budget Variance (Comparative Bar Chart) */}
+            {showCost && (
+              <SectionCard
+                title="Cost & Budget Variance"
+                subtitle={
+                  scopedData.isAll
+                    ? "Approved budget vs. actual expenditure across all projects"
+                    : `Cost variance for ${scopedData.singleProj?.project_name}`
+                }
+              >
+                <CostBarChart data={scopedData.costSeries} height={290} />
+              </SectionCard>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* 5. ROW 5: SUBCONTRACTOR CONTRACTS & PAYMENT BALANCES */}
+      {canViewChart("pm-subcontractor-contracts") && (
+        <SectionCard
+          title="Subcontractor Contracts & Payment Balances"
+          subtitle={
+            scopedData.isAll
+              ? "Contract sums, amount paid, and outstanding balances across all subcontractors"
+              : `Subcontractor contracts for ${scopedData.singleProj?.project_name}`
+          }
+        >
+          <SubcontractorContractsChart
+            subcontracts={scopedData.subcontracts}
+            valuations={scopedData.valuations}
+            selectedProjectName={scopedData.singleProj?.project_name}
+          />
+        </SectionCard>
+      )}
+
+      {/* 6. ROW 6: SCHEDULE FORECASTING & PROJECTED COMPLETION (BELOW SUBCONTRACTOR CONTRACTS) */}
+      {canViewChart("pm-schedule-forecast") && (
+        <SectionCard
+          title="Schedule Forecast & Completion Projection"
+          subtitle={
+            scopedData.isAll
+              ? "Projected completion dates vs. contract end dates per project based on delivery velocity"
+              : `Projected completion date vs. contract end date for ${scopedData.singleProj?.project_name}`
+          }
+        >
+          <ProjectScheduleForecastSection
+            forecasts={scopedData.forecastData}
+            isAll={scopedData.isAll}
+          />
+        </SectionCard>
+      )}
+
+      {/* 7. ROW 7: EARNED VALUE EFFICIENCY MATRIX (CPI vs. SPI) - BOTTOM OF HOMEPAGE */}
+      {canViewChart("pm-earned-value") && (
+        <SectionCard
+          title="Earned Value Efficiency Matrix (CPI vs. SPI)"
+          subtitle="Cost Performance Index (CPI) vs. Schedule Performance Index (SPI)"
+        >
+          <EarnedValueEfficiencyBubbleChart
+            projects={scopedData.budgetRows}
+            height={320}
+          />
+        </SectionCard>
+      )}
     </div>
   );
 }

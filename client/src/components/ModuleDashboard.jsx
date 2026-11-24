@@ -7,63 +7,176 @@ import { ModuleTopNavBar } from "./ModuleLayout.jsx";
 import MobileMovingCarousel from "./MobileMovingCarousel.jsx";
 import { getPageWhiteIcon } from "../layout/AppShell.jsx";
 
-const BRIGHT_ICON_PALETTE = [
-  "bg-amber-500 text-white shadow-amber-500/30",
-  "bg-sky-500 text-white shadow-sky-500/30",
-  "bg-emerald-500 text-white shadow-emerald-500/30",
-  "bg-indigo-600 text-white shadow-indigo-600/30",
-  "bg-rose-500 text-white shadow-rose-500/30",
-  "bg-violet-600 text-white shadow-violet-600/30",
-  "bg-teal-500 text-white shadow-teal-500/30",
-  "bg-blue-600 text-white shadow-blue-600/30",
-  "bg-orange-500 text-white shadow-orange-500/30",
-  "bg-cyan-600 text-white shadow-cyan-600/30",
+export const BRIGHT_ICON_PALETTE = [
+  "bg-blue-600 text-white shadow-blue-600/30",       // 0: Royal Blue
+  "bg-emerald-500 text-white shadow-emerald-500/30", // 1: Emerald Green
+  "bg-amber-500 text-white shadow-amber-500/30",     // 2: Golden Amber
+  "bg-rose-500 text-white shadow-rose-500/30",       // 3: Coral Rose
+  "bg-purple-600 text-white shadow-purple-600/30",   // 4: Vivid Purple
+  "bg-orange-500 text-white shadow-orange-500/30",   // 5: Tangerine Orange
+  "bg-cyan-500 text-white shadow-cyan-500/30",       // 6: Electric Cyan
+  "bg-fuchsia-600 text-white shadow-fuchsia-600/30", // 7: Vibrant Fuchsia
+  "bg-indigo-600 text-white shadow-indigo-600/30",   // 8: Deep Indigo
+  "bg-teal-500 text-white shadow-teal-500/30",       // 9: Bright Teal
+  "bg-pink-500 text-white shadow-pink-500/30",       // 10: Hot Pink
+  "bg-sky-500 text-white shadow-sky-500/30",         // 11: Vibrant Sky Blue
+  "bg-violet-600 text-white shadow-violet-600/30",   // 12: Electric Violet
+  "bg-red-500 text-white shadow-red-500/30",         // 13: Crimson Red
+  "bg-lime-600 text-white shadow-lime-600/30",       // 14: Vivid Lime
+  "bg-amber-600 text-white shadow-amber-600/30",     // 15: Warm Bronze
+];
+
+export const SECTION_BRIGHT_GRADIENTS = [
+  "from-blue-600 to-indigo-700 shadow-blue-500/25",
+  "from-emerald-500 to-teal-700 shadow-emerald-500/25",
+  "from-amber-500 to-orange-600 shadow-amber-500/25",
+  "from-purple-600 to-violet-700 shadow-purple-500/25",
+  "from-rose-500 to-pink-600 shadow-rose-500/25",
+  "from-cyan-500 to-blue-600 shadow-cyan-500/25",
+  "from-fuchsia-600 to-purple-700 shadow-fuchsia-500/25",
+  "from-orange-500 to-red-600 shadow-orange-500/25",
 ];
 
 const getItemColorClass = (item, index = 0) => {
-  const t = String(item?.title || item?.name || "").toLowerCase();
-  if (t.includes("expense") || t.includes("invoice") || t.includes("receipt") || t.includes("payment") || t.includes("cost") || t.includes("valuation") || t.includes("finance")) {
-    return "bg-emerald-500 text-white shadow-emerald-500/30";
+  const t = String(item?.title || item?.name || item?.label || "").toLowerCase();
+
+  // 1. High-specificity alerts, expiry, risk & snags
+  if (t.includes("expired") || t.includes("expiry") || t.includes("scrap") || t.includes("waste") || t.includes("damage")) {
+    return "bg-red-500 text-white shadow-red-500/30";
   }
-  if (t.includes("return") || t.includes("refund") || t.includes("on-hold") || t.includes("hold") || t.includes("pause")) {
-    return "bg-amber-600 text-white shadow-amber-600/30";
-  }
-  if (t.includes("pending") || t.includes("time") || t.includes("schedule") || t.includes("clock") || t.includes("alert")) {
-    return "bg-amber-500 text-white shadow-amber-500/30";
-  }
-  if (t.includes("order") || t.includes("quotation") || t.includes("proposal") || t.includes("requisition")) {
-    return "bg-sky-500 text-white shadow-sky-500/30";
-  }
-  if (t.includes("project") || t.includes("milestone") || t.includes("phase") || t.includes("portfolio")) {
-    return "bg-indigo-600 text-white shadow-indigo-600/30";
-  }
-  if (t.includes("quality") || t.includes("qa") || t.includes("qc") || t.includes("inspect") || t.includes("check")) {
-    return "bg-teal-500 text-white shadow-teal-500/30";
-  }
-  if (t.includes("team") || t.includes("client") || t.includes("user") || t.includes("resource") || t.includes("worker") || t.includes("people")) {
-    return "bg-violet-600 text-white shadow-violet-600/30";
-  }
-  if (t.includes("risk") || t.includes("variance") || t.includes("issue") || t.includes("defect") || t.includes("hazard")) {
-    return "bg-rose-500 text-white shadow-rose-500/30";
-  }
-  if (t.includes("site") || t.includes("subcontractor") || t.includes("boq") || t.includes("construction") || t.includes("wbs")) {
-    return "bg-blue-600 text-white shadow-blue-600/30";
-  }
-  if (t.includes("store") || t.includes("warehouse") || t.includes("inventory") || t.includes("stock") || t.includes("item")) {
-    return "bg-cyan-600 text-white shadow-cyan-600/30";
-  }
-  if (t.includes("note") || t.includes("mindmap") || t.includes("plan")) {
-    return "bg-purple-600 text-white shadow-purple-600/30";
+  if (t.includes("issue") || t.includes("defect") || t.includes("snag") || t.includes("risk") || t.includes("hazard") || t.includes("dispute")) {
+    return "bg-pink-500 text-white shadow-pink-500/30";
   }
 
-  // Deterministic fallback using item path/title hash so each item gets a consistent bright color
+  // 2. Velocity, moving items & transit
+  if (t.includes("fast") || t.includes("velocity") || t.includes("speed") || t.includes("quick") || t.includes("express")) {
+    return "bg-orange-500 text-white shadow-orange-500/30";
+  }
+  if (t.includes("slow") || t.includes("delay") || t.includes("dormant") || t.includes("idle")) {
+    return "bg-indigo-600 text-white shadow-indigo-600/30";
+  }
+  if (t.includes("non moving") || t.includes("non-moving") || t.includes("dead stock") || t.includes("on-hold") || t.includes("hold") || t.includes("pause") || t.includes("suspended")) {
+    return "bg-sky-500 text-white shadow-sky-500/30";
+  }
+
+  // 3. Aging, timeline, history & notes
+  if (t.includes("aging") || t.includes("age") || t.includes("history") || t.includes("timeline") || t.includes("log") || t.includes("audit")) {
+    return "bg-purple-600 text-white shadow-purple-600/30";
+  }
+  if (t.includes("note") || t.includes("mindmap") || t.includes("whiteboard") || t.includes("scratchpad")) {
+    return "bg-purple-500 text-white shadow-purple-500/30";
+  }
+
+  // 4. Balances, accounting, ledger, equity & profit
+  if (t.includes("balance") || t.includes("ledger") || t.includes("reconcil") || t.includes("profit") || t.includes("revenue")) {
+    return "bg-emerald-500 text-white shadow-emerald-500/30";
+  }
+
+  // 5. Valuation, pricing, currency, money & rates
+  if (t.includes("value") || t.includes("valuation") || t.includes("price") || t.includes("cost") || t.includes("tariff") || t.includes("budget")) {
+    return "bg-amber-500 text-white shadow-amber-500/30";
+  }
+
+  // 6. Summaries, digests & periodicals
+  if (t.includes("summary") || t.includes("periodical") || t.includes("digest") || t.includes("kpi")) {
+    return "bg-fuchsia-600 text-white shadow-fuchsia-600/30";
+  }
+
+  // 7. Statements, manifests & documents
+  if (t.includes("statement") || t.includes("manifest") || t.includes("sheet")) {
+    return "bg-cyan-500 text-white shadow-cyan-500/30";
+  }
+
+  // 8. Health, monitoring, inspection & quality
+  if (t.includes("health") || t.includes("monitor") || t.includes("vital")) {
+    return "bg-teal-500 text-white shadow-teal-500/30";
+  }
+  if (t.includes("quality") || t.includes("qa") || t.includes("qc") || t.includes("inspect") || t.includes("check")) {
+    return "bg-emerald-600 text-white shadow-emerald-600/30";
+  }
+
+  // 9. Dashboards, analytics & command centers
+  if (t.includes("dashboard") || t.includes("analytics") || t.includes("overview") || t.includes("intelligence") || t.includes("hub") || t.includes("center")) {
+    return "bg-blue-600 text-white shadow-blue-600/30";
+  }
+
+  // 10. Registers, rosters & directories
+  if (t.includes("register") || t.includes("directory") || t.includes("roster") || t.includes("catalog")) {
+    return "bg-violet-600 text-white shadow-violet-600/30";
+  }
+
+  // 11. Payments, disbursements, billing & bank
+  if (t.includes("payment") || t.includes("receipt") || t.includes("cash") || t.includes("bank") || t.includes("wallet") || t.includes("disbursement")) {
+    return "bg-teal-500 text-white shadow-teal-500/30";
+  }
+  if (t.includes("expense") || t.includes("invoice") || t.includes("bill") || t.includes("tax") || t.includes("spending")) {
+    return "bg-rose-500 text-white shadow-rose-500/30";
+  }
+
+  // 12. Requisitions, proposals & quotes
+  if (t.includes("requisition") || t.includes("indent") || t.includes("request")) {
+    return "bg-sky-500 text-white shadow-sky-500/30";
+  }
+  if (t.includes("quotation") || t.includes("rfq") || t.includes("estimate") || t.includes("tender") || t.includes("proposal")) {
+    return "bg-amber-500 text-white shadow-amber-500/30";
+  }
+
+  // 13. Orders, sales, purchases & contracts
+  if (t.includes("order") || t.includes("purchase") || t.includes("sales entry") || t.includes("pos")) {
+    return "bg-emerald-600 text-white shadow-emerald-600/30";
+  }
+  if (t.includes("contract") || t.includes("agreement") || t.includes("subcontractor")) {
+    return "bg-blue-600 text-white shadow-blue-600/30";
+  }
+
+  // 14. Dispatch, shipments, transfer & movement
+  if (t.includes("transfer") || t.includes("dispatch") || t.includes("delivery") || t.includes("shipment") || t.includes("transit") || t.includes("gate pass")) {
+    return "bg-orange-500 text-white shadow-orange-500/30";
+  }
+  if (t.includes("return") || t.includes("refund")) {
+    return "bg-amber-600 text-white shadow-amber-600/30";
+  }
+
+  // 15. People, clients, customers, staff & payroll
+  if (t.includes("client") || t.includes("customer") || t.includes("lead") || t.includes("crm")) {
+    return "bg-pink-500 text-white shadow-pink-500/30";
+  }
+  if (t.includes("employee") || t.includes("staff") || t.includes("payroll") || t.includes("attendance") || t.includes("leave") || t.includes("worker") || t.includes("people") || t.includes("team") || t.includes("user")) {
+    return "bg-violet-600 text-white shadow-violet-600/30";
+  }
+
+  // 16. Projects, milestones, plans & sites
+  if (t.includes("milestone") || t.includes("roadmap")) {
+    return "bg-amber-500 text-white shadow-amber-500/30";
+  }
+  if (t.includes("site") || t.includes("boq") || t.includes("construction") || t.includes("wbs") || t.includes("task") || t.includes("gantt") || t.includes("kanban")) {
+    return "bg-blue-600 text-white shadow-blue-600/30";
+  }
+  if (t.includes("variation") || t.includes("change order")) {
+    return "bg-orange-500 text-white shadow-orange-500/30";
+  }
+
+  // 17. Governance, admin, strategy & policies
+  if (t.includes("admin") || t.includes("executive") || t.includes("strategy") || t.includes("governance") || t.includes("legal") || t.includes("portfolio") || t.includes("security") || t.includes("policy") || t.includes("compliance")) {
+    return "bg-indigo-600 text-white shadow-indigo-600/30";
+  }
+
+  // 18. Warehouses, locations, products & items (use index-cycled bright colors)
+  if (t.includes("warehouse") || t.includes("location") || t.includes("store")) {
+    return BRIGHT_ICON_PALETTE[(index * 3 + 2) % BRIGHT_ICON_PALETTE.length];
+  }
+  if (t.includes("item") || t.includes("product") || t.includes("material") || t.includes("stock") || t.includes("inventory")) {
+    return BRIGHT_ICON_PALETTE[(index * 5 + 1) % BRIGHT_ICON_PALETTE.length];
+  }
+
+  // Deterministic fallback cycling through the 16 bright colors based on index & hash
   const key = item?.path || item?.title || item?.name || String(index);
   let hash = 0;
   for (let i = 0; i < key.length; i++) {
     hash = (hash << 5) - hash + key.charCodeAt(i);
     hash |= 0;
   }
-  return BRIGHT_ICON_PALETTE[Math.abs(hash + index) % BRIGHT_ICON_PALETTE.length];
+  return BRIGHT_ICON_PALETTE[(Math.abs(hash) + index) % BRIGHT_ICON_PALETTE.length];
 };
 
 const renderItemIcon = (item, itemTitle) => {
@@ -388,6 +501,31 @@ const ModuleDashboard = ({
   }, [headerActions, moduleKey, location.pathname, canAccessPath, canViewDashboardElement]);
   const [searchTerm, setSearchTerm] = useState("");
 
+  const visibleStats = useMemo(() => {
+    if (!Array.isArray(stats) || !stats.length) return [];
+    return stats
+      .filter((stat) => {
+        if (!stat || stat.hidden) return false;
+        const path = String(stat.path || "");
+        const parts = path.split("/").filter(Boolean);
+        const mk = String(stat.module_key || moduleKey || parts[0] || (location.pathname.split("/").filter(Boolean)[0] || ""));
+        if (mk && typeof isModuleEnabled === "function" && !isModuleEnabled(mk)) return false;
+        const key =
+          String(stat.rbac_key || "")
+            .toLowerCase()
+            .trim() ||
+          String(stat.label || stat.name || stat.title || "")
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g, "-")
+            .replace(/[^a-z0-9-]/g, "");
+        if (!mk || !key) return true;
+        if (stat.rbac_key && canViewDashboardElement(mk, "card", stat.rbac_key) === false) return false;
+        return canViewDashboardElement(mk, "card", key);
+      })
+      .slice(0, 4);
+  }, [stats, moduleKey, location.pathname, isModuleEnabled, canViewDashboardElement]);
+
   const handleNavigate = (path, e) => {
     if (e) e.stopPropagation();
     if (path) navigate(path);
@@ -687,7 +825,7 @@ const ModuleDashboard = ({
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 relative z-10 w-full min-w-0">
             <div className="min-w-0 flex-1">
               <div className="flex items-center gap-2.5 sm:gap-3 w-full min-w-0">
-                <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-brand-50/80 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-700/50 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
+                <div className="w-10 h-10 sm:w-11 sm:h-11 md:w-12 md:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-[#69274f]/15 to-brand-50/80 dark:from-[#69274f]/30 dark:to-brand-950/60 border border-[#69274f]/30 dark:border-[#69274f]/40 flex items-center justify-center text-xl sm:text-2xl shadow-inner shrink-0">
                   {typeof icon === "string" ? icon : (typeof moduleInfo?.icon === "string" ? moduleInfo.icon : "📂")}
                 </div>
                 <div className="min-w-0 flex-1">
@@ -748,7 +886,344 @@ const ModuleDashboard = ({
           <div className="absolute left-1/3 -bottom-10 w-36 h-36 bg-sky-500/10 dark:bg-sky-400/10 rounded-full blur-2xl pointer-events-none" />
         </div>
 
-      {/* Search Field - hidden on mobile / small devices */}
+      {/* Key Statistics */}
+      {visibleStats.length > 0 && (
+        <div className="mb-6 md:mb-8">
+          <h2 className="hidden md:flex text-xl font-semibold text-brand-800 dark:text-brand-200 mb-4 items-center gap-2">
+            <span>📈</span> Business Overview
+          </h2>
+          <MobileMovingCarousel data-module-carousel gridColsClass="md:grid-cols-2 lg:grid-cols-4" gapClass="gap-4 sm:gap-6"
+            autoInterval={3500}
+          >
+            {visibleStats.map((stat, index) => {
+                const cardType = index % 5;
+                const isClickable = Boolean(stat.path && (!canAccessPath || canAccessPath(stat.path)));
+
+                if (cardType === 0) {
+                  // Module Card 1: Warm Golden Amber with Mirrored Waves & Repositioned Dot Matrix
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => isClickable && handleNavigate(stat.path)}
+                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#ebb028] text-white shadow-sm ${
+                        isClickable ? "cursor-pointer" : ""
+                      }`}
+                    >
+                      {/* Background Geometric Elements with Repositioned Elements */}
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                        {/* Organic Wave Overlays (Mirrored horizontally) */}
+                        <svg className="absolute inset-0 w-full h-full transform scale-x-[-1]" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                          <path d="M110 0 C 170 35, 230 75, 300 35 L 300 0 Z" fill="rgba(0,0,0,0.08)" />
+                          <path d="M160 0 C 210 20, 260 45, 300 15 L 300 0 Z" fill="rgba(255,255,255,0.18)" />
+                          <path d="M0 85 C 50 80, 95 115, 135 150 L 0 150 Z" fill="rgba(0,0,0,0.06)" />
+                        </svg>
+
+                        {/* Dot Matrix Grid Repositioned to Bottom-Right */}
+                        <svg className="absolute bottom-3 right-4 w-12 h-9" viewBox="0 0 48 36" fill="none">
+                          <circle cx="6" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="18" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="30" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="42" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="6" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="30" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="42" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="6" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="18" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="30" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                          <circle cx="42" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                        </svg>
+
+                        {/* Concentric Arcs Repositioned to Top-Right */}
+                        <svg className="absolute -top-4 -right-4 w-28 h-28" viewBox="0 0 110 110" fill="none">
+                          <circle cx="95" cy="15" r="45" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+                          <circle cx="95" cy="15" r="70" stroke="rgba(255,255,255,0.16)" strokeWidth="1.2" />
+                        </svg>
+
+                        <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                      </div>
+
+                      <div className="flex flex-col h-full justify-between relative z-10">
+                        <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                          {/* Overlapping Translucent Circles Logo */}
+                          <div className="flex items-center -space-x-1.5 opacity-70">
+                            <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                            <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                          </div>
+
+                          {(stat.change || stat.trend) ? (
+                            <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
+                              {stat.change || stat.trend}
+                            </span>
+                          ) : (
+                            <span className="text-[10px] tracking-widest text-white/50 font-mono">
+                              •••• 1234
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
+                          {renderMetricValue(stat.value, `${getResponsiveValueClass(stat.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]`)}
+                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
+                            {stat.label}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (cardType === 1) {
+                  // Module Card 2: Steel Blue with Repositioned Ripple Rings (Top-Right) & Arcs (Bottom-Left)
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => isClickable && handleNavigate(stat.path)}
+                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#24526d] text-white shadow-sm ${
+                        isClickable ? "cursor-pointer" : ""
+                      }`}
+                    >
+                      {/* Background Geometric Elements with Repositioned Elements */}
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                        {/* Fluid Wave Overlays (mirrored) */}
+                        <svg className="absolute inset-0 w-full h-full transform scale-x-[-1]" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                          <path d="M80 0 C 150 30, 220 70, 300 30 L 300 0 Z" fill="rgba(255,255,255,0.08)" />
+                          <path d="M0 80 C 60 75, 110 115, 150 150 L 0 150 Z" fill="rgba(0,0,0,0.12)" />
+                        </svg>
+
+                        {/* Concentric Wireframe Ripple Rings Repositioned to Top-Right */}
+                        <svg className="absolute top-2.5 right-4 w-16 h-16 sm:w-20 sm:h-20" viewBox="0 0 80 80" fill="none">
+                          <circle cx="62" cy="18" r="14" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+                          <circle cx="62" cy="18" r="26" stroke="rgba(255,255,255,0.16)" strokeWidth="1.2" />
+                          <circle cx="62" cy="18" r="38" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" />
+                        </svg>
+
+                        {/* Concentric Arcs Repositioned to Bottom-Left */}
+                        <svg className="absolute -bottom-3 -left-3 w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100" fill="none">
+                          <circle cx="10" cy="90" r="38" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                          <circle cx="10" cy="90" r="60" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+                        </svg>
+
+                        {/* Sparkline Wave at Bottom-Right */}
+                        <svg className="w-10 h-5 text-white/20 absolute right-5 bottom-4 group-hover:text-white/40 transition-colors" viewBox="0 0 50 20" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M0 15 L10 12 L20 18 L30 8 L40 10 L50 2" strokeLinecap="round" strokeLinejoin="round" />
+                        </svg>
+
+                        <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                      </div>
+
+                      <div className="flex flex-col h-full justify-between relative z-10">
+                        <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                          {/* Overlapping Translucent Circles Logo */}
+                          <div className="flex items-center -space-x-1.5 opacity-70">
+                            <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                            <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                          </div>
+
+                          {(stat.change || stat.trend) && (
+                            <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-amber-500/25 backdrop-blur-md text-amber-200 border border-amber-400/20 shadow-xs leading-none flex items-center gap-1">
+                              {stat.change || stat.trend}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
+                          {renderMetricValue(stat.value, `${getResponsiveValueClass(stat.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]`)}
+                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
+                            {stat.label}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (cardType === 2) {
+                  // Module Card 3: Rich Plum Wine with Inverted Wave & Repositioned Arcs
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => isClickable && handleNavigate(stat.path)}
+                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#69274f] text-white shadow-sm ${
+                        isClickable ? "cursor-pointer" : ""
+                      }`}
+                    >
+                      {/* Background Geometric Elements with Repositioned Elements */}
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                        {/* Fluid Wave Overlays (mirrored) */}
+                        <svg className="absolute inset-0 w-full h-full transform scale-x-[-1]" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                          <path d="M100 0 C 170 30, 235 60, 300 25 L 300 0 Z" fill="rgba(255,255,255,0.08)" />
+                          <path d="M0 90 C 55 80, 105 120, 145 150 L 0 150 Z" fill="rgba(0,0,0,0.15)" />
+                        </svg>
+
+                        {/* Concentric Wireframe Rings Repositioned to Bottom-Right */}
+                        <svg className="absolute bottom-3 right-4 w-16 h-16 sm:w-20 sm:h-20" viewBox="0 0 80 80" fill="none">
+                          <circle cx="62" cy="62" r="14" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+                          <circle cx="62" cy="62" r="26" stroke="rgba(255,255,255,0.16)" strokeWidth="1.2" />
+                          <circle cx="62" cy="62" r="38" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" />
+                        </svg>
+
+                        {/* Concentric Arcs Repositioned to Top-Left */}
+                        <svg className="absolute -top-3 -left-3 w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100" fill="none">
+                          <circle cx="10" cy="10" r="38" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                          <circle cx="10" cy="10" r="60" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+                        </svg>
+
+                        <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                      </div>
+
+                      <div className="flex flex-col h-full justify-between relative z-10">
+                        <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                          {/* Overlapping Translucent Circles Logo */}
+                          <div className="flex items-center -space-x-1.5 opacity-70">
+                            <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                            <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                          </div>
+
+                          {(stat.change || stat.trend) && (
+                            <span className="text-[11px] sm:text-xs lg:text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white/95 border border-white/15 shadow-xs leading-none flex items-center gap-1">
+                              {stat.change || stat.trend}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
+                          <div className="flex items-center gap-1.5 min-w-0">
+                            {renderMetricValue(stat.value, `${getResponsiveValueClass(stat.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]`)}
+                            <svg className="w-4 sm:w-5 lg:w-4 h-4 sm:h-5 lg:h-4 text-white/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
+                            </svg>
+                          </div>
+                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
+                            {stat.label}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else if (cardType === 3) {
+                  // Module Card 4: Emerald Green with Repositioned Ripple Rings & Arcs
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => isClickable && handleNavigate(stat.path)}
+                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#1ea85d] text-white shadow-sm ${
+                        isClickable ? "cursor-pointer" : ""
+                      }`}
+                    >
+                      {/* Background Geometric Elements with Repositioned Elements */}
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                        {/* Organic Wave Overlays (mirrored) */}
+                        <svg className="absolute inset-0 w-full h-full transform scale-x-[-1]" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                          <path d="M80 0 C 145 25, 215 65, 300 25 L 300 0 Z" fill="rgba(255,255,255,0.16)" />
+                          <path d="M190 150 C 225 105, 265 85, 300 95 L 300 150 Z" fill="rgba(0,0,0,0.12)" />
+                          <path d="M0 95 C 40 85, 75 120, 115 150 L 0 150 Z" fill="rgba(255,255,255,0.08)" />
+                        </svg>
+
+                        {/* Top-Right Fine Concentric Ripple Rings */}
+                        <svg className="absolute top-2 right-4 w-20 h-20 sm:w-24 sm:h-24" viewBox="0 0 90 90" fill="none">
+                          <circle cx="72" cy="18" r="16" stroke="rgba(255,255,255,0.24)" strokeWidth="1.2" />
+                          <circle cx="72" cy="18" r="30" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" />
+                          <circle cx="72" cy="18" r="44" stroke="rgba(255,255,255,0.11)" strokeWidth="1.2" />
+                        </svg>
+
+                        {/* Bottom-Left Concentric Arcs */}
+                        <svg className="absolute -bottom-4 -left-4 w-28 h-28" viewBox="0 0 110 110" fill="none">
+                          <circle cx="15" cy="95" r="42" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+                          <circle cx="15" cy="95" r="68" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" />
+                        </svg>
+
+                        <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                      </div>
+
+                      <div className="flex flex-col h-full justify-between relative z-10">
+                        <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                          {/* Overlapping Translucent Circles Logo */}
+                          <div className="flex items-center -space-x-1.5 opacity-70">
+                            <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                            <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                          </div>
+
+                          {(stat.change || stat.trend) && (
+                            <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
+                              {stat.change || stat.trend}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
+                          {renderMetricValue(stat.value, `${getResponsiveValueClass(stat.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]`)}
+                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
+                            {stat.label}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                } else {
+                  // Module Card 5: Carbon Dark Slate
+                  return (
+                    <div
+                      key={index}
+                      onClick={() => isClickable && handleNavigate(stat.path)}
+                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#0f172a] text-white shadow-sm ${
+                        isClickable ? "cursor-pointer" : ""
+                      }`}
+                    >
+                      {/* Background Geometric Elements with Repositioned Elements */}
+                      <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                        {/* Dot Matrix Grid at Bottom-Left */}
+                        <svg className="absolute bottom-3 left-4 w-12 h-9" viewBox="0 0 48 36" fill="none">
+                          <circle cx="6" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="18" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="30" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="42" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="6" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="30" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="42" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="6" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="18" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="30" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                          <circle cx="42" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                        </svg>
+
+                        {/* Concentric Arcs at Top-Right */}
+                        <svg className="absolute -top-4 -right-4 w-28 h-28" viewBox="0 0 110 110" fill="none">
+                          <circle cx="95" cy="15" r="40" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                          <circle cx="95" cy="15" r="65" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" />
+                        </svg>
+
+                        <div className="absolute -left-6 -bottom-6 w-24 h-24 bg-cyan-500/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                      </div>
+
+                      <div className="flex flex-col h-full justify-between relative z-10">
+                        <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                          {/* Overlapping Translucent Circles Logo */}
+                          <div className="flex items-center -space-x-1.5 opacity-70">
+                            <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                            <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                          </div>
+
+                          {(stat.change || stat.trend) && (
+                            <span className="text-[11px] sm:text-xs lg:text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
+                              {stat.change || stat.trend}
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
+                          {renderMetricValue(stat.value, `${getResponsiveValueClass(stat.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]`)}
+                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
+                            {stat.label}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                }
+              })}
+          </MobileMovingCarousel>
+        </div>
+      )}
+
+      {/* Search Field - positioned below the module home cards */}
       <div className="hidden sm:block mb-6">
         <div className="max-w-md">
           <div className="relative">
@@ -768,185 +1243,6 @@ const ModuleDashboard = ({
           </div>
         </div>
       </div>
-
-      {/* Key Statistics */}
-      {!isSearching && stats.filter((s) => {
-        if (!canShowItem(s)) return false;
-        const path = String(s.path || "");
-        const parts = path.split("/").filter(Boolean);
-        const mk = String(s.module_key || moduleKey || parts[0] || (location.pathname.split("/").filter(Boolean)[0] || ""));
-        const key =
-          String(s.rbac_key || "")
-            .toLowerCase()
-            .trim() ||
-          String(s.label || s.name || s.title || "")
-            .toLowerCase()
-            .trim()
-            .replace(/\s+/g, "-")
-            .replace(/[^a-z0-9-]/g, "");
-        if (!mk || !key) return true;
-        if (s.rbac_key && canViewDashboardElement(mk, "card", s.rbac_key) === false) return false;
-        return canViewDashboardElement(mk, "card", key);
-      }).length > 0 && (
-        <div className="mb-4 md:mb-8">
-          <h2 className="hidden md:flex text-xl font-semibold text-brand-800 dark:text-brand-200 mb-4 items-center gap-2">
-            <span>📈</span> Business Overview
-          </h2>
-          <MobileMovingCarousel data-module-carousel gridColsClass="md:grid-cols-2 lg:grid-cols-4" gapClass="gap-4 sm:gap-6"
-            autoInterval={3500}
-          >
-            {stats
-              .filter((stat) => {
-                if (!canShowItem(stat)) return false;
-                const path = String(stat.path || "");
-                const parts = path.split("/").filter(Boolean);
-                const mk = String(stat.module_key || moduleKey || parts[0] || (location.pathname.split("/").filter(Boolean)[0] || ""));
-                const key =
-                  String(stat.rbac_key || "")
-                    .toLowerCase()
-                    .trim() ||
-                  String(stat.label || stat.name || stat.title || "")
-                    .toLowerCase()
-                    .trim()
-                    .replace(/\s+/g, "-")
-                    .replace(/[^a-z0-9-]/g, "");
-                if (!mk || !key) return true;
-                if (stat.rbac_key && canViewDashboardElement(mk, "card", stat.rbac_key) === false) return false;
-                return canViewDashboardElement(mk, "card", key);
-              })
-              .map((stat, index) => {
-                const cardType = index % 4;
-                const isClickable = Boolean(stat.path);
-
-                if (cardType === 0) {
-                  // Card 1: Amber Gold
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => isClickable && handleNavigate(stat.path)}
-                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-smoky-lg border border-white/10 hover:border-white/20 hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-smoky-lg active:scale-[0.98] transition-all duration-300 ease-out group bg-[#b26e17] text-white ${
-                        isClickable ? "cursor-pointer" : ""
-                      }`}
-                    >
-                      <div className="flex flex-col h-full justify-between">
-                        <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
-                          {(stat.change || stat.trend) && (
-                            <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white/90 border border-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] leading-none flex items-center gap-1">
-                              {stat.change || stat.trend}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                          {renderMetricValue(stat.value, `${getResponsiveValueClass(stat.value)} drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)]`)}
-                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
-                            {stat.label}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-                    </div>
-                  );
-                } else if (cardType === 1) {
-                  // Card 2: Steel Blue
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => isClickable && handleNavigate(stat.path)}
-                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-smoky-lg border border-white/10 hover:border-white/20 hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-smoky-lg active:scale-[0.98] transition-all duration-300 ease-out group bg-[#24526d] text-white ${
-                        isClickable ? "cursor-pointer" : ""
-                      }`}
-                    >
-                      <div className="flex flex-col h-full justify-between">
-                        <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
-                          {(stat.change || stat.trend) && (
-                            <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-amber-500/20 backdrop-blur-md text-amber-200 border border-amber-400/20 shadow-sm leading-none flex items-center gap-1">
-                              {stat.change || stat.trend}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                          {renderMetricValue(stat.value, getResponsiveValueClass(stat.value))}
-                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug flex items-center justify-between min-w-0">
-                            <span className="break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>{stat.label}</span>
-                            <svg className="w-7 sm:w-8 lg:w-6 h-4 lg:h-3.5 text-white/30 ml-2 group-hover:text-white/50 transition-colors shrink-0" viewBox="0 0 50 20" fill="none" stroke="currentColor" strokeWidth="2">
-                              <path d="M0 15 L10 12 L20 18 L30 8 L40 10 L50 2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-                    </div>
-                  );
-                } else if (cardType === 2) {
-                  // Card 3: Teal Green
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => isClickable && handleNavigate(stat.path)}
-                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-smoky-lg border border-white/10 hover:border-white/20 hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-smoky-lg active:scale-[0.98] transition-all duration-300 ease-out group bg-[#18755c] text-white ${
-                        isClickable ? "cursor-pointer" : ""
-                      }`}
-                    >
-                      <div className="flex flex-col h-full justify-between">
-                        <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
-                          {(stat.change || stat.trend) && (
-                            <span className="text-[11px] sm:text-xs lg:text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white/90 border border-white/15 shadow-sm leading-none flex items-center gap-1">
-                              {stat.change || stat.trend}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            {renderMetricValue(stat.value, getResponsiveValueClass(stat.value))}
-                            <svg className="w-4 sm:w-5 lg:w-4 h-4 sm:h-5 lg:h-4 text-white/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                              <path strokeLinecap="round" strokeLinejoin="round" d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25" />
-                            </svg>
-                          </div>
-                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
-                            {stat.label}
-                          </div>
-                        </div>
-                      </div>
-                      <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-                    </div>
-                  );
-                } else {
-                  // Card 4: Carbon Dark Gray
-                  return (
-                    <div
-                      key={index}
-                      onClick={() => isClickable && handleNavigate(stat.path)}
-                      className={`w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-smoky-lg border border-white/5 hover:border-white/15 hover:-translate-y-1.5 hover:scale-[1.02] hover:shadow-smoky-lg active:scale-[0.98] transition-all duration-300 ease-out group bg-[#1d1f22] bg-[radial-gradient(#ffffff06_1px,transparent_1px)] [background-size:8px_8px] text-white ${
-                        isClickable ? "cursor-pointer" : ""
-                      }`}
-                    >
-                      <div className="flex flex-col h-full justify-between">
-                        <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
-                          {(stat.change || stat.trend) && (
-                            <span className="text-[11px] sm:text-xs lg:text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-sm leading-none flex items-center gap-1">
-                              {stat.change || stat.trend}
-                            </span>
-                          )}
-                        </div>
-                        <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                          {renderMetricValue(stat.value, getResponsiveValueClass(stat.value))}
-                          <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={stat.label}>
-                            {stat.label}
-                          </div>
-                        </div>
-                      </div>
-                      <svg className="w-4.5 h-4.5 lg:w-3.5 lg:h-3.5 text-white/20 absolute right-5 bottom-5 lg:right-3.5 lg:bottom-3.5 group-hover:scale-110 group-hover:text-white/40 transition-all duration-300" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z" />
-                        <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                      </svg>
-                      <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
-                    </div>
-                  );
-                }
-              })}
-          </MobileMovingCarousel>
-        </div>
-      )}
 
       {/* Quick Actions */}
       {!isSearching &&
@@ -1044,7 +1340,7 @@ const ModuleDashboard = ({
 
                     <div>
                       <div className="flex items-start justify-between gap-3 mb-4">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-brand-600 to-brand-800 text-white text-xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-2 transition-transform duration-300 shrink-0">
+                        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${SECTION_BRIGHT_GRADIENTS[sectionIndex % SECTION_BRIGHT_GRADIENTS.length]} text-white text-xl flex items-center justify-center shadow-md group-hover:scale-110 group-hover:rotate-2 transition-transform duration-300 shrink-0`}>
                           {safeRenderIcon(sectionIcon, "w-6 h-6", sectionTitle)}
                         </div>
                         {section.badge ? (
@@ -1155,7 +1451,7 @@ const ModuleDashboard = ({
                   {/* Desktop Section Header (>= md) */}
                   <div className="hidden md:flex items-center justify-between border-b border-slate-200/80 dark:border-slate-800/80 pb-3">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-600 to-brand-800 text-white text-lg flex items-center justify-center shadow-xs shrink-0">
+                      <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${SECTION_BRIGHT_GRADIENTS[sectionIndex % SECTION_BRIGHT_GRADIENTS.length]} text-white text-lg flex items-center justify-center shadow-xs shrink-0`}>
                         {safeRenderIcon(sectionIcon, "w-5 h-5", sectionTitle)}
                       </div>
                       <div className="flex flex-col min-w-0">
@@ -1184,7 +1480,7 @@ const ModuleDashboard = ({
                   {/* Mobile Section Header (< md): Sleek compact divider */}
                   <div className="md:hidden flex items-center gap-2.5 pt-3 pb-1">
                     <div className="flex items-center gap-2 min-w-0 shrink-0">
-                      <div className="w-7 h-7 rounded-lg bg-brand-50 dark:bg-brand-950/60 text-brand-700 dark:text-brand-300 flex items-center justify-center text-sm font-semibold shrink-0 border border-brand-200/60 dark:border-brand-800/60">
+                      <div className={`w-7 h-7 rounded-lg bg-gradient-to-br ${SECTION_BRIGHT_GRADIENTS[sectionIndex % SECTION_BRIGHT_GRADIENTS.length]} text-white flex items-center justify-center text-sm font-semibold shrink-0 shadow-xs`}>
                         {safeRenderIcon(sectionIcon, "w-3.5 h-3.5", sectionTitle)}
                       </div>
                       <h2 className="text-sm font-bold text-slate-900 dark:text-white tracking-tight truncate">
@@ -1215,7 +1511,7 @@ const ModuleDashboard = ({
                             className="w-full aspect-square rounded-xl bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200/90 dark:border-slate-800/90 shadow-smoky-card hover:shadow-smoky-lg hover:-translate-y-1 hover:border-brand-300/80 dark:hover:border-brand-500/50 transition-all duration-300 flex items-center justify-center p-2 relative overflow-hidden active:scale-95"
                           >
                             {/* Ambient Corner Glow on Hover */}
-                            <div className="absolute -right-4 -top-4 w-12 h-12 bg-gradient-to-br from-brand-500/10 to-indigo-500/10 group-hover:from-brand-500/20 group-hover:to-indigo-500/20 rounded-full blur-md transition-all duration-500 pointer-events-none" />
+                            <div className="absolute -right-4 -top-4 w-12 h-12 bg-gradient-to-br from-brand-500/15 via-indigo-500/10 to-transparent group-hover:from-brand-500/25 group-hover:to-indigo-500/20 rounded-full blur-md transition-all duration-500 pointer-events-none" />
 
                             {/* Round bright colored icon badge */}
                             <div
@@ -1251,7 +1547,7 @@ const ModuleDashboard = ({
                           onClick={() => handleNavigate(item.path)}
                         >
                           {/* Ambient Corner Glow on Hover */}
-                          <div className="absolute -right-8 -top-8 w-24 h-24 bg-gradient-to-br from-brand-500/10 to-indigo-500/10 group-hover:from-brand-500/20 group-hover:to-indigo-500/20 rounded-full blur-xl transition-all duration-500 pointer-events-none" />
+                          <div className="absolute -right-8 -top-8 w-24 h-24 bg-gradient-to-br from-brand-500/15 via-indigo-500/10 to-transparent group-hover:from-brand-500/25 group-hover:to-indigo-500/20 rounded-full blur-xl transition-all duration-500 pointer-events-none" />
 
                           <div className="relative z-10">
                             <div className="flex items-start justify-between gap-3 mb-3">

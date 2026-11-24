@@ -701,7 +701,7 @@ export default function ClearanceTracking() {
           <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fade-in">
             <div className="bg-white dark:bg-slate-800 rounded-2xl max-w-md w-full border border-slate-200 dark:border-slate-700 shadow-2xl overflow-hidden p-6 space-y-4">
               <div className="flex items-center gap-3">
-                <span className="p-3 rounded-full bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
+                <span className="p-3 rounded-full text-white bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
                   <AlertTriangle className="w-6 h-6" />
                 </span>
                 <div>

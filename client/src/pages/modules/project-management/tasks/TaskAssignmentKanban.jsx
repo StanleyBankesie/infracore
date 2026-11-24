@@ -4526,7 +4526,7 @@ export default function TaskAssignmentKanban() {
 
 
 
-              <div className={`p-3 rounded-full ${colorClass} text-white shadow-sm flex items-center justify-center`}>
+              <div className={`p-3 rounded-full text-white ${colorClass} text-white shadow-sm flex items-center justify-center`}>
 
 
 

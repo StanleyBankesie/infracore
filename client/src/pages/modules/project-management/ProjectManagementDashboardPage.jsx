@@ -941,6 +941,13 @@ export default function ProjectManagementDashboardPage() {
     );
   }, [user, canViewDashboardElement, canAccessPath]);
 
+  const canViewChart = (key) => {
+    if (canViewDashboardElement("home", "card", key) === false) return false;
+    if (canViewDashboardElement("project-management", "card", key) === false) return false;
+    if (canViewDashboardElement("projects", "card", key) === false) return false;
+    return true;
+  };
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [selectedProjectId, setSelectedProjectId] = useState("ALL");
@@ -1260,7 +1267,7 @@ export default function ProjectManagementDashboardPage() {
             onChange={(e) => setSelectedProjectId(e.target.value)}
             className="form-select text-xs py-1.5 px-3 rounded-lg border-slate-300 dark:border-slate-700 dark:bg-slate-800 font-semibold"
           >
-            <option value="ALL">All Projects (Portfolio View)</option>
+            <option value="ALL">All Projects</option>
             {data.projects.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.project_name} ({p.project_code || `PRJ-${p.id}`})
@@ -1322,162 +1329,221 @@ export default function ProjectManagementDashboardPage() {
       </div>
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 1: PROJECT PROFITABILITY & WORK EXECUTION DELIVERY         */}
+      {/* 1. TOP SECTION: MILESTONE ACHIEVEMENT MATRIX                   */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Project Profitability: Expense, Income & Profit per Project */}
+      {canViewChart("pm-milestone-matrix") && (
         <SectionCard
-          title="Project Profitability & P&L"
+          title="Milestone Achievement Matrix"
           subtitle={
             filteredData.isAll
-              ? `Comparative revenue, expenses, and net profit margins across ${filteredData.projects.length} projects`
-              : `Income, expenditure, and net operating margin for ${filteredData.singleProj?.project_name}`
+              ? `Portfolio milestone delivery (${filteredData.milestoneData?.totalAchieved || 0} of ${filteredData.milestoneData?.grandTotal || 0} achieved) with per-project breakdown`
+              : `Milestone delivery status for ${filteredData.singleProj?.project_name}`
           }
         >
-          <ProjectProfitabilityChart
-            data={filteredData.financialSeries}
-            height={290}
+          <MilestoneAchievementDashboard
+            milestoneData={filteredData.milestoneData}
+            isAll={filteredData.isAll}
           />
         </SectionCard>
+      )}
 
-        {/* Project Execution & Work Velocity */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 2. ROW 2: PROJECT PROFITABILITY & WORK EXECUTION DELIVERY      */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {(() => {
+        const showProfitability = canViewChart("pm-profitability-pl");
+        const showExecution = canViewChart("pm-project-execution");
+        if (!showProfitability && !showExecution) return null;
+
+        const gridCols = showProfitability && showExecution ? "grid-cols-1 lg:grid-cols-2" : "grid-cols-1";
+
+        return (
+          <div className={`grid ${gridCols} gap-6`}>
+            {/* Project Profitability: Expense, Income & Profit per Project */}
+            {showProfitability && (
+              <SectionCard
+                title="Project Profitability & P&L"
+                subtitle={
+                  filteredData.isAll
+                    ? `Comparative revenue, expenses, and net profit margins across ${filteredData.projects.length} projects`
+                    : `Income, expenditure, and net operating margin for ${filteredData.singleProj?.project_name}`
+                }
+              >
+                <ProjectProfitabilityChart
+                  data={filteredData.financialSeries}
+                  height={290}
+                />
+              </SectionCard>
+            )}
+
+            {/* Project Execution & Work Velocity */}
+            {showExecution && (
+              <SectionCard
+                title="Project Execution & Work Delivery"
+                subtitle={
+                  filteredData.isAll
+                    ? `Delivery progress & task velocity across ${filteredData.projects.length} projects`
+                    : `Delivery breakdown by work package for ${filteredData.singleProj?.project_name}`
+                }
+              >
+                <ProjectExecutionHorizontalBarChart
+                  projects={filteredData.projects}
+                  tasks={filteredData.tasks}
+                  isAll={filteredData.isAll}
+                />
+              </SectionCard>
+            )}
+          </div>
+        );
+      })()}
+
+      {/* ───────────────────────────────────────────────────────────── */}
+      {/* 3. ROW 3: PORTFOLIO DELIVERY HEALTH & RISK STATUS             */}
+      {/* ───────────────────────────────────────────────────────────── */}
+      {canViewChart("pm-delivery-health") && (
         <SectionCard
-          title="Project Execution & Work Delivery"
+          title="Portfolio Delivery Health & Risk"
           subtitle={
             filteredData.isAll
-              ? `Delivery progress & task velocity across ${filteredData.projects.length} projects`
-              : `Delivery breakdown by work package for ${filteredData.singleProj?.project_name}`
+              ? `Delivery confidence and schedule/budget risk rating across ${filteredData.projects.length} projects`
+              : `Delivery confidence & task risk for ${filteredData.singleProj?.project_name}`
           }
         >
-          <ProjectExecutionHorizontalBarChart
-            projects={filteredData.projects}
+          <PortfolioDeliveryHealthDonutChart
+            projects={filteredData.budgetRows}
             tasks={filteredData.tasks}
             isAll={filteredData.isAll}
           />
         </SectionCard>
-      </div>
+      )}
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 2: PORTFOLIO DELIVERY HEALTH & RISK STATUS                */}
+      {/* 4. ROW 4: COST BAR CHART & TASKS DONUT CHART                  */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <SectionCard
-        title="Portfolio Delivery Health & Risk"
-        subtitle={
-          filteredData.isAll
-            ? `Delivery confidence and schedule/budget risk rating across ${filteredData.projects.length} projects`
-            : `Delivery confidence & task risk for ${filteredData.singleProj?.project_name}`
+      {(() => {
+        const showCost = canViewChart("pm-cost-variance");
+        const showTasks = canViewChart("pm-task-distribution");
+        if (!showCost && !showTasks) return null;
+
+        if (showCost && showTasks) {
+          return (
+            <div className="grid gap-6 xl:grid-cols-12">
+              <div className="xl:col-span-7">
+                <SectionCard
+                  title="Cost & Budget Variance"
+                  subtitle={
+                    filteredData.isAll
+                      ? "Approved budget vs. actual expenditure across all projects"
+                      : `Cost variance for ${filteredData.singleProj?.project_name}`
+                  }
+                >
+                  <CostBarChart data={filteredData.costSeries} height={300} />
+                </SectionCard>
+              </div>
+              <div className="xl:col-span-5">
+                <SectionCard
+                  title="Task Distribution"
+                  subtitle="Status breakdown"
+                >
+                  <TasksDonutChart
+                    taskCounts={filteredData.taskCounts}
+                    total={filteredData.tasks.length}
+                  />
+                </SectionCard>
+              </div>
+            </div>
+          );
         }
-      >
-        <PortfolioDeliveryHealthDonutChart
-          projects={filteredData.budgetRows}
-          tasks={filteredData.tasks}
-          isAll={filteredData.isAll}
-        />
-      </SectionCard>
+
+        return (
+          <div className="grid gap-6 grid-cols-1">
+            {showCost && (
+              <SectionCard
+                title="Cost & Budget Variance"
+                subtitle={
+                  filteredData.isAll
+                    ? "Approved budget vs. actual expenditure across all projects"
+                    : `Cost variance for ${filteredData.singleProj?.project_name}`
+                }
+              >
+                <CostBarChart data={filteredData.costSeries} height={300} />
+              </SectionCard>
+            )}
+            {showTasks && (
+              <SectionCard
+                title="Task Distribution"
+                subtitle="Status breakdown"
+              >
+                <TasksDonutChart
+                  taskCounts={filteredData.taskCounts}
+                  total={filteredData.tasks.length}
+                />
+              </SectionCard>
+            )}
+          </div>
+        );
+      })()}
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 3: MILESTONE ACHIEVEMENT MATRIX                           */}
+      {/* 5. ROW 5: SUBCONTRACTOR CONTRACTS & PAYMENT BALANCES          */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <SectionCard
-        title="Milestone Achievement Matrix"
-        subtitle={
-          filteredData.isAll
-            ? `Portfolio milestone delivery (${filteredData.milestoneData?.totalAchieved || 0} of ${filteredData.milestoneData?.grandTotal || 0} achieved) with per-project breakdown`
-            : `Milestone delivery status for ${filteredData.singleProj?.project_name}`
-        }
-      >
-        <MilestoneAchievementDashboard
-          milestoneData={filteredData.milestoneData}
-          isAll={filteredData.isAll}
-        />
-      </SectionCard>
+      {canViewChart("pm-subcontractor-contracts") && (
+        <SectionCard
+          title="Subcontractor Contracts & Payment Balances"
+          subtitle={
+            filteredData.isAll
+              ? "Contract sums, amount paid, and outstanding balances across all subcontractors"
+              : `Subcontractor contracts for ${filteredData.singleProj?.project_name}`
+          }
+        >
+          <SubcontractorContractsChart
+            subcontracts={filteredData.subcontracts}
+            valuations={filteredData.valuations}
+            selectedProjectName={filteredData.singleProj?.project_name}
+          />
+        </SectionCard>
+      )}
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 4: SCHEDULE FORECASTING & COMPLETION PROJECTION           */}
+      {/* 6. ROW 6: SCHEDULE FORECASTING & COMPLETION PROJECTION        */}
       {/* ───────────────────────────────────────────────────────────── */}
-      <SectionCard
-        title="Schedule Forecast & Completion Projection"
-        subtitle={
-          filteredData.isAll
-            ? "Projected completion dates vs. contract end dates per project based on delivery velocity"
-            : `Projected completion date vs. contract end date for ${filteredData.singleProj?.project_name}`
-        }
-      >
-        <ProjectScheduleForecastSection
-          forecasts={filteredData.forecastData}
-          isAll={filteredData.isAll}
-        />
-      </SectionCard>
+      {canViewChart("pm-schedule-forecast") && (
+        <SectionCard
+          title="Schedule Forecast & Completion Projection"
+          subtitle={
+            filteredData.isAll
+              ? "Projected completion dates vs. contract end dates per project based on delivery velocity"
+              : `Projected completion date vs. contract end date for ${filteredData.singleProj?.project_name}`
+          }
+        >
+          <ProjectScheduleForecastSection
+            forecasts={filteredData.forecastData}
+            isAll={filteredData.isAll}
+          />
+        </SectionCard>
+      )}
 
       {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 5: COST BAR CHART & TASKS DONUT CHART                     */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <div className="grid gap-6 xl:grid-cols-12">
-        {/* Cost = Bar Chart (7 Cols) */}
-        <div className="xl:col-span-7">
-          <SectionCard
-            title="Cost & Budget Variance"
-            subtitle={
-              filteredData.isAll
-                ? "Approved budget vs. actual expenditure across all projects"
-                : `Cost variance for ${filteredData.singleProj?.project_name}`
-            }
-          >
-            <CostBarChart data={filteredData.costSeries} height={300} />
-          </SectionCard>
-        </div>
-
-        {/* Tasks = Donut Chart (5 Cols) */}
-        <div className="xl:col-span-5">
-          <SectionCard
-            title="Task Distribution"
-            subtitle="Status breakdown"
-          >
-            <TasksDonutChart
-              taskCounts={filteredData.taskCounts}
-              total={filteredData.tasks.length}
-            />
-          </SectionCard>
-        </div>
-      </div>
-
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 6: SUBCONTRACTOR CONTRACTS & PAYMENT BALANCES             */}
-      {/* ───────────────────────────────────────────────────────────── */}
-      <SectionCard
-        title="Subcontractor Contracts & Payment Balances"
-        subtitle={
-          filteredData.isAll
-            ? "Contract sums, amount paid, and outstanding balances across all subcontractors"
-            : `Subcontractor contracts for ${filteredData.singleProj?.project_name}`
-        }
-      >
-        <SubcontractorContractsChart
-          subcontracts={filteredData.subcontracts}
-          valuations={filteredData.valuations}
-          selectedProjectName={filteredData.singleProj?.project_name}
-        />
-      </SectionCard>
-
-      {/* ───────────────────────────────────────────────────────────── */}
-      {/* ROW 7: EARNED VALUE EFFICIENCY MATRIX & RESOURCE WORKLOAD     */}
+      {/* 7. ROW 7: EARNED VALUE EFFICIENCY MATRIX & RESOURCE WORKLOAD  */}
       {/* ───────────────────────────────────────────────────────────── */}
       <div className="grid gap-6 xl:grid-cols-12">
         {/* Earned Value Efficiency (CPI vs. SPI) = Bubble Chart (7 Cols) */}
-        <div className="xl:col-span-7">
-          <SectionCard
-            title="Earned Value Efficiency Matrix (CPI vs. SPI)"
-            subtitle="Cost Performance Index (CPI) vs. Schedule Performance Index (SPI)"
-          >
-            <EarnedValueEfficiencyBubbleChart
-              projects={filteredData.budgetRows}
-              height={320}
-            />
-          </SectionCard>
-        </div>
+        {canViewChart("pm-earned-value") && (
+          <div className="xl:col-span-7">
+            <SectionCard
+              title="Earned Value Efficiency Matrix (CPI vs. SPI)"
+              subtitle="Cost Performance Index (CPI) vs. Schedule Performance Index (SPI)"
+            >
+              <EarnedValueEfficiencyBubbleChart
+                projects={filteredData.budgetRows}
+                height={320}
+              />
+            </SectionCard>
+          </div>
+        )}
 
         {/* Workload = Horizontal Bar Chart (5 Cols) */}
-        <div className="xl:col-span-5">
+        <div className={canViewChart("pm-earned-value") ? "xl:col-span-5" : "xl:col-span-12"}>
           <SectionCard
             title="Resource Workload"
             subtitle="Tasks by resource"

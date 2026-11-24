@@ -9,6 +9,7 @@ export default defineConfig({
     include: ["@ant-design/icons"],
   },
   build: {
+    emptyOutDir: false,
     sourcemap: false,
     target: "esnext",
     chunkSizeWarningLimit: 2000,

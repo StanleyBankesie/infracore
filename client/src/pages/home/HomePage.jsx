@@ -955,18 +955,21 @@ export default function HomePage() {
       const modAllowed = isModuleEnabled(canonicalMod) || isModuleEnabled(rawModKey);
       
       cards.forEach(card => {
-        // Check if card is forbidden in its parent module
-        if (
-          canViewDashboardElement(canonicalMod, "card", card.key) === false ||
-          canViewDashboardElement(rawModKey, "card", card.key) === false
-        ) {
-          return;
-        }
         // Check if card is permitted on Home
         const cardAllowedForHome = canViewDashboardElement("home", "card", card.key);
         if (cardAllowedForHome === false) {
           return;
         }
+
+        // Check if card is explicitly forbidden in its parent module (only if NOT explicitly allowed for Home)
+        if (
+          !cardAllowedForHome &&
+          (canViewDashboardElement(canonicalMod, "card", card.key) === false ||
+           canViewDashboardElement(rawModKey, "card", card.key) === false)
+        ) {
+          return;
+        }
+
         if (!modAllowed && !cardAllowedForHome) {
           return;
         }
@@ -1145,10 +1148,13 @@ export default function HomePage() {
   const visibleMetrics = React.useMemo(() => {
     const checked = allPossibleMetrics.filter((m) => {
       if (!m.key) return false;
+      const homeAllowed = canViewDashboardElement("home", "card", m.key);
+      if (homeAllowed === false) return false;
+      if (homeAllowed === true) return true;
       if (m.moduleKey && canViewDashboardElement(m.moduleKey, "card", m.key) === false) {
         return false;
       }
-      return canViewDashboardElement("home", "card", m.key) === true;
+      return m.moduleKey ? canViewDashboardElement(m.moduleKey, "card", m.key) === true : false;
     });
 
     if (isBasicMode) {
@@ -1185,9 +1191,6 @@ export default function HomePage() {
           pmCards.push(c);
         }
       });
-      if (pmCards.length >= 4) {
-        return pmCards.slice(0, 4);
-      }
       const others = checked.filter((c) => !pmCards.includes(c));
       return [...pmCards, ...others].slice(0, 4);
     }
@@ -1215,7 +1218,7 @@ export default function HomePage() {
       { key: "transport", label: "Transport & Fleet", path: "/transport", icon: "🚚", color: "from-teal-600 to-emerald-600", lightBg: "bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200/60 dark:border-teal-800/60", badge: "Fleet" },
       { key: "business-intelligence", label: "Business Intelligence", path: "/business-intelligence", icon: "📈", color: "from-indigo-600 to-violet-600", lightBg: "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200/60 dark:border-indigo-800/60", badge: "Analytics" },
       { key: "executive-overview", label: "Executive Overview", path: "/executive-overview", icon: "📊", color: "from-blue-700 to-cyan-700", lightBg: "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200/60 dark:border-blue-800/60", badge: "Executive" },
-      { key: "administration", label: "Administration", path: "/administration", icon: "⚙️", color: "from-slate-700 to-slate-900", lightBg: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200/60 dark:border-slate-700/60", badge: "Security" },
+      { key: "administration", label: "Administration", path: "/administration", icon: "⚙️", color: "from-[#69274f] to-[#4a1836]", lightBg: "bg-[#69274f]/10 text-[#69274f] dark:bg-[#69274f]/30 dark:text-[#dfacc7] border-[#69274f]/30 dark:border-[#69274f]/40", badge: "Security" },
       { key: "system-configuration", label: "System Configuration", path: "/system-configuration", icon: "🔧", color: "from-zinc-700 to-slate-800", lightBg: "bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border-zinc-200/60 dark:border-zinc-700/60", badge: "Setup" },
     ];
 
@@ -1427,58 +1430,14 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen px-2 pb-2 md:px-3 md:pb-3 pt-0 md:pt-0.5 font-sans text-slate-900 bg-transparent">
+    <div
+      data-layout-mode={isBasicMode ? "basic" : "standard"}
+      data-app-mode={isBasicMode ? "BASIC" : "STANDARD"}
+      className={`min-h-screen px-2 pb-2 md:px-3 md:pb-3 pt-0 md:pt-0.5 font-sans text-slate-900 bg-transparent ${
+        !isBasicMode ? "homepage-standard-mode" : "homepage-basic-mode"
+      }`}
+    >
       <div className="max-w-7xl mx-auto space-y-3 fullbleed-sm pt-0 mt-0">
-        {/* Elegant Scope Selector - Placed above homepage cards */}
-        {isBasicMode && (
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 rounded-2xl p-3.5 sm:px-5 sm:py-3.5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0 flex-1">
-              <div className="w-9 h-9 rounded-xl bg-brand-50 dark:bg-brand-950/60 border border-brand-200/60 dark:border-brand-800/60 flex items-center justify-center text-brand-600 dark:text-brand-400 shrink-0 shadow-2xs">
-                <Filter size={17} />
-              </div>
-
-              <div className="min-w-0 flex-1">
-                <div className="relative inline-block w-full sm:w-auto">
-                  <select
-                    id="portfolio-scope-select"
-                    value={selectedScope}
-                    onChange={(e) => setSelectedScope(e.target.value)}
-                    className="w-full sm:w-auto min-w-[260px] md:min-w-[340px] appearance-none bg-slate-50 hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 text-slate-900 dark:text-white font-black text-sm sm:text-base border border-slate-300 dark:border-slate-700 rounded-xl pl-3.5 pr-10 py-1.5 focus:outline-none focus:ring-2 focus:ring-brand-500 cursor-pointer shadow-2xs transition-colors"
-                  >
-                    <option value="ALL" className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-bold">
-                      All Projects (Portfolio View)
-                    </option>
-                    {scopeProjects.map((p) => (
-                      <option
-                        key={p.id}
-                        value={p.id}
-                        className="bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 font-semibold py-1.5"
-                      >
-                        {p.project_name} {p.project_code ? `(${p.project_code})` : ""}
-                      </option>
-                    ))}
-                  </select>
-                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3 text-slate-500 dark:text-slate-400">
-                    <ChevronDown size={18} />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Portfolio Live Scope Summary Pill */}
-            <div className="flex items-center gap-2 self-start sm:self-center shrink-0">
-              <span className="inline-flex items-center gap-1.5 text-xs font-semibold px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span>
-                  {selectedScope === "ALL"
-                    ? `${scopeProjects.length} Projects • ${scopeTasks.length} Tasks`
-                    : `${scopeProjects.find((p) => String(p.id) === String(selectedScope))?.project_name || "Project"} • ${scopeTasks.filter((t) => String(t.project_id) === String(selectedScope)).length} Tasks`}
-                </span>
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Tickers / Stats Grid - Mobile Moving Carousel & Medium 2-Grid Columns */}
         {visibleMetrics.length > 0 && (
           <MobileMovingCarousel data-home-carousel gridColsClass="md:grid-cols-2 lg:grid-cols-4"
@@ -1486,151 +1445,312 @@ export default function HomePage() {
             autoInterval={3500}
           >
           {visibleMetrics.map((metric, index) => {
-            const cardType = index % 4;
+            const cardType = index % 5;
             if (cardType === 0) {
-              // Card 1: Amber Gold
+              // Card 1: Steel Blue (Matching Marked Card in Business Overview: #24526d)
               return (
                 <div
                   key={index}
-                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-sm border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md active:scale-[0.98] transition-all duration-300 ease-out group bg-[#b26e17] text-white"
+                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#24526d] text-white shadow-sm"
                 >
-                  <div className="flex flex-col h-full justify-between">
-                    <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
+                  {/* Background Geometric Elements */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                    {/* Subtle Fluid Wave Overlays */}
+                    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                      <path d="M80 0 C 150 30, 220 70, 300 30 L 300 0 Z" fill="rgba(255,255,255,0.08)" />
+                      <path d="M0 80 C 60 75, 110 115, 150 150 L 0 150 Z" fill="rgba(0,0,0,0.12)" />
+                    </svg>
+
+                    {/* Top-Left Concentric Wireframe Ripple Rings */}
+                    <svg className="absolute top-2.5 left-2.5 w-16 h-16 sm:w-20 sm:h-20" viewBox="0 0 80 80" fill="none">
+                      <circle cx="18" cy="18" r="14" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+                      <circle cx="18" cy="18" r="26" stroke="rgba(255,255,255,0.16)" strokeWidth="1.2" />
+                      <circle cx="18" cy="18" r="38" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" />
+                    </svg>
+
+                    {/* Bottom-Right Concentric Arcs */}
+                    <svg className="absolute -bottom-3 -right-3 w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100" fill="none">
+                      <circle cx="90" cy="90" r="38" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <circle cx="90" cy="90" r="60" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+                    </svg>
+
+                    {/* Subtle Sparkline Wave in Bottom-Right */}
+                    <svg className="w-10 h-5 text-white/20 absolute right-5 bottom-4 group-hover:text-white/40 transition-colors" viewBox="0 0 50 20" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M0 15 L10 12 L20 18 L30 8 L40 10 L50 2" strokeLinecap="round" strokeLinejoin="round" />
+                    </svg>
+
+                    <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                  </div>
+
+                  <div className="flex flex-col h-full justify-between relative z-10">
+                    <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                      {/* Overlapping Translucent Circles Logo */}
+                      <div className="flex items-center -space-x-1.5 opacity-70">
+                        <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                        <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                      </div>
+
                       {metric.badge ? (
-                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white/90 border border-white/15 shadow-[inset_0_1px_1px_rgba(255,255,255,0.2)] leading-none flex items-center gap-1">
+                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/25 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
                           {metric.badge}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="text-[10px] tracking-widest text-white/50 font-mono">
+                          •••• 1234
+                        </span>
+                      )}
                     </div>
+
                     <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                      {renderMetricValue(metric.value, `${getResponsiveValueClass(metric.value)} drop-shadow-[0_2px_8px_rgba(255,255,255,0.35)]`)}
+                      {renderMetricValue(metric.value, `${getResponsiveValueClass(metric.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]`)}
                       <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={metric.label}>
                         {metric.label}
                       </div>
                     </div>
                   </div>
-                  <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
                 </div>
               );
             } else if (cardType === 1) {
-              // Card 2: Steel Blue
+              // Card 2: Warm Golden Yellow with Organic Waves & Dot Matrix (Matching Reference Image Card 2)
               return (
                 <div
                   key={index}
-                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-sm border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md active:scale-[0.98] transition-all duration-300 ease-out group bg-[#24526d] text-white"
+                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#ebb028] text-white shadow-sm"
                 >
-                  <div className="flex flex-col h-full justify-between">
-                    <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
+                  {/* Background Geometric Elements */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                    {/* Organic Wave Overlays */}
+                    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                      <path d="M110 0 C 170 35, 230 75, 300 35 L 300 0 Z" fill="rgba(0,0,0,0.08)" />
+                      <path d="M160 0 C 210 20, 260 45, 300 15 L 300 0 Z" fill="rgba(255,255,255,0.18)" />
+                      <path d="M0 85 C 50 80, 95 115, 135 150 L 0 150 Z" fill="rgba(0,0,0,0.06)" />
+                    </svg>
+                    {/* Top-Right Dot Matrix Grid (4x3 dots) */}
+                    <svg className="absolute top-3.5 right-4 w-12 h-9" viewBox="0 0 48 36" fill="none">
+                      <circle cx="6" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="18" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="30" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="42" cy="6" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="6" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="30" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="42" cy="18" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="6" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="18" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="30" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                      <circle cx="42" cy="30" r="2" fill="rgba(255,255,255,0.45)" />
+                    </svg>
+                    {/* Bottom-Right Concentric Arcs */}
+                    <svg className="absolute -bottom-4 -right-4 w-28 h-28" viewBox="0 0 110 110" fill="none">
+                      <circle cx="95" cy="95" r="45" stroke="rgba(255,255,255,0.25)" strokeWidth="1.2" />
+                      <circle cx="95" cy="95" r="70" stroke="rgba(255,255,255,0.16)" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+
+                  <div className="flex flex-col h-full justify-between relative z-10">
+                    <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                      {/* Overlapping Translucent Circles Logo */}
+                      <div className="flex items-center -space-x-1.5 opacity-70">
+                        <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                        <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                      </div>
+
                       {metric.badge ? (
-                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-amber-500/20 backdrop-blur-md text-amber-200 border border-amber-400/20 shadow-sm leading-none flex items-center gap-1">
+                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
                           {metric.badge}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="text-[10px] tracking-widest text-white/50 font-mono">
+                          •••• 1234
+                        </span>
+                      )}
                     </div>
+
                     <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                      {renderMetricValue(metric.value, getResponsiveValueClass(metric.value))}
-                      <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug flex items-center justify-between min-w-0">
-                        <span className="break-words line-clamp-2 lg:line-clamp-1" title={metric.label}>{metric.label}</span>
-                        <svg
-                          className="w-7 sm:w-8 lg:w-6 h-4 lg:h-3.5 text-white/20 ml-2 group-hover:text-white/40 transition-colors shrink-0"
-                          viewBox="0 0 50 20"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                        >
-                          <path
-                            d="M0 15 L10 12 L20 18 L30 8 L40 10 L50 2"
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                          />
-                        </svg>
+                      {renderMetricValue(metric.value, `${getResponsiveValueClass(metric.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]`)}
+                      <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={metric.label}>
+                        {metric.label}
                       </div>
                     </div>
                   </div>
-                  <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
                 </div>
               );
             } else if (cardType === 2) {
-              // Card 3: Teal Green
+              // Card 3: Crisp Emerald Green with Organic Curves & Concentric Rings (Matching Reference Image Card 3)
               return (
                 <div
                   key={index}
-                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-sm border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md active:scale-[0.98] transition-all duration-300 ease-out group bg-[#18755c] text-white"
+                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#1ea85d] text-white shadow-sm"
                 >
-                  <div className="flex flex-col h-full justify-between">
-                    <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
+                  {/* Background Geometric Elements */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                    {/* Organic Wave Overlays */}
+                    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                      <path d="M80 0 C 145 25, 215 65, 300 25 L 300 0 Z" fill="rgba(255,255,255,0.16)" />
+                      <path d="M190 150 C 225 105, 265 85, 300 95 L 300 150 Z" fill="rgba(0,0,0,0.12)" />
+                      <path d="M0 95 C 40 85, 75 120, 115 150 L 0 150 Z" fill="rgba(255,255,255,0.08)" />
+                    </svg>
+                    {/* Top-Left Fine Concentric Ripple Rings */}
+                    <svg className="absolute top-2 left-2 w-20 h-20 sm:w-24 sm:h-24" viewBox="0 0 90 90" fill="none">
+                      <circle cx="18" cy="18" r="16" stroke="rgba(255,255,255,0.24)" strokeWidth="1.2" />
+                      <circle cx="18" cy="18" r="30" stroke="rgba(255,255,255,0.18)" strokeWidth="1.2" />
+                      <circle cx="18" cy="18" r="44" stroke="rgba(255,255,255,0.11)" strokeWidth="1.2" />
+                    </svg>
+                    {/* Bottom-Right Concentric Arcs */}
+                    <svg className="absolute -bottom-4 -right-4 w-28 h-28" viewBox="0 0 110 110" fill="none">
+                      <circle cx="95" cy="95" r="42" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+                      <circle cx="95" cy="95" r="68" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+
+                  <div className="flex flex-col h-full justify-between relative z-10">
+                    <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                      {/* Overlapping Translucent Circles Logo */}
+                      <div className="flex items-center -space-x-1.5 opacity-70">
+                        <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                        <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                      </div>
+
                       {metric.badge ? (
-                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white/90 border border-white/15 shadow-sm leading-none flex items-center gap-1">
+                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/20 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
                           {metric.badge}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="text-[10px] tracking-widest text-white/50 font-mono">
+                          •••• 1234
+                        </span>
+                      )}
                     </div>
+
                     <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                      <div className="flex items-center gap-1.5 min-w-0">
-                        {renderMetricValue(metric.value, getResponsiveValueClass(metric.value))}
-                        <svg
-                          className="w-4 sm:w-5 lg:w-4 h-4 sm:h-5 lg:h-4 text-white/40 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform shrink-0"
-                          fill="none"
-                          stroke="currentColor"
-                          strokeWidth="2"
-                          viewBox="0 0 24 24"
-                        >
-                          <path
-                            strokeLinecap="round"
-                            strokeLinejoin="round"
-                            d="M4.5 19.5l15-15m0 0H8.25m11.25 0v11.25"
-                          />
-                        </svg>
-                      </div>
+                      {renderMetricValue(metric.value, `${getResponsiveValueClass(metric.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.25)]`)}
                       <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={metric.label}>
                         {metric.label}
                       </div>
                     </div>
                   </div>
-                  <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
+                </div>
+              );
+            } else if (cardType === 3) {
+              // Card 4: Rich Plum / Mulberry Wine (Matching Marked Card in Business Overview: #69274f)
+              return (
+                <div
+                  key={index}
+                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#69274f] text-white shadow-sm"
+                >
+                  {/* Background Geometric Elements */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                    {/* Subtle Fluid Wave Overlays */}
+                    <svg className="absolute inset-0 w-full h-full" preserveAspectRatio="none" viewBox="0 0 300 150" fill="none">
+                      <path d="M100 0 C 170 30, 235 60, 300 25 L 300 0 Z" fill="rgba(255,255,255,0.08)" />
+                      <path d="M0 90 C 55 80, 105 120, 145 150 L 0 150 Z" fill="rgba(0,0,0,0.15)" />
+                    </svg>
+
+                    {/* Top-Left Concentric Wireframe Rings */}
+                    <svg className="absolute top-2.5 left-2.5 w-16 h-16 sm:w-20 sm:h-20" viewBox="0 0 80 80" fill="none">
+                      <circle cx="18" cy="18" r="14" stroke="rgba(255,255,255,0.22)" strokeWidth="1.2" />
+                      <circle cx="18" cy="18" r="26" stroke="rgba(255,255,255,0.16)" strokeWidth="1.2" />
+                      <circle cx="18" cy="18" r="38" stroke="rgba(255,255,255,0.1)" strokeWidth="1.2" />
+                    </svg>
+
+                    {/* Bottom-Right Concentric Arcs */}
+                    <svg className="absolute -bottom-3 -right-3 w-24 h-24 sm:w-28 sm:h-28" viewBox="0 0 100 100" fill="none">
+                      <circle cx="90" cy="90" r="38" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <circle cx="90" cy="90" r="60" stroke="rgba(255,255,255,0.14)" strokeWidth="1.2" />
+                    </svg>
+
+                    <div className="absolute -right-6 -bottom-6 w-24 h-24 bg-white/10 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500" />
+                  </div>
+
+                  <div className="flex flex-col h-full justify-between relative z-10">
+                    <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                      {/* Overlapping Translucent Circles Logo */}
+                      <div className="flex items-center -space-x-1.5 opacity-70">
+                        <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                        <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                      </div>
+
+                      {metric.badge ? (
+                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/25 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
+                          {metric.badge}
+                        </span>
+                      ) : (
+                        <span className="text-[10px] tracking-widest text-white/50 font-mono">
+                          •••• 1234
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
+                      {renderMetricValue(metric.value, `${getResponsiveValueClass(metric.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]`)}
+                      <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={metric.label}>
+                        {metric.label}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               );
             } else {
-              // Card 4: Carbon Dark Gray
+              // Card 5: Midnight Slate / Carbon with Electric Cyan Blobs & Dot Matrix
               return (
                 <div
                   key={index}
-                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 shadow-sm border border-white/5 hover:border-white/15 hover:-translate-y-1 hover:scale-[1.01] hover:shadow-md active:scale-[0.98] transition-all duration-300 ease-out group bg-[#1d1f22] bg-[radial-gradient(#ffffff06_1px,transparent_1px)] [background-size:8px_8px] text-white"
+                  className="w-full h-full relative overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl min-h-[185px] sm:min-h-[210px] lg:min-h-[145px] lg:max-h-[147px] lg:h-[145px] p-5 sm:p-7 lg:p-4 lg:py-3.5 lg:px-5 border border-white/10 hover:border-white/20 hover:-translate-y-1 hover:scale-[1.01] active:scale-[0.98] transition-all duration-300 ease-out group bg-[#0f172a] text-white shadow-sm"
                 >
-                  <div className="flex flex-col h-full justify-between">
-                    <div className="flex justify-end min-h-[22px] lg:min-h-[18px]">
+                  {/* Background Geometric Elements */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl sm:rounded-[24px] lg:rounded-2xl">
+                    {/* Top-Right Electric Cyan Blob */}
+                    <div className="absolute -top-10 -right-8 w-36 h-36 sm:w-44 sm:h-44 rounded-full bg-[#06b6d4] transition-transform duration-500 group-hover:scale-105" />
+                    {/* Bottom-Left Ocean Blue Curve */}
+                    <div className="absolute -bottom-14 -left-8 w-40 h-40 sm:w-48 sm:h-48 rounded-full bg-[#0284c7]/50 transition-transform duration-500 group-hover:scale-105" />
+                    {/* Top-Left Dot Matrix */}
+                    <svg className="absolute top-3.5 left-4 w-12 h-9" viewBox="0 0 48 36" fill="none">
+                      <circle cx="6" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="18" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="30" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="42" cy="6" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="6" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="18" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="30" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="42" cy="18" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="6" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="18" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="30" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                      <circle cx="42" cy="30" r="2" fill="rgba(255,255,255,0.3)" />
+                    </svg>
+                    {/* Bottom-Right Concentric Arcs */}
+                    <svg className="absolute -bottom-4 -right-4 w-28 h-28" viewBox="0 0 110 110" fill="none">
+                      <circle cx="95" cy="95" r="40" stroke="rgba(255,255,255,0.2)" strokeWidth="1.2" />
+                      <circle cx="95" cy="95" r="65" stroke="rgba(255,255,255,0.15)" strokeWidth="1.2" />
+                    </svg>
+                  </div>
+
+                  <div className="flex flex-col h-full justify-between relative z-10">
+                    <div className="flex items-center justify-between min-h-[22px] lg:min-h-[18px]">
+                      {/* Overlapping Translucent Circles Logo */}
+                      <div className="flex items-center -space-x-1.5 opacity-70">
+                        <div className="w-5 h-5 rounded-full bg-white/45 backdrop-blur-xs border border-white/20" />
+                        <div className="w-5 h-5 rounded-full bg-white/30 backdrop-blur-xs border border-white/20" />
+                      </div>
+
                       {metric.badge ? (
-                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-white/15 backdrop-blur-md text-white border border-white/20 shadow-sm leading-none flex items-center gap-1">
+                        <span className="text-xs sm:text-sm lg:text-[11px] font-bold uppercase tracking-wider px-2.5 py-1 lg:px-2 lg:py-0.5 rounded-full bg-black/25 backdrop-blur-md text-white border border-white/20 shadow-xs leading-none flex items-center gap-1">
                           {metric.badge}
                         </span>
-                      ) : null}
+                      ) : (
+                        <span className="text-[10px] tracking-widest text-white/50 font-mono">
+                          •••• 1234
+                        </span>
+                      )}
                     </div>
+
                     <div className="mt-4 sm:mt-6 lg:mt-1 min-w-0">
-                      {renderMetricValue(metric.value, getResponsiveValueClass(metric.value))}
+                      {renderMetricValue(metric.value, `${getResponsiveValueClass(metric.value)} drop-shadow-[0_2px_8px_rgba(0,0,0,0.3)]`)}
                       <div className="mt-2 lg:mt-0.5 text-xs sm:text-sm lg:text-xs font-extrabold text-white/95 uppercase tracking-wider leading-snug break-words line-clamp-2 lg:line-clamp-1" title={metric.label}>
                         {metric.label}
                       </div>
                     </div>
                   </div>
-                  <svg
-                    className="w-4.5 h-4.5 lg:w-3.5 lg:h-3.5 text-white/20 absolute right-5 bottom-5 lg:right-3.5 lg:bottom-3.5 group-hover:scale-110 group-hover:text-white/40 transition-all duration-300"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M2.036 12.322a1.012 1.012 0 010-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178z"
-                    />
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
-                    />
-                  </svg>
-                  <div className="absolute -right-6 -bottom-6 lg:-right-4 lg:-bottom-4 w-24 h-24 lg:w-16 lg:h-16 bg-white/5 rounded-full blur-xl group-hover:scale-150 transition-transform duration-500 pointer-events-none" />
                 </div>
               );
             }
